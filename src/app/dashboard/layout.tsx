@@ -1,0 +1,1417 @@
+"use client";
+
+import React, { useState, useEffect, createContext, useContext } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { 
+  LayoutDashboard, Users, UserSquare2, Briefcase, Calendar, 
+  Activity, Bell, Trash2, Settings, Plus, Search, LogOut, 
+  User, CheckCircle2, AlertCircle, FileText, CalendarRange, Clock, CreditCard
+} from "lucide-react";
+
+// Context for global state sharing (Quick Add triggers, etc.)
+interface DashboardContextType {
+  currentUser: any;
+  triggerRefresh: number;
+  setTriggerRefresh: React.Dispatch<React.SetStateAction<number>>;
+  openQuickAdd: (type: string, data?: any) => void;
+  bdas: any[];
+  devs: any[];
+  clientsList: any[];
+  projectsList: any[];
+}
+
+const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
+
+export const useDashboard = () => {
+  const context = useContext(DashboardContext);
+  if (!context) throw new Error("useDashboard must be used within DashboardProvider");
+  return context;
+};
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [bdas, setBdas] = useState<any[]>([]);
+  const [devs, setDevs] = useState<any[]>([]);
+  const [clientsList, setClientsList] = useState<any[]>([]);
+  const [projectsList, setProjectsList] = useState<any[]>([]);
+  
+  const [triggerRefresh, setTriggerRefresh] = useState(0);
+  
+  // UI states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any>(null);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [quickAddType, setQuickAddType] = useState<string | null>(null); // 'lead' | 'client' | 'project' | 'meeting' | 'payment' | 'note'
+  const [showQuickAddMenu, setShowQuickAddMenu] = useState(false);
+
+  // Quick Add forms state
+  const [leadForm, setLeadForm] = useState({ name: "", linkedinUrl: "", company: "", jobTitle: "", country: "", city: "", industry: "", profilePhoto: "", source: "LinkedIn", customSource: "", priority: "Warm", status: "New", notes: "", tags: "", primaryBdaId: "", assignedBdaIds: [] as string[] });
+  const [enriching, setEnriching] = useState(false);
+  const [clientForm, setClientForm] = useState({ name: "", email: "", company: "", phone: "", website: "" });
+  const [projectForm, setProjectForm] = useState({ name: "", clientId: "", source: "LinkedIn", startDate: "", deadline: "", finalBudget: "", bonus: "0", primaryBdaId: "", serviceType: "Web Design" });
+  const [meetingForm, setMeetingForm] = useState({ title: "", type: "Meeting", startTime: "", notes: "", leadId: "", projectId: "", assignedUserIds: [] as string[] });
+  const [paymentForm, setPaymentForm] = useState({ projectId: "", amount: "", note: "" });
+  const [noteForm, setNoteForm] = useState({ leadId: "", projectId: "", content: "" });
+  
+  const [actionLoading, setActionLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // Fetch initial profile & reference data
+  useEffect(() => {
+    async function loadInitialData() {
+      try {
+        const meRes = await fetch("/api/auth/me");
+        if (!meRes.ok) {
+          router.push("/login");
+          return;
+        }
+        const meData = await meRes.json();
+        setCurrentUser(meData.user);
+
+        // Load lists
+        const uRes = await fetch("/api/users");
+        if (uRes.ok) {
+          const uData = await uRes.json();
+          setBdas(uData.users.filter((u: any) => u.isActive && (u.roleName === "BDA" || u.roleName === "Super Admin")));
+          setDevs(uData.users.filter((u: any) => u.isActive && u.roleName === "Developer"));
+        }
+
+        const clRes = await fetch("/api/clients");
+        if (clRes.ok) {
+          const clData = await clRes.json();
+          setClientsList(clData.clients || []);
+        }
+
+        const prRes = await fetch("/api/projects");
+        if (prRes.ok) {
+          const prData = await prRes.json();
+          setProjectsList(prData.projects || []);
+        }
+
+        // Default primary BDA in forms to current user
+        setLeadForm(prev => ({ ...prev, primaryBdaId: meData.user.id }));
+        setProjectForm(prev => ({ ...prev, primaryBdaId: meData.user.id }));
+        setMeetingForm(prev => ({ ...prev, assignedUserIds: [meData.user.id] }));
+
+      } catch (err) {
+        console.error("Failed to load initial layout data", err);
+      }
+    }
+    loadInitialData();
+  }, [triggerRefresh, router]);
+
+  // Load Notifications
+  useEffect(() => {
+    if (!currentUser) return;
+    async function loadNotifications() {
+      const res = await fetch(`/api/notifications?userId=${currentUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      }
+    }
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 15000); // refresh every 15s
+    return () => clearInterval(interval);
+  }, [currentUser, triggerRefresh]);
+
+  // Global Search logic
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    const delayDebounce = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data.results);
+          setShowSearchDropdown(true);
+        }
+      } catch (err) {
+        console.error("Global search error", err);
+      }
+    }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+    } catch (err) {
+      console.error("Logout error", err);
+    }
+  };
+
+  const handleNotificationClick = async (notif: any) => {
+    try {
+      await fetch(`/api/notifications/${notif.id}`, { method: "PUT" });
+      setShowNotifications(false);
+      setTriggerRefresh(prev => prev + 1);
+      if (notif.linkUrl) router.push(notif.linkUrl);
+    } catch (err) {
+      console.error("Error updating notification", err);
+    }
+  };
+
+  // LinkedIn URL pasting triggers simulated enrichment
+  const handleLinkedinPaste = async (url: string) => {
+    setLeadForm(prev => ({ ...prev, linkedinUrl: url }));
+    if (!url.includes("linkedin.com/")) return;
+
+    setEnriching(true);
+    showToast("Retrieving public profile details...", "info");
+    try {
+      const res = await fetch(`/api/leads/enrich?url=${encodeURIComponent(url)}`);
+      if (res.ok) {
+        const enriched = await res.json();
+        setLeadForm(prev => ({
+          ...prev,
+          name: enriched.profile.name || prev.name,
+          company: enriched.profile.company || prev.company,
+          jobTitle: enriched.profile.jobTitle || prev.jobTitle,
+          country: enriched.profile.country || "",
+          city: enriched.profile.city || "",
+          industry: enriched.profile.industry || "",
+          notes: enriched.profile.notes || prev.notes
+        }));
+        
+        if (enriched.profile.isEnriched) {
+          showToast("LinkedIn profile details populated successfully!");
+        } else {
+          showToast("LinkedIn enrichment is not configured. Please fill details manually.", "info");
+        }
+      }
+    } catch (err) {
+      console.error("Enrichment error", err);
+      showToast("Could not enrich automatically. Please fill details manually.", "info");
+    } finally {
+      setEnriching(false);
+    }
+  };
+
+  // Submit handlers
+  const handleQuickAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionLoading(true);
+
+    let url = "";
+    let body: any = {};
+
+    switch (quickAddType) {
+      case "lead":
+        url = "/api/leads";
+        body = {
+          ...leadForm,
+          tags: leadForm.tags.split(",").map(t => t.trim()).filter(Boolean)
+        };
+        break;
+      case "client":
+        url = "/api/clients";
+        body = clientForm;
+        break;
+      case "project":
+        url = "/api/projects";
+        body = projectForm;
+        break;
+      case "meeting":
+        url = "/api/meetings";
+        body = meetingForm;
+        break;
+      case "payment":
+        url = `/api/projects/${paymentForm.projectId}/payments`;
+        body = paymentForm;
+        break;
+      case "note":
+        url = `/api/activities`;
+        body = {
+          type: "Note",
+          notes: noteForm.content,
+          leadId: noteForm.leadId || undefined,
+          projectId: noteForm.projectId || undefined
+        };
+        break;
+    }
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Action failed");
+
+      showToast(`${quickAddType?.toUpperCase()} added successfully!`);
+      
+      // Reset forms
+      setLeadForm({ name: "", linkedinUrl: "", company: "", jobTitle: "", country: "", city: "", industry: "", profilePhoto: "", source: "LinkedIn", customSource: "", priority: "Warm", status: "New", notes: "", tags: "", primaryBdaId: currentUser?.id || "", assignedBdaIds: [] });
+      setClientForm({ name: "", email: "", company: "", phone: "", website: "" });
+      setProjectForm({ name: "", clientId: "", source: "LinkedIn", startDate: "", deadline: "", finalBudget: "", bonus: "0", primaryBdaId: currentUser?.id || "", serviceType: "Web Design" });
+      setMeetingForm({ title: "", type: "Meeting", startTime: "", notes: "", leadId: "", projectId: "", assignedUserIds: [currentUser?.id || ""] });
+      setPaymentForm({ projectId: "", amount: "", note: "" });
+      setNoteForm({ leadId: "", projectId: "", content: "" });
+
+      setQuickAddType(null);
+      setTriggerRefresh(prev => prev + 1);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const navItems = [
+    { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { name: "Leads", icon: UserSquare2, path: "/dashboard/leads" },
+    { name: "Clients", icon: UserSquare2, path: "/dashboard/clients" },
+    { name: "Projects", icon: Briefcase, path: "/dashboard/projects" },
+    { name: "Calendar", icon: Calendar, path: "/dashboard/calendar" },
+    { name: "Activities", icon: Activity, path: "/dashboard/activities" },
+    { name: "Team", icon: Users, path: "/dashboard/team" },
+    { name: "Trash", icon: Trash2, path: "/dashboard/trash" },
+  ];
+
+  return (
+    <DashboardContext.Provider value={{
+      currentUser,
+      triggerRefresh,
+      setTriggerRefresh,
+      openQuickAdd: (type, data) => {
+        setQuickAddType(type);
+        if (type === "lead" && data) {
+          setLeadForm(prev => ({ ...prev, ...data }));
+        }
+      },
+      bdas,
+      devs,
+      clientsList,
+      projectsList
+    }}>
+      <div className="crm-layout">
+        {/* Left Sidebar */}
+        <aside className="crm-sidebar">
+          <div style={sidebarStyles.logoArea}>
+            <div style={sidebarStyles.logo}>BDA</div>
+            <span style={sidebarStyles.logoSubtitle}>Internal CRM</span>
+          </div>
+
+          <nav style={sidebarStyles.nav}>
+            {navItems.map(item => {
+              const active = pathname === item.path || (item.path !== "/dashboard" && pathname.startsWith(item.path));
+              return (
+                <button
+                  key={item.name}
+                  onClick={() => router.push(item.path)}
+                  style={{
+                    ...sidebarStyles.navItem,
+                    backgroundColor: active ? "var(--primary-light)" : "transparent",
+                    color: active ? "var(--primary-color)" : "var(--text-secondary)",
+                    fontWeight: active ? 600 : 500
+                  }}
+                >
+                  <item.icon size={18} />
+                  {item.name}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div style={sidebarStyles.footer}>
+            {currentUser && (
+              <div style={sidebarStyles.userCard}>
+                <div style={sidebarStyles.avatar}>
+                  {currentUser.name.charAt(0)}
+                </div>
+                <div style={sidebarStyles.userInfo}>
+                  <div style={sidebarStyles.userName}>{currentUser.name}</div>
+                  <div style={sidebarStyles.userRole}>{currentUser.roleName}</div>
+                </div>
+              </div>
+            )}
+            <button onClick={handleLogout} style={sidebarStyles.logoutBtn}>
+              <LogOut size={16} />
+              Logout Session
+            </button>
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <div className="crm-main-content">
+          {/* Top Bar */}
+          <header className="crm-topbar">
+            {/* Global Search */}
+            <div style={topbarStyles.searchArea}>
+              <Search size={18} style={topbarStyles.searchIcon} />
+              <input
+                type="text"
+                placeholder="Search leads, clients, projects, timeline..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowSearchDropdown(true)}
+                style={topbarStyles.searchInput}
+              />
+              {showSearchDropdown && searchResults && (
+                <div style={topbarStyles.searchDropdown}>
+                  <div style={topbarStyles.dropdownHeader}>
+                    <span>Global Search Results</span>
+                    <button onClick={() => { setShowSearchDropdown(false); setSearchQuery(""); }} style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.75rem", cursor: "pointer" }}>Clear</button>
+                  </div>
+                  <div style={topbarStyles.dropdownBody}>
+                    {/* Leads */}
+                    {searchResults.leads?.length > 0 && (
+                      <div style={topbarStyles.section}>
+                        <div style={topbarStyles.sectionTitle}>Leads ({searchResults.leads.length})</div>
+                        {searchResults.leads.map((l: any) => (
+                          <div key={l.id} onClick={() => { router.push(`/dashboard/leads/${l.id}`); setShowSearchDropdown(false); }} style={topbarStyles.resultItem}>
+                            <div><strong>{l.name}</strong> - {l.company || "No Company"}</div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{l.status} • {l.priority}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Clients */}
+                    {searchResults.clients?.length > 0 && (
+                      <div style={topbarStyles.section}>
+                        <div style={topbarStyles.sectionTitle}>Clients ({searchResults.clients.length})</div>
+                        {searchResults.clients.map((c: any) => (
+                          <div key={c.id} onClick={() => { router.push(`/dashboard/clients/${c.id}`); setShowSearchDropdown(false); }} style={topbarStyles.resultItem}>
+                            <div><strong>{c.name}</strong> - {c.company}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Projects */}
+                    {searchResults.projects?.length > 0 && (
+                      <div style={topbarStyles.section}>
+                        <div style={topbarStyles.sectionTitle}>Projects ({searchResults.projects.length})</div>
+                        {searchResults.projects.map((p: any) => (
+                          <div key={p.id} onClick={() => { router.push(`/dashboard/projects/${p.id}`); setShowSearchDropdown(false); }} style={topbarStyles.resultItem}>
+                            <div><strong>{p.name}</strong></div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{p.status}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {searchResults.leads?.length === 0 && searchResults.clients?.length === 0 && searchResults.projects?.length === 0 && (
+                      <div style={{ padding: "1.5rem", textAlign: "center", color: "var(--text-tertiary)" }}>No results found for "{searchQuery}"</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Topbar Actions */}
+            <div style={topbarStyles.actions}>
+              {/* Quick Add Dropdown Trigger */}
+              <div style={{ position: "relative" }}>
+                <button 
+                  onClick={() => setShowQuickAddMenu(!showQuickAddMenu)}
+                  className="crm-btn crm-btn-primary"
+                  style={{ padding: "0.5rem 1rem", height: "40px" }}
+                >
+                  <Plus size={16} />
+                  Quick Add
+                </button>
+                {showQuickAddMenu && (
+                  <div style={topbarStyles.quickAddMenu}>
+                    <div style={topbarStyles.menuTitle}>Create New Record</div>
+                    <button onClick={() => { setQuickAddType("lead"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><Users size={14} /> Add Lead</button>
+                    <button onClick={() => { setQuickAddType("client"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><UserSquare2 size={14} /> Add Client</button>
+                    <button onClick={() => { setQuickAddType("project"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><Briefcase size={14} /> Add Project</button>
+                    <button onClick={() => { setQuickAddType("meeting"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><CalendarRange size={14} /> Schedule Activity</button>
+                    <button onClick={() => { setQuickAddType("payment"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><CreditCard size={14} /> Add Payment</button>
+                    <button onClick={() => { setQuickAddType("note"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><FileText size={14} /> Add Timeline Note</button>
+                  </div>
+                )}
+              </div>
+
+              {/* Notifications Bell */}
+              <div style={{ position: "relative" }}>
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  style={{ ...topbarStyles.iconBtn, color: showNotifications ? "var(--primary-color)" : "var(--text-secondary)" }}
+                >
+                  <Bell size={20} />
+                  {notifications.filter(n => !n.isRead).length > 0 && (
+                    <span style={topbarStyles.badge}>{notifications.filter(n => !n.isRead).length}</span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div style={topbarStyles.notifDropdown}>
+                    <div style={topbarStyles.dropdownHeader}>
+                      <span>Notifications Center</span>
+                      <button onClick={async () => {
+                        // Mark all read mock
+                        for (const n of notifications) {
+                          if (!n.isRead) await fetch(`/api/notifications/${n.id}`, { method: "PUT" });
+                        }
+                        setTriggerRefresh(prev => prev + 1);
+                      }} style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.75rem", cursor: "pointer" }}>Mark all read</button>
+                    </div>
+                    <div style={topbarStyles.notifList}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+                          No notifications yet
+                        </div>
+                      ) : (
+                        notifications.map(n => (
+                          <div 
+                            key={n.id} 
+                            onClick={() => handleNotificationClick(n)}
+                            style={{
+                              ...topbarStyles.notifItem,
+                              backgroundColor: n.isRead ? "transparent" : "var(--bg-primary)"
+                            }}
+                          >
+                            <div style={{ display: "flex", gap: "0.5rem" }}>
+                              {!n.isRead && <span style={topbarStyles.unreadDot} />}
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{n.title}</div>
+                                <div style={{ fontSize: "0.825rem", color: "var(--text-secondary)", marginTop: "2px" }}>{n.message}</div>
+                                <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "4px" }}>
+                                  {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* User Profile */}
+              {currentUser && (
+                <div style={{ position: "relative" }}>
+                  <button onClick={() => setShowProfileMenu(!showProfileMenu)} style={topbarStyles.profileArea}>
+                    <div style={topbarStyles.profileAvatar}>
+                      {currentUser.name.charAt(0)}
+                    </div>
+                  </button>
+                  {showProfileMenu && (
+                    <div style={topbarStyles.profileMenu}>
+                      <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid var(--border-primary)" }}>
+                        <div style={{ fontWeight: 600 }}>{currentUser.name}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{currentUser.email}</div>
+                      </div>
+                      <button onClick={() => { router.push("/dashboard/settings"); setShowProfileMenu(false); }} style={topbarStyles.profileMenuItem}><Settings size={14} /> Profile Settings</button>
+                      <button onClick={handleLogout} style={{ ...topbarStyles.profileMenuItem, color: "var(--danger-color)" }}><LogOut size={14} /> Logout Session</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </header>
+
+          {/* Toast Alert */}
+          {toast && (
+            <div 
+              style={{
+                position: "fixed",
+                bottom: "24px",
+                right: "24px",
+                zIndex: 100,
+                backgroundColor: toast.type === "success" ? "var(--success-light)" : toast.type === "error" ? "var(--danger-light)" : "var(--info-light)",
+                color: toast.type === "success" ? "var(--success-text)" : toast.type === "error" ? "var(--danger-text)" : "var(--info-text)",
+                border: "1px solid currentColor",
+                padding: "0.875rem 1.5rem",
+                borderRadius: "8px",
+                boxShadow: "var(--shadow-lg)",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontWeight: 500,
+                fontSize: "0.875rem",
+                animation: "fadeIn 0.2s ease"
+              }}
+            >
+              {toast.type === "success" && <CheckCircle2 size={16} />}
+              {toast.type === "error" && <AlertCircle size={16} />}
+              {toast.type === "info" && <Clock size={16} />}
+              {toast.message}
+            </div>
+          )}
+
+          {/* Page Contents */}
+          <main style={{ flexGrow: 1 }}>
+            {children}
+          </main>
+        </div>
+
+        {/* Quick Add Modals */}
+        {quickAddType && (
+          <div style={modalStyles.overlay}>
+            <div style={modalStyles.container} className="animate-fade-in">
+              <div style={modalStyles.header}>
+                <h3 style={modalStyles.title}>Quick Add {quickAddType.toUpperCase()}</h3>
+                <button onClick={() => setQuickAddType(null)} style={modalStyles.closeBtn}>&times;</button>
+              </div>
+
+              <form onSubmit={handleQuickAddSubmit} style={modalStyles.body}>
+                {/* Lead Form */}
+                {quickAddType === "lead" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    <div className="crm-input-group">
+                      <label style={modalStyles.label}>LinkedIn Profile URL (Unique & Auto-Populates)</label>
+                      <input 
+                        type="url" 
+                        className="crm-input" 
+                        placeholder="https://linkedin.com/in/username" 
+                        value={leadForm.linkedinUrl}
+                        onChange={(e) => handleLinkedinPaste(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Name</label>
+                        <input 
+                          type="text" 
+                          className="crm-input" 
+                          placeholder="e.g. John Doe"
+                          value={leadForm.name}
+                          onChange={(e) => setLeadForm(prev => ({ ...prev, name: e.target.value }))}
+                          disabled={enriching}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Company</label>
+                        <input 
+                          type="text" 
+                          className="crm-input" 
+                          placeholder="e.g. Acme Corp"
+                          value={leadForm.company}
+                          onChange={(e) => setLeadForm(prev => ({ ...prev, company: e.target.value }))}
+                          disabled={enriching}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Job Title</label>
+                        <input 
+                          type="text" 
+                          className="crm-input" 
+                          placeholder="e.g. CEO"
+                          value={leadForm.jobTitle}
+                          onChange={(e) => setLeadForm(prev => ({ ...prev, jobTitle: e.target.value }))}
+                          disabled={enriching}
+                        />
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Lead Source</label>
+                        <select 
+                          className="crm-select"
+                          value={leadForm.source}
+                          onChange={(e) => setLeadForm(prev => ({ ...prev, source: e.target.value }))}
+                        >
+                          <option value="LinkedIn">LinkedIn</option>
+                          <option value="Upwork">Upwork</option>
+                          <option value="WhatsApp">WhatsApp</option>
+                          <option value="Referral">Referral</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {leadForm.source === "Other" && (
+                      <div>
+                        <label style={modalStyles.label}>Custom Source Name</label>
+                        <input 
+                          type="text" 
+                          className="crm-input" 
+                          value={leadForm.customSource}
+                          onChange={(e) => setLeadForm(prev => ({ ...prev, customSource: e.target.value }))}
+                          required
+                        />
+                      </div>
+                    )}
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Priority</label>
+                        <select 
+                          className="crm-select"
+                          value={leadForm.priority}
+                          onChange={(e) => setLeadForm(prev => ({ ...prev, priority: e.target.value }))}
+                        >
+                          <option value="Hot">Hot 🔥</option>
+                          <option value="Warm">Warm ⚡</option>
+                          <option value="Cold">Cold ❄️</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Primary BDA</label>
+                        <select 
+                          className="crm-select"
+                          value={leadForm.primaryBdaId}
+                          onChange={(e) => setLeadForm(prev => ({ ...prev, primaryBdaId: e.target.value }))}
+                          required
+                        >
+                          <option value="">Select BDA</option>
+                          {bdas.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={modalStyles.label}>Custom Tags (comma separated)</label>
+                      <input 
+                        type="text" 
+                        className="crm-input" 
+                        placeholder="Shopify, USA, High Budget"
+                        value={leadForm.tags}
+                        onChange={(e) => setLeadForm(prev => ({ ...prev, tags: e.target.value }))}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={modalStyles.label}>Brief Notes</label>
+                      <textarea 
+                        className="crm-textarea" 
+                        rows={2} 
+                        value={leadForm.notes}
+                        onChange={(e) => setLeadForm(prev => ({ ...prev, notes: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Client Form */}
+                {quickAddType === "client" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    <div>
+                      <label style={modalStyles.label}>Client Name</label>
+                      <input 
+                        type="text" 
+                        className="crm-input" 
+                        placeholder="John Doe"
+                        value={clientForm.name}
+                        onChange={(e) => setClientForm(prev => ({ ...prev, name: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Company Name</label>
+                      <input 
+                        type="text" 
+                        className="crm-input" 
+                        placeholder="e.g. Acme Inc"
+                        value={clientForm.company}
+                        onChange={(e) => setClientForm(prev => ({ ...prev, company: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Email Address</label>
+                      <input 
+                        type="email" 
+                        className="crm-input" 
+                        placeholder="client@company.com"
+                        value={clientForm.email}
+                        onChange={(e) => setClientForm(prev => ({ ...prev, email: e.target.value }))}
+                      />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Phone Number</label>
+                        <input 
+                          type="text" 
+                          className="crm-input" 
+                          placeholder="+1..."
+                          value={clientForm.phone}
+                          onChange={(e) => setClientForm(prev => ({ ...prev, phone: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Website URL</label>
+                        <input 
+                          type="url" 
+                          className="crm-input" 
+                          placeholder="https://..."
+                          value={clientForm.website}
+                          onChange={(e) => setClientForm(prev => ({ ...prev, website: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Project Form */}
+                {quickAddType === "project" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    <div>
+                      <label style={modalStyles.label}>Project Name</label>
+                      <input 
+                        type="text" 
+                        className="crm-input" 
+                        placeholder="Shopify Redesign"
+                        value={projectForm.name}
+                        onChange={(e) => setProjectForm(prev => ({ ...prev, name: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Select Client</label>
+                        <select 
+                          className="crm-select"
+                          value={projectForm.clientId}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, clientId: e.target.value }))}
+                          required
+                        >
+                          <option value="">Choose Client</option>
+                          {clientsList.map(c => <option key={c.id} value={c.id}>{c.name} ({c.company})</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Project Type</label>
+                        <select 
+                          className="crm-select"
+                          value={projectForm.serviceType}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, serviceType: e.target.value }))}
+                        >
+                          <option value="Web Design">Web Design</option>
+                          <option value="Web Development">Web Development</option>
+                          <option value="Shopify">Shopify</option>
+                          <option value="WordPress">WordPress</option>
+                          <option value="UI/UX">UI/UX</option>
+                          <option value="Mobile App">Mobile App</option>
+                          <option value="Custom Software">Custom Software</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Start Date</label>
+                        <input 
+                          type="date" 
+                          className="crm-input"
+                          value={projectForm.startDate}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, startDate: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Deadline</label>
+                        <input 
+                          type="date" 
+                          className="crm-input"
+                          value={projectForm.deadline}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, deadline: e.target.value }))}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Final Budget (INR)</label>
+                        <input 
+                          type="number" 
+                          className="crm-input"
+                          placeholder="50000"
+                          value={projectForm.finalBudget}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, finalBudget: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Bonus Budget (INR)</label>
+                        <input 
+                          type="number" 
+                          className="crm-input"
+                          value={projectForm.bonus}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, bonus: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={modalStyles.label}>Assigned Primary BDA</label>
+                      <select 
+                        className="crm-select"
+                        value={projectForm.primaryBdaId}
+                        onChange={(e) => setProjectForm(prev => ({ ...prev, primaryBdaId: e.target.value }))}
+                        required
+                      >
+                        {bdas.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Schedule Activity Form */}
+                {quickAddType === "meeting" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    <div>
+                      <label style={modalStyles.label}>Activity Title</label>
+                      <input 
+                        type="text" 
+                        className="crm-input" 
+                        placeholder="Intro Call / Follow-up Discussion"
+                        value={meetingForm.title}
+                        onChange={(e) => setMeetingForm(prev => ({ ...prev, title: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Activity Type</label>
+                        <select 
+                          className="crm-select"
+                          value={meetingForm.type}
+                          onChange={(e) => setMeetingForm(prev => ({ ...prev, type: e.target.value }))}
+                        >
+                          <option value="Meeting">Meeting</option>
+                          <option value="Call">Call</option>
+                          <option value="Follow-up">Follow-up</option>
+                          <option value="Demo">Demo</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Date & Time</label>
+                        <input 
+                          type="datetime-local" 
+                          className="crm-input"
+                          value={meetingForm.startTime}
+                          onChange={(e) => setMeetingForm(prev => ({ ...prev, startTime: e.target.value }))}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Link to Lead (Optional)</label>
+                        <select 
+                          className="crm-select"
+                          value={meetingForm.leadId}
+                          onChange={(e) => setMeetingForm(prev => ({ ...prev, leadId: e.target.value }))}
+                        >
+                          <option value="">None</option>
+                          {/* We'll populate lead options if needed, but since it's quick add, we can search or list */}
+                          <option value="l1">John Smith</option>
+                          <option value="l2">Sarah Connor</option>
+                          <option value="l3">Amit Patel</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Link to Project (Optional)</label>
+                        <select 
+                          className="crm-select"
+                          value={meetingForm.projectId}
+                          onChange={(e) => setMeetingForm(prev => ({ ...prev, projectId: e.target.value }))}
+                        >
+                          <option value="">None</option>
+                          {projectsList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={modalStyles.label}>Brief Notes / Agenda</label>
+                      <textarea 
+                        className="crm-textarea" 
+                        rows={2} 
+                        value={meetingForm.notes}
+                        onChange={(e) => setMeetingForm(prev => ({ ...prev, notes: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Payment Form */}
+                {quickAddType === "payment" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    <div>
+                      <label style={modalStyles.label}>Select Project</label>
+                      <select 
+                        className="crm-select"
+                        value={paymentForm.projectId}
+                        onChange={(e) => setPaymentForm(prev => ({ ...prev, projectId: e.target.value }))}
+                        required
+                      >
+                        <option value="">Choose Project</option>
+                        {projectsList.map(p => <option key={p.id} value={p.id}>{p.name} ({p.client?.name})</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Payment Amount (INR)</label>
+                      <input 
+                        type="number" 
+                        className="crm-input" 
+                        placeholder="15000"
+                        value={paymentForm.amount}
+                        onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Note / Invoice Number</label>
+                      <input 
+                        type="text" 
+                        className="crm-input" 
+                        placeholder="First Milestone payment"
+                        value={paymentForm.note}
+                        onChange={(e) => setPaymentForm(prev => ({ ...prev, note: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Note Form */}
+                {quickAddType === "note" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Link to Lead</label>
+                        <select 
+                          className="crm-select"
+                          value={noteForm.leadId}
+                          onChange={(e) => setNoteForm(prev => ({ ...prev, leadId: e.target.value, projectId: "" }))}
+                        >
+                          <option value="">None</option>
+                          <option value="l1">John Smith</option>
+                          <option value="l2">Sarah Connor</option>
+                          <option value="l3">Amit Patel</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Link to Project</label>
+                        <select 
+                          className="crm-select"
+                          value={noteForm.projectId}
+                          onChange={(e) => setNoteForm(prev => ({ ...prev, projectId: e.target.value, leadId: "" }))}
+                        >
+                          <option value="">None</option>
+                          {projectsList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Timeline Note Content</label>
+                      <textarea 
+                        className="crm-textarea" 
+                        rows={4}
+                        placeholder="Varun spoke to client. They are happy to proceed with Shopify."
+                        value={noteForm.content}
+                        onChange={(e) => setNoteForm(prev => ({ ...prev, content: e.target.value }))}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div style={modalStyles.actions}>
+                  <button type="button" onClick={() => setQuickAddType(null)} className="crm-btn crm-btn-secondary">Cancel</button>
+                  <button type="submit" disabled={actionLoading || enriching} className="crm-btn crm-btn-primary">
+                    {actionLoading ? "Saving..." : "Save Record"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </DashboardContext.Provider>
+  );
+}
+
+const sidebarStyles: Record<string, React.CSSProperties> = {
+  logoArea: {
+    padding: "2rem 1.5rem",
+    borderBottom: "1px solid var(--border-primary)",
+  },
+  logo: {
+    fontSize: "1.5rem",
+    fontWeight: 800,
+    background: "linear-gradient(135deg, var(--primary-color) 0%, var(--info-color) 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    letterSpacing: "-0.5px",
+  },
+  logoSubtitle: {
+    fontSize: "0.7rem",
+    color: "var(--text-tertiary)",
+    textTransform: "uppercase",
+    letterSpacing: "1.5px",
+    display: "block",
+    marginTop: "2px",
+  },
+  nav: {
+    padding: "1.5rem 0.75rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.25rem",
+    flexGrow: 1,
+  },
+  navItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    width: "100%",
+    padding: "0.75rem 1rem",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    textAlign: "left",
+    fontSize: "0.875rem",
+    transition: "all 0.2s ease",
+  },
+  footer: {
+    padding: "1.5rem",
+    borderTop: "1px solid var(--border-primary)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.75rem",
+  },
+  userCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+  },
+  avatar: {
+    width: "36px",
+    height: "36px",
+    borderRadius: "9999px",
+    backgroundColor: "var(--primary-color)",
+    color: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+    fontSize: "0.875rem",
+  },
+  userInfo: {
+    overflow: "hidden",
+  },
+  userName: {
+    fontSize: "0.875rem",
+    fontWeight: 600,
+    color: "var(--text-primary)",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis",
+  },
+  userRole: {
+    fontSize: "0.75rem",
+    color: "var(--text-tertiary)",
+  },
+  logoutBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "0.5rem",
+    width: "100%",
+    padding: "0.625rem",
+    border: "1px solid var(--border-primary)",
+    borderRadius: "8px",
+    backgroundColor: "transparent",
+    color: "var(--text-secondary)",
+    fontSize: "0.8125rem",
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+};
+
+const topbarStyles: Record<string, React.CSSProperties> = {
+  searchArea: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    width: "360px",
+  },
+  searchIcon: {
+    position: "absolute",
+    left: "1rem",
+    color: "var(--text-tertiary)",
+  },
+  searchInput: {
+    width: "100%",
+    padding: "0.625rem 1rem 0.625rem 2.5rem",
+    borderRadius: "9999px",
+    border: "1px solid var(--border-primary)",
+    backgroundColor: "var(--bg-primary)",
+    color: "var(--text-primary)",
+    fontSize: "0.875rem",
+    outline: "none",
+    transition: "all 0.2s ease",
+  },
+  searchDropdown: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    width: "100%",
+    maxHeight: "400px",
+    backgroundColor: "var(--bg-secondary)",
+    border: "1px solid var(--border-primary)",
+    borderRadius: "12px",
+    boxShadow: "var(--shadow-lg)",
+    marginTop: "0.5rem",
+    zIndex: 90,
+    display: "flex",
+    flexDirection: "column",
+  },
+  dropdownHeader: {
+    padding: "0.75rem 1rem",
+    borderBottom: "1px solid var(--border-primary)",
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    color: "var(--text-tertiary)",
+    display: "flex",
+    justifyContent: "space-between",
+  },
+  dropdownBody: {
+    overflowY: "auto",
+    padding: "0.5rem 0",
+  },
+  section: {
+    padding: "0.5rem 0",
+    borderBottom: "1px solid var(--border-primary)",
+  },
+  sectionTitle: {
+    padding: "0.25rem 1rem",
+    fontSize: "0.7rem",
+    fontWeight: 700,
+    color: "var(--text-tertiary)",
+    textTransform: "uppercase",
+  },
+  resultItem: {
+    padding: "0.5rem 1rem",
+    cursor: "pointer",
+    fontSize: "0.875rem",
+    transition: "background 0.2s",
+  },
+  actions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+  },
+  quickAddMenu: {
+    position: "absolute",
+    top: "calc(100% + 0.5rem)",
+    right: 0,
+    width: "200px",
+    backgroundColor: "var(--bg-secondary)",
+    border: "1px solid var(--border-primary)",
+    borderRadius: "8px",
+    boxShadow: "var(--shadow-lg)",
+    padding: "0.5rem 0",
+    zIndex: 80,
+  },
+  menuTitle: {
+    padding: "0.5rem 1rem",
+    fontSize: "0.75rem",
+    fontWeight: 700,
+    color: "var(--text-tertiary)",
+    textTransform: "uppercase",
+  },
+  menuItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    width: "100%",
+    padding: "0.625rem 1rem",
+    border: "none",
+    background: "none",
+    color: "var(--text-secondary)",
+    textAlign: "left",
+    fontSize: "0.875rem",
+    cursor: "pointer",
+    transition: "background 0.2s",
+  },
+  iconBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "40px",
+    height: "40px",
+    borderRadius: "9999px",
+    border: "1px solid var(--border-primary)",
+    background: "var(--bg-secondary)",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+  badge: {
+    position: "absolute",
+    top: "2px",
+    right: "2px",
+    width: "18px",
+    height: "18px",
+    borderRadius: "9999px",
+    backgroundColor: "var(--danger-color)",
+    color: "#ffffff",
+    fontSize: "0.65rem",
+    fontWeight: "bold",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "2px solid var(--bg-secondary)",
+  },
+  notifDropdown: {
+    position: "absolute",
+    top: "calc(100% + 0.5rem)",
+    right: 0,
+    width: "360px",
+    maxHeight: "480px",
+    backgroundColor: "var(--bg-secondary)",
+    border: "1px solid var(--border-primary)",
+    borderRadius: "12px",
+    boxShadow: "var(--shadow-lg)",
+    zIndex: 80,
+    display: "flex",
+    flexDirection: "column",
+  },
+  notifList: {
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+  },
+  notifItem: {
+    padding: "1rem",
+    borderBottom: "1px solid var(--border-primary)",
+    cursor: "pointer",
+    transition: "background 0.2s",
+  },
+  unreadDot: {
+    width: "8px",
+    height: "8px",
+    borderRadius: "9999px",
+    backgroundColor: "var(--primary-color)",
+    marginTop: "5px",
+    flexShrink: 0,
+  },
+  profileArea: {
+    display: "flex",
+    alignItems: "center",
+    border: "none",
+    background: "none",
+    cursor: "pointer",
+  },
+  profileAvatar: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "9999px",
+    backgroundColor: "var(--primary-color)",
+    color: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+  },
+  profileMenu: {
+    position: "absolute",
+    top: "calc(100% + 0.5rem)",
+    right: 0,
+    width: "200px",
+    backgroundColor: "var(--bg-secondary)",
+    border: "1px solid var(--border-primary)",
+    borderRadius: "8px",
+    boxShadow: "var(--shadow-lg)",
+    zIndex: 80,
+    padding: "0.25rem 0",
+  },
+  profileMenuItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    width: "100%",
+    padding: "0.625rem 1rem",
+    border: "none",
+    background: "none",
+    color: "var(--text-secondary)",
+    textAlign: "left",
+    fontSize: "0.875rem",
+    cursor: "pointer",
+    transition: "background 0.2s",
+  },
+};
+
+const modalStyles: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backdropFilter: "blur(4px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 100,
+    padding: "1rem",
+  },
+  container: {
+    width: "100%",
+    maxWidth: "560px",
+    maxHeight: "90vh",
+    backgroundColor: "var(--bg-secondary)",
+    border: "1px solid var(--border-primary)",
+    borderRadius: "12px",
+    boxShadow: "var(--shadow-lg)",
+    display: "flex",
+    flexDirection: "column",
+  },
+  header: {
+    padding: "1.25rem 1.5rem",
+    borderBottom: "1px solid var(--border-primary)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  title: {
+    fontSize: "1.125rem",
+    fontWeight: 600,
+    color: "var(--text-primary)",
+  },
+  closeBtn: {
+    border: "none",
+    background: "none",
+    fontSize: "1.5rem",
+    color: "var(--text-secondary)",
+    cursor: "pointer",
+    padding: "0 0.5rem",
+  },
+  body: {
+    padding: "1.5rem",
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: "1.5rem",
+  },
+  label: {
+    fontSize: "0.8125rem",
+    fontWeight: 500,
+    color: "var(--text-secondary)",
+    marginBottom: "0.375rem",
+    display: "block",
+  },
+  actions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "0.75rem",
+    marginTop: "1rem",
+  },
+};

@@ -1,0 +1,260 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // "Super Admin", "BDA", "Developer", etc.
+  permissions String[] // List of permission keys
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id                     String                    @id @default(uuid())
+  name                   String
+  email                  String                    @unique
+  passwordHash           String
+  roleId                 String
+  role                   Role                      @relation(fields: [roleId], references: [id])
+  isActive               Boolean                   @default(true)
+  isTrashed              Boolean                   @default(false)
+  leadPrimaryAssignments Lead[]                    @relation("PrimaryBDA")
+  leadAssignments        LeadAssignment[]
+  projectAssignments     Project[]                 @relation("ProjectPrimaryBDA")
+  ownershipHistories     ProjectOwnershipHistory[]
+  recordedPayments       Payment[]
+  uploadedAttachments    Attachment[]
+  notifications          Notification[]
+  activities             Activity[]
+  meetingAssignments     MeetingAssignment[]
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+}
+
+model Lead {
+  id                       String           @id @default(uuid())
+  name                     String
+  linkedinUrl              String?          @unique
+  profilePhoto             String?
+  country                  String?
+  city                     String?
+  jobTitle                 String?
+  company                  String?
+  industry                 String?
+  
+  // CRM Information
+  serviceRequirements      String[]         // Array of service options
+  customServiceRequirement String?          // For "Other" service
+  leadSource               String           // LinkedIn, Upwork, WhatsApp, etc.
+  customLeadSource         String?          // For "Other" source
+  status                   String           // New, Contacted, Connected, Replied, Interested, Meeting, Proposal Sent, Won, Lost
+  priority                 String           // Hot, Warm, Cold
+  primaryBdaId             String?
+  primaryBda               User?            @relation("PrimaryBDA", fields: [primaryBdaId], references: [id])
+  assignments              LeadAssignment[]
+  tags                     String[]         // Custom tags
+  notes                    String?
+  
+  // Follow-up Info
+  lastContacted            DateTime?
+  nextFollowup             DateTime?
+  followupNotes            String?
+
+  // Flags & Conversions
+  isTrashed                Boolean          @default(false)
+  convertedAt              DateTime?
+  convertedClientId        String?          @unique
+  convertedClient          Client?          @relation("LeadToClient", fields: [convertedClientId], references: [id])
+
+  // Relations
+  activities               Activity[]
+  meetings                 Meeting[]
+  attachments              Attachment[]
+  
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+}
+
+model LeadAssignment {
+  id        String   @id @default(uuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("Additional") // Primary / Additional
+  createdAt DateTime @default(now())
+
+  @@unique([leadId, userId])
+}
+
+model Client {
+  id          String   @id @default(uuid())
+  name        String
+  email       String?
+  company     String?
+  industry    String?
+  logo        String?
+  phone       String?
+  website     String?
+  isTrashed   Boolean  @default(false)
+  
+  // Back relation to the source lead
+  leadSource  Lead?    @relation("LeadToClient")
+  projects    Project[]
+  activities  Activity[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id                String                    @id @default(uuid())
+  name              String
+  clientId          String
+  client            Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  source            String?
+  startDate         DateTime                  @default(now())
+  deadline          DateTime
+  finalBudget       Float
+  bonus             Float                     @default(0)
+  
+  primaryBdaId      String
+  primaryBda        User                      @relation("ProjectPrimaryBDA", fields: [primaryBdaId], references: [id])
+  serviceType       String
+  status            String                    // Not Started, Work in Progress, On Hold, Review, Issue, Completed, Cancelled
+  issueDescription  String?
+  notes             String?
+  isTrashed         Boolean                   @default(false)
+
+  // Relations
+  ownershipHistory  ProjectOwnershipHistory[]
+  payments          Payment[]
+  attachments       Attachment[]
+  activities        Activity[]
+  meetings          Meeting[]
+  emailReminders    EmailReminder[]
+
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+}
+
+model ProjectOwnershipHistory {
+  id              String   @id @default(uuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  previousBdaId   String?
+  newBdaId        String
+  newBda          User     @relation(fields: [newBdaId], references: [id], onDelete: Cascade)
+  takeoverDate    DateTime @default(now())
+  note            String?
+}
+
+model Payment {
+  id          String   @id @default(uuid())
+  amount      Float
+  paymentDate DateTime @default(now())
+  note        String?
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  recordedById String
+  recordedBy  User     @relation(fields: [recordedById], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Attachment {
+  id           String   @id @default(uuid())
+  name         String
+  url          String
+  fileType     String
+  size         Int
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  leadId       String?
+  lead         Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+model Activity {
+  id          String   @id @default(uuid())
+  timestamp   DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // Meeting, Call, Follow-up, WhatsApp, Email, LinkedIn, Note, System, Other
+  notes       String
+  
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Meeting {
+  id             String              @id @default(uuid())
+  title          String
+  type           String              // Meeting, Call, Follow-up, Demo, Other
+  startTime      DateTime
+  endTime        DateTime?
+  status         String              // Upcoming, Completed, Cancelled, Rescheduled
+  notes          String?
+  leadId         String?
+  lead           Lead?               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignments    MeetingAssignment[]
+  emailReminders EmailReminder[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model MeetingAssignment {
+  id        String   @id @default(uuid())
+  meetingId String
+  meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([meetingId, userId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  type      String   // MeetingReminder, NewLead, NewProject, ProjectTakeover, DeadlineReminder, etc.
+  isRead    Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkUrl   String?  // URL to navigate to when clicked
+  createdAt DateTime @default(now())
+}
+
+model EmailReminder {
+  id             String    @id @default(uuid())
+  type           String    // 1dayBefore, 1hourBefore, 10minBefore, Project3dayBefore, Project1dayBefore, ProjectDeadlineDay
+  scheduledFor   DateTime
+  sentAt         DateTime?
+  isCancelled    Boolean   @default(false)
+  
+  meetingId      String?
+  meeting        Meeting?  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime  @default(now())
+}
