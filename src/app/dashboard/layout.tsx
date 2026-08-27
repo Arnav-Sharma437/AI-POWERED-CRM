@@ -59,6 +59,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [paymentForm, setPaymentForm] = useState({ projectId: "", amount: "", note: "" });
   const [noteForm, setNoteForm] = useState({ leadId: "", projectId: "", content: "" });
   
+  const [showInnerClientForm, setShowInnerClientForm] = useState(false);
+  const [innerClientForm, setInnerClientForm] = useState({ name: "", email: "", company: "", phone: "", website: "" });
+  const [innerClientLoading, setInnerClientLoading] = useState(false);
+  const [customServiceType, setCustomServiceType] = useState("");
+  
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -225,7 +230,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         break;
       case "project":
         url = "/api/projects";
-        body = projectForm;
+        body = {
+          ...projectForm,
+          serviceType: projectForm.serviceType === "Other" ? customServiceType : projectForm.serviceType
+        };
         break;
       case "meeting":
         url = "/api/meetings";
@@ -261,6 +269,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setLeadForm({ name: "", linkedinUrl: "", company: "", jobTitle: "", country: "", city: "", industry: "", profilePhoto: "", source: "LinkedIn", customSource: "", priority: "Warm", status: "New", notes: "", tags: "", primaryBdaId: currentUser?.id || "", assignedBdaIds: [] });
       setClientForm({ name: "", email: "", company: "", phone: "", website: "" });
       setProjectForm({ name: "", clientId: "", source: "LinkedIn", startDate: "", deadline: "", finalBudget: "", bonus: "0", primaryBdaId: currentUser?.id || "", serviceType: "Web Design" });
+      setCustomServiceType("");
       setMeetingForm({ title: "", type: "Meeting", startTime: "", notes: "", leadId: "", projectId: "", assignedUserIds: [currentUser?.id || ""] });
       setPaymentForm({ projectId: "", amount: "", note: "" });
       setNoteForm({ leadId: "", projectId: "", content: "" });
@@ -771,7 +780,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                       <div>
-                        <label style={modalStyles.label}>Select Client</label>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
+                          <label style={modalStyles.label}>Select Client</label>
+                          <span 
+                            onClick={() => setShowInnerClientForm(true)}
+                            style={{ color: "var(--primary-color)", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+                          >
+                            + Add New Client
+                          </span>
+                        </div>
                         <select 
                           className="crm-select"
                           value={projectForm.clientId}
@@ -787,7 +804,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <select 
                           className="crm-select"
                           value={projectForm.serviceType}
-                          onChange={(e) => setProjectForm(prev => ({ ...prev, serviceType: e.target.value }))}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setProjectForm(prev => ({ ...prev, serviceType: val }));
+                            if (val !== "Other") {
+                              setCustomServiceType("");
+                            }
+                          }}
                         >
                           <option value="Web Design">Web Design</option>
                           <option value="Web Development">Web Development</option>
@@ -796,9 +819,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <option value="UI/UX">UI/UX</option>
                           <option value="Mobile App">Mobile App</option>
                           <option value="Custom Software">Custom Software</option>
+                          <option value="Other">Other</option>
                         </select>
                       </div>
                     </div>
+
+                    {projectForm.serviceType === "Other" && (
+                      <div style={{ marginTop: "-0.5rem", marginBottom: "0.5rem" }}>
+                        <label style={modalStyles.label}>Custom Project Type</label>
+                        <input 
+                          type="text" 
+                          className="crm-input" 
+                          placeholder="Enter project type" 
+                          value={customServiceType}
+                          onChange={(e) => setCustomServiceType(e.target.value)}
+                          required
+                        />
+                      </div>
+                    )}
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                       <div>
@@ -1027,6 +1065,111 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <button type="button" onClick={() => setQuickAddType(null)} className="crm-btn crm-btn-secondary">Cancel</button>
                   <button type="submit" disabled={actionLoading || enriching} className="crm-btn crm-btn-primary">
                     {actionLoading ? "Saving..." : "Save Record"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+         )}
+
+        {/* Add Client Directly from Project Form Sub-Modal */}
+        {showInnerClientForm && (
+          <div style={{ ...modalStyles.overlay, zIndex: 1100 }}>
+            <div style={modalStyles.container} className="animate-fade-in">
+              <div style={modalStyles.header}>
+                <h3 style={modalStyles.title}>Add New Client</h3>
+                <button type="button" onClick={() => setShowInnerClientForm(false)} style={modalStyles.closeBtn}>&times;</button>
+              </div>
+              <form 
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setInnerClientLoading(true);
+                  try {
+                    const res = await fetch("/api/clients", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(innerClientForm)
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || "Failed to create client");
+                    
+                    // Add newly created client to context list
+                    setClientsList(prev => [...prev, data.client]);
+                    // Set current project selection to newly created client
+                    setProjectForm(prev => ({ ...prev, clientId: data.client.id }));
+                    
+                    // Reset forms
+                    setInnerClientForm({ name: "", email: "", company: "", phone: "", website: "" });
+                    setShowInnerClientForm(false);
+                    showToast("Client added and selected successfully!");
+                  } catch (err: any) {
+                    showToast(err.message, "error");
+                  } finally {
+                    setInnerClientLoading(false);
+                  }
+                }} 
+                style={modalStyles.body}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div>
+                    <label style={modalStyles.label}>Client Name</label>
+                    <input 
+                      type="text" 
+                      className="crm-input" 
+                      placeholder="John Doe"
+                      value={innerClientForm.name}
+                      onChange={(e) => setInnerClientForm(prev => ({ ...prev, name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={modalStyles.label}>Company Name</label>
+                    <input 
+                      type="text" 
+                      className="crm-input" 
+                      placeholder="e.g. Acme Inc"
+                      value={innerClientForm.company}
+                      onChange={(e) => setInnerClientForm(prev => ({ ...prev, company: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={modalStyles.label}>Email Address</label>
+                    <input 
+                      type="email" 
+                      className="crm-input" 
+                      placeholder="client@company.com"
+                      value={innerClientForm.email}
+                      onChange={(e) => setInnerClientForm(prev => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={modalStyles.label}>Phone Number</label>
+                      <input 
+                        type="text" 
+                        className="crm-input" 
+                        placeholder="+1..."
+                        value={innerClientForm.phone}
+                        onChange={(e) => setInnerClientForm(prev => ({ ...prev, phone: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Website URL</label>
+                      <input 
+                        type="url" 
+                        className="crm-input" 
+                        placeholder="https://..."
+                        value={innerClientForm.website}
+                        onChange={(e) => setInnerClientForm(prev => ({ ...prev, website: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div style={modalStyles.actions}>
+                  <button type="button" onClick={() => setShowInnerClientForm(false)} className="crm-btn crm-btn-secondary">Cancel</button>
+                  <button type="submit" disabled={innerClientLoading} className="crm-btn crm-btn-primary">
+                    {innerClientLoading ? "Saving..." : "Save Client"}
                   </button>
                 </div>
               </form>
