@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { loginUser } from "@/lib/services";
-import { signJWT } from "@/lib/auth";
+import { signTempJWT } from "@/lib/auth";
+import { createVerificationSession } from "@/lib/verification";
 
 export async function POST(request: Request) {
   try {
@@ -22,32 +23,34 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create session token
-    const token = await signJWT({
+    // Generate Verification Session (OTP)
+    const verification = await createVerificationSession(user.id);
+    if (verification.error) {
+      return NextResponse.json(
+        { error: verification.error },
+        { status: 500 }
+      );
+    }
+
+    // Create a temporary JWT token mapping the verification process
+    const tempToken = await signTempJWT({
       userId: user.id,
-      name: user.name,
-      email: user.email,
-      roleId: user.roleId
-    });
+      verificationId: verification.verificationId
+    }, 900); // 15 minutes temp token expiry
 
     const response = NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        roleId: user.roleId
-      }
+      requiresVerification: true
     });
 
-    // Set cookie
+    // Set temp_token cookie
     response.cookies.set({
-      name: "token",
-      value: token,
+      name: "temp_token",
+      value: tempToken,
       httpOnly: true,
       path: "/",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 // 24 hours
+      maxAge: 900 // 15 minutes
     });
 
     return response;

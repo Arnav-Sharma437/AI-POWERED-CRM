@@ -13,5 +13,15 @@ export async function POST() {
     maxAge: 0
   });
 
+  // Clear temp_token cookie
+  response.cookies.set({
+    name: "temp_token",
+    value: "",
+    httpOnly: true,
+    path: "/",
+    expires: new Date(0),
+    maxAge: 0
+  });
+
   return response;
 }

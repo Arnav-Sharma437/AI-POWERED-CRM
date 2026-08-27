@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Loader2, ArrowRight } from "lucide-react";
+import { Lock, Mail, Loader2, ArrowRight, ShieldCheck, RefreshCw } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,10 +11,26 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // OTP verification state variables
+  const [requiresOtp, setRequiresOtp] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [message, setMessage] = useState("");
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(prev => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setMessage("");
 
     try {
       const res = await fetch("/api/auth/login", {
@@ -29,11 +45,75 @@ export default function LoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      router.push("/dashboard");
+      if (data.requiresVerification) {
+        setRequiresOtp(true);
+        setMessage("We've sent a 6-digit verification code to your registered email.");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.trim().length !== 6) {
+      setError("Please enter a valid 6-digit code.");
+      return;
+    }
+
+    setVerifying(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: otp }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Verification failed");
+      }
+
+      // Success - Redirect to dashboard
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Verification failed. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+
+    setError("");
+    setMessage("");
+    setResendCooldown(60);
+
+    try {
+      const res = await fetch("/api/auth/resend-otp", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to resend code");
+      }
+
+      setMessage("A new verification code has been sent to your email.");
+      setOtp(""); // Reset input code
+    } catch (err: any) {
+      setError(err.message || "Failed to resend verification code.");
+      setResendCooldown(0); // Reset cooldown on error
     }
   };
 
@@ -44,65 +124,149 @@ export default function LoginPage() {
           <div style={styles.logoBox}>
             <span style={styles.logoText}>BDA</span>
           </div>
-          <h2 style={styles.title}>Welcome Back</h2>
-          <p style={styles.subtitle}>Sign in to access your CRM Dashboard</p>
+          
+          {!requiresOtp ? (
+            <>
+              <h2 style={styles.title}>Welcome Back</h2>
+              <p style={styles.subtitle}>Sign in to access your CRM Dashboard</p>
+            </>
+          ) : (
+            <>
+              <h2 style={styles.title}>Verify your email</h2>
+              <p style={styles.subtitle}>We've sent a verification code to your email.</p>
+            </>
+          )}
         </div>
 
-        <form onSubmit={handleLogin} style={styles.form}>
-          {error && <div style={styles.errorBox}>{error}</div>}
+        {error && <div style={styles.errorBox}>{error}</div>}
+        {message && <div style={styles.successBox}>{message}</div>}
 
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Email Address</label>
-            <div style={styles.inputWrapper}>
-              <Mail size={18} style={styles.inputIcon} />
-              <input
-                type="email"
-                placeholder="varun@bda.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                style={styles.input}
-              />
+        {!requiresOtp ? (
+          <form onSubmit={handleLogin} style={styles.form}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Email Address</label>
+              <div style={styles.inputWrapper}>
+                <Mail size={18} style={styles.inputIcon} />
+                <input
+                  type="email"
+                  placeholder="varun@bda.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  style={styles.input}
+                />
+              </div>
             </div>
-          </div>
 
-          <div style={styles.inputGroup}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <label style={styles.label}>Password</label>
-              <span 
-                onClick={() => alert("Please contact BDA Super Admin (Varun) to reset your password.")}
-                style={{ ...styles.forgot, cursor: "pointer" }}
-              >
-                Forgot Password?
-              </span>
+            <div style={styles.inputGroup}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <label style={styles.label}>Password</label>
+                <span 
+                  onClick={() => alert("Please contact BDA Super Admin (Varun) to reset your password.")}
+                  style={{ ...styles.forgot, cursor: "pointer" }}
+                >
+                  Forgot Password?
+                </span>
+              </div>
+              <div style={styles.inputWrapper}>
+                <Lock size={18} style={styles.inputIcon} />
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={styles.input}
+                />
+              </div>
             </div>
-            <div style={styles.inputWrapper}>
-              <Lock size={18} style={styles.inputIcon} />
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={styles.input}
-              />
-            </div>
-          </div>
 
-          <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              <>
-                Access Account
-                <ArrowRight size={18} />
-              </>
-            )}
-          </button>
-        </form>
+            <button type="submit" disabled={loading} style={styles.button}>
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Access Account
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} style={styles.form}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>6-Digit Verification Code</label>
+              <div style={styles.inputWrapper}>
+                <ShieldCheck size={18} style={styles.inputIcon} />
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  required
+                  style={styles.input}
+                />
+              </div>
+            </div>
+
+            <button type="submit" disabled={verifying} style={styles.button}>
+              {verifying ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  Verify & Continue
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+
+            <button 
+              type="button" 
+              onClick={handleResendOtp}
+              disabled={resendCooldown > 0} 
+              style={{
+                ...styles.button,
+                backgroundColor: "transparent",
+                border: "1px solid var(--border-primary)",
+                color: resendCooldown > 0 ? "var(--text-tertiary)" : "var(--text-primary)",
+                boxShadow: "none",
+                marginTop: "0.25rem"
+              }}
+            >
+              <RefreshCw size={14} className={resendCooldown > 0 ? "" : "animate-pulse"} />
+              {resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : "Resend Code"}
+            </button>
+
+            <button 
+              type="button" 
+              onClick={() => {
+                setRequiresOtp(false);
+                setError("");
+                setMessage("");
+                setOtp("");
+              }}
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--text-secondary)",
+                backgroundColor: "transparent",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "center",
+                marginTop: "0.5rem",
+                textDecoration: "underline"
+              }}
+            >
+              Back to Sign In
+            </button>
+          </form>
+        )}
 
         <div style={styles.footer}>
           <p style={{ ...styles.footerText, marginBottom: "1rem" }}>
@@ -188,6 +352,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "0.875rem",
     fontWeight: 500,
     border: "1px solid rgba(239, 68, 68, 0.15)",
+    marginBottom: "1rem",
+  },
+  successBox: {
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    color: "#10b981",
+    padding: "0.75rem 1rem",
+    borderRadius: "8px",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    border: "1px solid rgba(16, 185, 129, 0.15)",
+    marginBottom: "1rem",
   },
   inputGroup: {
     display: "flex",

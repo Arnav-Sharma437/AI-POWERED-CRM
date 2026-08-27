@@ -99,3 +99,39 @@ export async function verifySession(request: Request): Promise<any | null> {
     return null;
   }
 }
+
+export async function signTempJWT(payload: any, expirySeconds = 900): Promise<string> {
+  const header = { alg: "HS256", typ: "JWT" };
+  const enc = new TextEncoder();
+
+  const exp = Math.floor(Date.now() / 1000) + expirySeconds;
+  const fullPayload = { ...payload, exp, temp: true };
+
+  const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  const payloadB64 = btoa(JSON.stringify(fullPayload)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+  const signData = enc.encode(`${headerB64}.${payloadB64}`);
+  const key = await getCryptoKey();
+  const signature = await crypto.subtle.sign("HMAC", key, signData);
+
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+
+  return `${headerB64}.${payloadB64}.${sigB64}`;
+}
+
+export async function getTempSession(request: Request): Promise<any | null> {
+  try {
+    const cookiesHeader = request.headers.get("cookie") || "";
+    const tempToken = cookiesHeader.split(";").find(c => c.trim().startsWith("temp_token="))?.split("=")[1];
+    if (!tempToken) return null;
+    const decoded = await verifyJWT(tempToken);
+    if (!decoded || !decoded.temp) return null;
+    return decoded;
+  } catch (error) {
+    console.error("getTempSession error:", error);
+    return null;
+  }
+}
