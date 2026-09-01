@@ -117,19 +117,43 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const handleSendChatMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatText.trim() && chatStagedAttachments.length === 0) return;
-    if (!project?.conversationId) return;
+    if (!project?.conversationId || !currentUser) return;
+
+    const currentText = chatText;
+    const currentAttachments = [...chatStagedAttachments];
+
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+      id: tempId,
+      conversationId: project.conversationId,
+      content: currentText,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      senderEmail: currentUser.email,
+      createdAt: new Date().toISOString(),
+      isDeleted: false,
+      attachments: currentAttachments.map((a, i) => ({
+        id: `temp-att-${i}`,
+        fileName: a.name,
+        fileType: a.type,
+        storagePath: ""
+      })),
+      reads: [{ userId: currentUser.id, readAt: new Date().toISOString() }]
+    };
+
+    // Instant append
+    setChatMessages((prev) => [...prev, optimisticMessage]);
+    setChatText("");
+    setChatStagedAttachments([]);
 
     const payload = {
-      content: chatText,
-      attachments: chatStagedAttachments.map((a) => ({
+      content: currentText,
+      attachments: currentAttachments.map((a) => ({
         fileName: a.name,
         fileType: a.type,
         base64: a.base64
       }))
     };
-
-    setChatText("");
-    setChatStagedAttachments([]);
 
     try {
       const res = await fetch(`/api/chat/conversations/${project.conversationId}/messages`, {
@@ -140,9 +164,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       if (!res.ok) {
         const errData = await res.json();
         alert(errData.error || "Failed to send message");
+        setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
+      } else {
+        const data = await res.json();
+        if (data.message) {
+          setChatMessages((prev) =>
+            prev.map((m) => (m.id === tempId ? data.message : m))
+          );
+        }
       }
     } catch (err) {
       console.error(err);
+      setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
     }
   };
 

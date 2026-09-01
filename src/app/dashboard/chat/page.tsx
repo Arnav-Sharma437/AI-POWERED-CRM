@@ -192,23 +192,49 @@ function ChatContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Handle send message
+  // Handle send message with instant optimistic UI update
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageText.trim() && attachments.length === 0) return;
-    if (!activeConvId) return;
+    if (!activeConvId || !currentUser) return;
+
+    const currentText = messageText;
+    const currentAttachments = [...attachments];
+
+    // Create optimistic message
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+      id: tempId,
+      conversationId: activeConvId,
+      content: currentText,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      senderEmail: currentUser.email,
+      createdAt: new Date().toISOString(),
+      isDeleted: false,
+      attachments: currentAttachments.map((a, i) => ({
+        id: `temp-att-${i}`,
+        fileName: a.name,
+        fileType: a.type,
+        storagePath: ""
+      })),
+      reads: [{ userId: currentUser.id, readAt: new Date().toISOString() }],
+      pending: true
+    };
+
+    // Instant append
+    setMessages((prev) => [...prev, optimisticMessage]);
+    setMessageText("");
+    setAttachments([]);
 
     const payload = {
-      content: messageText,
-      attachments: attachments.map((a) => ({
+      content: currentText,
+      attachments: currentAttachments.map((a) => ({
         fileName: a.name,
         fileType: a.type,
         base64: a.base64
       }))
     };
-
-    setMessageText("");
-    setAttachments([]);
 
     try {
       const res = await fetch(`/api/chat/conversations/${activeConvId}/messages`, {
@@ -219,9 +245,19 @@ function ChatContent() {
       if (!res.ok) {
         const errData = await res.json();
         alert(errData.error || "Failed to send message");
+        // Remove optimistic message on failure
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      } else {
+        const data = await res.json();
+        if (data.message) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === tempId ? data.message : m))
+          );
+        }
       }
     } catch (err) {
       console.error(err);
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
     }
   };
 

@@ -88,13 +88,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [currentUser, triggerRefresh]);
 
+  const [popupNotification, setPopupNotification] = useState<{ id?: string; title: string; message: string; linkUrl?: string } | null>(null);
+
+  const fetchNotifications = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`/api/notifications?userId=${currentUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      }
+    } catch (err) {
+      console.error("Failed to load notifications:", err);
+    }
+  };
+
   useEffect(() => {
     if (!currentUser) return;
     const eventSource = new EventSource("/api/chat/realtime");
     eventSource.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        if (payload.type === "message" || payload.type === "read") {
+        if (payload.type === "message") {
+          const newMsg = payload.data;
+          fetchUnreadCount();
+          fetchNotifications();
+
+          // If message is from someone else, display a floating notification popup toast
+          if (newMsg.senderId !== currentUser.id) {
+            setPopupNotification({
+              title: `New Message from ${newMsg.senderName}`,
+              message: newMsg.content || "Sent an attachment",
+              linkUrl: `/dashboard/chat?id=${newMsg.conversationId}`
+            });
+
+            // Auto dismiss popup after 6 seconds
+            setTimeout(() => {
+              setPopupNotification(null);
+            }, 6000);
+          }
+        } else if (payload.type === "read") {
           fetchUnreadCount();
         }
       } catch (err) {
@@ -593,6 +626,72 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </div>
           </header>
+
+          {/* Live Floating Notification Popup */}
+          {popupNotification && (
+            <div 
+              style={{
+                position: "fixed",
+                top: "80px",
+                right: "24px",
+                zIndex: 1000,
+                backgroundColor: "var(--bg-primary)",
+                border: "1px solid var(--primary-color)",
+                borderLeft: "4px solid var(--primary-color)",
+                padding: "1rem 1.25rem",
+                borderRadius: "10px",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "0.875rem",
+                maxWidth: "360px",
+                animation: "fadeIn 0.25s ease-out",
+                cursor: popupNotification.linkUrl ? "pointer" : "default"
+              }}
+              onClick={() => {
+                if (popupNotification.linkUrl) {
+                  router.push(popupNotification.linkUrl);
+                  setPopupNotification(null);
+                }
+              }}
+            >
+              <div style={{ 
+                width: "36px", 
+                height: "36px", 
+                borderRadius: "50%", 
+                backgroundColor: "var(--primary-light)", 
+                color: "var(--primary-color)",
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center",
+                flexShrink: 0 
+              }}>
+                <MessageSquare size={18} />
+              </div>
+              <div style={{ flexGrow: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {popupNotification.title}
+                  </div>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPopupNotification(null);
+                    }}
+                    style={{ border: "none", background: "none", color: "var(--text-tertiary)", cursor: "pointer", fontSize: "1.1rem", padding: "0 0 0 0.5rem" }}
+                  >
+                    &times;
+                  </button>
+                </div>
+                <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {popupNotification.message}
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "var(--primary-color)", marginTop: "4px", fontWeight: 600 }}>
+                  Click to reply →
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Toast Alert */}
           {toast && (
