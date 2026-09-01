@@ -152,6 +152,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
         } else if (payload.type === "read") {
           fetchUnreadCount();
+        } else if (payload.type === "crm_update") {
+          // Instant sync for all dashboards, calendar, leads, and projects
+          setTriggerRefresh(prev => prev + 1);
+          fetchNotifications();
         }
       } catch (err) {
         console.error("SSE parse error in layout:", err);

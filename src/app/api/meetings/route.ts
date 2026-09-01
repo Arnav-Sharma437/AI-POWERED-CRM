@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth";
 import { listMeetings, createMeeting } from "@/lib/services";
+import { chatEmitter } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,10 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const meeting = await createMeeting(body, session.userId);
+
+    // Broadcast instant real-time update
+    chatEmitter.emit("crm_update", { entity: "meeting", action: "create", meeting });
+
     return NextResponse.json({ success: true, meeting });
   } catch (error: any) {
     console.error("Meetings POST error:", error);

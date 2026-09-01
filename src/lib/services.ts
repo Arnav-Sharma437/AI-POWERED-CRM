@@ -1226,6 +1226,11 @@ export async function createMeeting(data: any, userId: string): Promise<any> {
             userId: uid
           }))
         }
+      },
+      include: {
+        lead: true,
+        project: true,
+        assignments: { include: { user: true } }
       }
     });
 

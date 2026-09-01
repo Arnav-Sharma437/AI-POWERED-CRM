@@ -59,15 +59,25 @@ export async function GET(request: Request) {
           }
         };
 
+        const onCrmUpdate = (updateData: any) => {
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "crm_update", data: updateData })}\n\n`));
+          } catch (err) {
+            console.error("SSE crm_update callback error:", err);
+          }
+        };
+
         chatEmitter.on("message", onMessage);
         chatEmitter.on("delete", onDelete);
         chatEmitter.on("read", onRead);
+        chatEmitter.on("crm_update", onCrmUpdate);
 
         request.signal.addEventListener("abort", () => {
           clearInterval(heartbeat);
           chatEmitter.off("message", onMessage);
           chatEmitter.off("delete", onDelete);
           chatEmitter.off("read", onRead);
+          chatEmitter.off("crm_update", onCrmUpdate);
           try {
             controller.close();
           } catch (e) {

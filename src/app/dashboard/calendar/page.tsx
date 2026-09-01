@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { 
   Calendar as CalendarIcon, Clock, User, Filter, 
   ChevronLeft, ChevronRight, List, Grid3X3, Briefcase, Users,
-  Video, Plus, ExternalLink, CheckCircle2, Sparkles
+  Video, Plus, ExternalLink, CheckCircle2, Sparkles, UserCheck, Trash2, CalendarCheck, Edit3
 } from "lucide-react";
 import { useDashboard } from "../layout";
 
@@ -13,7 +13,7 @@ type CalendarView = "month" | "week" | "day" | "list";
 
 export default function CalendarPage() {
   const router = useRouter();
-  const { currentUser, bdas, openQuickAdd } = useDashboard();
+  const { currentUser, bdas, devs, openQuickAdd, triggerRefresh } = useDashboard();
   const isDeveloper = currentUser?.roleName === "Developer";
   
   const [loading, setLoading] = useState(true);
@@ -21,6 +21,9 @@ export default function CalendarPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>("month");
+  
+  // Selected Event Details Modal
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   
   // Schedule Google Meet Modal
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -32,7 +35,8 @@ export default function CalendarPage() {
     durationMinutes: "30",
     projectId: "",
     notes: "",
-    customMeetLink: ""
+    customMeetLink: "",
+    assignedUserIds: [] as string[]
   });
   
   // Filtering state
@@ -60,7 +64,7 @@ export default function CalendarPage() {
       }
     }
     loadCalendarData();
-  }, []);
+  }, [triggerRefresh]);
 
   // Filter meetings
   const filteredMeetings = meetings.filter(m => {
@@ -147,14 +151,30 @@ export default function CalendarPage() {
     const randomCode = Math.random().toString(36).substring(2, 5) + "-" + Math.random().toString(36).substring(2, 6) + "-" + Math.random().toString(36).substring(2, 5);
     const gmeetLink = meetingForm.customMeetLink.trim() || `https://meet.google.com/${randomCode}`;
 
+    const attendees = Array.from(new Set([
+      ...(meetingForm.assignedUserIds.length > 0 ? meetingForm.assignedUserIds : []),
+      currentUser?.id
+    ].filter(Boolean)));
+
     const newMeetingData = {
       title: meetingForm.title,
       type: "Meeting",
       startTime: new Date(meetingForm.startTime).toISOString(),
       notes: `${meetingForm.notes ? meetingForm.notes + "\n\n" : ""}Google Meet Link: ${gmeetLink}`,
       projectId: meetingForm.projectId || undefined,
-      assignedUserIds: [currentUser?.id]
+      assignedUserIds: attendees
     };
+
+    // Optimistic UI Append for 0ms instant feedback
+    const optimisticMeeting = {
+      id: `temp-${Date.now()}`,
+      ...newMeetingData,
+      status: "Upcoming",
+      assignedUserIds: attendees,
+      createdAt: new Date().toISOString()
+    };
+    setMeetings(prev => [...prev, optimisticMeeting]);
+    setShowScheduleModal(false);
 
     try {
       const res = await fetch("/api/meetings", {
@@ -164,8 +184,7 @@ export default function CalendarPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setMeetings(prev => [...prev, data.meeting]);
-        setShowScheduleModal(false);
+        setMeetings(prev => prev.map(m => m.id === optimisticMeeting.id ? data.meeting : m));
         setMeetingForm({
           title: "",
           type: "Meeting",
@@ -173,14 +192,17 @@ export default function CalendarPage() {
           durationMinutes: "30",
           projectId: "",
           notes: "",
-          customMeetLink: ""
+          customMeetLink: "",
+          assignedUserIds: []
         });
       } else {
         const err = await res.json();
+        setMeetings(prev => prev.filter(m => m.id !== optimisticMeeting.id));
         alert(err.error || "Failed to schedule meeting");
       }
     } catch (err) {
       console.error(err);
+      setMeetings(prev => prev.filter(m => m.id !== optimisticMeeting.id));
       alert("Failed to schedule meeting");
     } finally {
       setScheduleLoading(false);
@@ -296,10 +318,7 @@ export default function CalendarPage() {
                   {dayEvents.map(m => (
                     <div 
                       key={m.id} 
-                      onClick={() => {
-                        if (m.projectId) router.push(`/dashboard/projects/${m.projectId}`);
-                        else if (m.leadId) router.push(`/dashboard/leads/${m.leadId}`);
-                      }}
+                      onClick={() => setSelectedEvent(m)}
                       style={{
                         ...styles.eventItem,
                         borderLeftColor: m.eventKind === "deadline" ? "var(--danger-color)" : m.type === "Call" ? "var(--info-color)" : m.type === "Follow-up" ? "var(--warning-color)" : "var(--primary-color)",
@@ -339,10 +358,7 @@ export default function CalendarPage() {
               ].sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()).map((m) => (
                 <div 
                   key={m.id} 
-                  onClick={() => {
-                    if (m.projectId) router.push(`/dashboard/projects/${m.projectId}`);
-                    else if (m.leadId) router.push(`/dashboard/leads/${m.leadId}`);
-                  }}
+                  onClick={() => setSelectedEvent(m)}
                   style={styles.listItem}
                 >
                   <div style={styles.listItemTimeCol}>
@@ -497,6 +513,48 @@ export default function CalendarPage() {
                 </select>
               </div>
 
+              {/* Invite Team Members */}
+              <div>
+                <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
+                  Invite Team Members / Developers
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", maxHeight: "100px", overflowY: "auto", padding: "0.5rem", border: "1px solid var(--border-primary)", borderRadius: "8px", backgroundColor: "var(--bg-primary)" }}>
+                  {[...bdas, ...devs].map((user: any) => {
+                    const isSelected = meetingForm.assignedUserIds.includes(user.id);
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => {
+                          setMeetingForm(prev => ({
+                            ...prev,
+                            assignedUserIds: isSelected 
+                              ? prev.assignedUserIds.filter(id => id !== user.id)
+                              : [...prev.assignedUserIds, user.id]
+                          }));
+                        }}
+                        style={{
+                          fontSize: "0.75rem",
+                          padding: "3px 8px",
+                          borderRadius: "6px",
+                          border: isSelected ? "1px solid var(--primary-color)" : "1px solid var(--border-secondary)",
+                          backgroundColor: isSelected ? "var(--primary-light)" : "var(--bg-secondary)",
+                          color: isSelected ? "var(--primary-color)" : "var(--text-primary)",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontWeight: isSelected ? 600 : 400
+                        }}
+                      >
+                        {isSelected && <CheckCircle2 size={12} />}
+                        {user.name} ({user.roleName || user.role?.name || "Member"})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div>
                 <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
                   Custom Google Meet URL (Leave blank to auto-generate)
@@ -533,6 +591,95 @@ export default function CalendarPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "1rem"
+        }}>
+          <div className="animate-fade-in" style={{
+            width: "100%",
+            maxWidth: "460px",
+            backgroundColor: "var(--bg-secondary)",
+            borderRadius: "12px",
+            border: "1px solid var(--border-primary)",
+            padding: "1.75rem",
+            boxShadow: "var(--shadow-lg)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
+              <div>
+                <span className={`badge ${selectedEvent.eventKind === "deadline" ? "badge-danger" : selectedEvent.status === "Completed" ? "badge-success" : "badge-primary"}`} style={{ marginBottom: "0.5rem" }}>
+                  {selectedEvent.eventKind === "deadline" ? "Project Target Deadline" : selectedEvent.type}
+                </span>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>{selectedEvent.title}</h3>
+              </div>
+              <button onClick={() => setSelectedEvent(null)} style={{ border: "none", background: "none", fontSize: "1.25rem", cursor: "pointer", color: "var(--text-tertiary)" }}>&times;</button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.875rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--text-secondary)" }}>
+                <Clock size={16} />
+                <span>{new Date(selectedEvent.startTime).toLocaleString([], { dateStyle: "full", timeStyle: "short" })}</span>
+              </div>
+
+              {selectedEvent.notes && (
+                <div style={{ padding: "0.75rem 1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)", whiteSpace: "pre-wrap" }}>
+                  {selectedEvent.notes}
+                </div>
+              )}
+
+              {selectedEvent.notes?.includes("meet.google.com") && (
+                <a
+                  href={selectedEvent.notes.split("Google Meet Link:")[1]?.trim().split(" ")[0] || selectedEvent.notes.match(/https:\/\/meet\.google\.com\/[a-zA-Z0-9-]+/)?.[0] || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    color: "#ffffff",
+                    backgroundColor: "var(--primary-color)",
+                    padding: "0.625rem 1.25rem",
+                    borderRadius: "8px",
+                    textDecoration: "none",
+                    boxShadow: "0 4px 10px rgba(99, 102, 241, 0.2)"
+                  }}
+                >
+                  <Video size={16} /> Join Google Meet Call <ExternalLink size={14} />
+                </a>
+              )}
+
+              {selectedEvent.projectId && (
+                <button 
+                  onClick={() => {
+                    const pid = selectedEvent.projectId;
+                    setSelectedEvent(null);
+                    router.push(`/dashboard/projects/${pid}`);
+                  }}
+                  className="crm-btn crm-btn-secondary"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  <Briefcase size={15} /> View Project Workspace →
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
