@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Briefcase, DollarSign, ArrowUpRight, Phone, Globe, Mail } from "lucide-react";
 import { useDashboard } from "../layout";
+import AiLoader from "@/components/AiLoader";
 
 export default function ClientsPage() {
   const router = useRouter();
@@ -63,9 +64,7 @@ export default function ClientsPage() {
 
       {/* Grid of Clients */}
       {loading ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
-          <div style={{ width: "32px", height: "32px", border: "3px solid var(--border-primary)", borderTopColor: "var(--primary-color)", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-        </div>
+        <AiLoader label="Querying Client Portfolios..." sublabel="Calculating contracts, collections, and outstanding ledgers" />
       ) : filteredClients.length === 0 ? (
         <div className="crm-card" style={{ padding: "4rem 2rem", textAlign: "center" }}>
           <h3>No client accounts found</h3>

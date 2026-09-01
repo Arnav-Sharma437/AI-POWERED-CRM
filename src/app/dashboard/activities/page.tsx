@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Activity, Search, Calendar, User, Layers } from "lucide-react";
 import { useDashboard } from "../layout";
+import AiLoader from "@/components/AiLoader";
 
 export default function ActivitiesPage() {
   const { triggerRefresh } = useDashboard();
@@ -80,9 +81,7 @@ export default function ActivitiesPage() {
 
       {/* Timeline List */}
       {loading ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
-          <div style={{ width: "32px", height: "32px", border: "3px solid var(--border-primary)", borderTopColor: "var(--primary-color)", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-        </div>
+        <AiLoader label="Synchronizing Audit Timeline..." sublabel="Loading verified logs, updates, and milestones" />
       ) : filteredActivities.length === 0 ? (
         <div className="crm-card" style={{ padding: "4rem 2rem", textAlign: "center" }}>
           <h3>No activity matches your filters</h3>

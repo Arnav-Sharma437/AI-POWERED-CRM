@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Plus, User, Shield, CheckCircle2, AlertCircle, Edit, Trash2, ShieldAlert } from "lucide-react";
 import { useDashboard } from "../layout";
+import AiLoader from "@/components/AiLoader";
 
 export default function TeamPage() {
   const router = useRouter();
@@ -205,9 +206,7 @@ export default function TeamPage() {
 
       {/* Users Table */}
       {loading ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
-          <div style={{ width: "32px", height: "32px", border: "3px solid var(--border-primary)", borderTopColor: "var(--primary-color)", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-        </div>
+        <AiLoader label="Synchronizing Team Directory..." sublabel="Fetching member roles, status, and permissions" />
       ) : filteredUsers.length === 0 ? (
         <div className="crm-card" style={{ padding: "4rem 2rem", textAlign: "center" }}>
           <h3>No team members found</h3>

@@ -1442,10 +1442,40 @@ export async function addNotification(userId: string, title: string, message: st
 // GLOBAL ACTIVITIES TIMELINE
 // -------------------------------------------------------------
 
-export async function listActivities(): Promise<any[]> {
+export async function listActivities(userContext?: { userId: string; roleName: string }): Promise<any[]> {
   await checkDbConnection();
+  const isSuperAdmin = userContext?.roleName === "Super Admin";
+  const isDeveloper = userContext?.roleName === "Developer";
+  const userId = userContext?.userId;
+
   if (isMockMode) {
-    return mockDb.activities
+    let list = mockDb.activities;
+
+    // Role-based filtering
+    if (!isSuperAdmin && userId) {
+      if (isDeveloper) {
+        // Developer only sees their own activities OR activities in projects they are involved in
+        const devProjectIds = new Set(
+          mockDb.projects
+            .filter(p => p.primaryBdaId === userId || (p as any).assignedDevId === userId)
+            .map(p => p.id)
+        );
+        list = list.filter(a => {
+          // Hide payment activities completely for developers
+          if (a.notes.toLowerCase().includes("payment") || a.notes.toLowerCase().includes("inr") || a.type === "Payment") {
+            return false;
+          }
+          return a.userId === userId || (a.projectId && devProjectIds.has(a.projectId));
+        });
+      } else {
+        // BDA only sees activities they created or linked to their leads/projects
+        const bdaLeadIds = new Set(mockDb.leads.filter(l => l.primaryBdaId === userId || l.assignedBdaIds.includes(userId)).map(l => l.id));
+        const bdaProjectIds = new Set(mockDb.projects.filter(p => p.primaryBdaId === userId).map(p => p.id));
+        list = list.filter(a => a.userId === userId || (a.leadId && bdaLeadIds.has(a.leadId)) || (a.projectId && bdaProjectIds.has(a.projectId)));
+      }
+    }
+
+    return list
       .map(a => ({
         ...a,
         user: mockDb.users.find(u => u.id === a.userId),
@@ -1455,7 +1485,49 @@ export async function listActivities(): Promise<any[]> {
       }))
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   } else {
+    // Database query with role-based filtering
+    let whereClause: any = {};
+
+    if (!isSuperAdmin && userId) {
+      if (isDeveloper) {
+        whereClause = {
+          AND: [
+            {
+              NOT: [
+                { notes: { contains: "payment", mode: "insensitive" } },
+                { notes: { contains: "inr", mode: "insensitive" } }
+              ]
+            },
+            {
+              OR: [
+                { userId },
+                {
+                  project: {
+                    conversations: {
+                      some: {
+                        members: { some: { userId } }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        };
+      } else {
+        // BDA
+        whereClause = {
+          OR: [
+            { userId },
+            { lead: { OR: [{ primaryBdaId: userId }, { assignments: { some: { userId } } }] } },
+            { project: { primaryBdaId: userId } }
+          ]
+        };
+      }
+    }
+
     return await prisma.activity.findMany({
+      where: whereClause,
       include: {
         user: true,
         lead: true,

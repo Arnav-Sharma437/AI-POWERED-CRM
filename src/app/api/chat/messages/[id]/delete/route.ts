@@ -39,10 +39,15 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden: You cannot delete this message." }, { status: 403 });
     }
 
-    // Perform soft deletion
-    await prisma.message.update({
-      where: { id: messageId },
-      data: { deletedAt: new Date() }
+    // Perform permanent deletion of message & attachments
+    await prisma.messageAttachment.deleteMany({
+      where: { messageId }
+    });
+    await prisma.messageRead.deleteMany({
+      where: { messageId }
+    });
+    await prisma.message.delete({
+      where: { id: messageId }
     });
 
     const deleteData = {

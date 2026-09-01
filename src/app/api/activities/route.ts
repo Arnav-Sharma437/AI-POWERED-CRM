@@ -6,9 +6,11 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const activities = await listActivities();
+    const session = await verifySession(request);
+    const userContext = session ? { userId: session.userId, roleName: session.roleName } : undefined;
+    const activities = await listActivities(userContext);
     return NextResponse.json({ success: true, activities });
   } catch (error) {
     console.error("Activities GET error:", error);

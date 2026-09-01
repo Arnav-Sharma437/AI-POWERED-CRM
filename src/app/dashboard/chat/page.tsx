@@ -309,9 +309,12 @@ function ChatContent() {
     });
   };
 
-  // Handle soft delete message
+  // Handle 0ms instant delete message
   const handleDeleteMessage = async (msgId: string) => {
     if (!confirm("Are you sure you want to delete this message?")) return;
+
+    // Instant optimistic removal from UI
+    setMessages((prev) => prev.filter((m) => m.id !== msgId));
 
     try {
       const res = await fetch(`/api/chat/messages/${msgId}/delete`, {
@@ -320,33 +323,38 @@ function ChatContent() {
       if (!res.ok) {
         const errData = await res.json();
         alert(errData.error || "Failed to delete message");
+        if (activeConvId) fetchMessages(activeConvId);
       }
     } catch (err) {
       console.error(err);
+      if (activeConvId) fetchMessages(activeConvId);
     }
   };
 
-  // Handle delete or clear conversation
+  // Handle 0ms instant delete or clear conversation
   const handleDeleteConversation = async (convId: string, convName: string) => {
     if (!confirm(`Are you sure you want to delete chat with "${convName}"? All message history will be cleared.`)) return;
+
+    // Instant optimistic UI cleanup
+    setConversations((prev) => prev.filter((c) => c.id !== convId));
+    if (activeConvId === convId) {
+      setActiveConvId(null);
+      setMessages([]);
+      router.replace("/dashboard/chat");
+    }
 
     try {
       const res = await fetch(`/api/chat/conversations/${convId}`, {
         method: "DELETE"
       });
-      if (res.ok) {
-        setConversations(prev => prev.filter(c => c.id !== convId));
-        if (activeConvId === convId) {
-          setActiveConvId(null);
-          setMessages([]);
-          router.replace("/dashboard/chat");
-        }
-      } else {
+      if (!res.ok) {
         const errData = await res.json();
         alert(errData.error || "Failed to delete conversation");
+        fetchConversations();
       }
     } catch (err) {
       console.error(err);
+      fetchConversations();
     }
   };
 
@@ -413,7 +421,7 @@ function ChatContent() {
 
         <div style={styles.scrollList}>
           {loadingConv ? (
-            <div style={styles.centered}>Loading...</div>
+            <AiLoader size="sm" label="Scanning Channels..." sublabel="Connecting to secure sockets" />
           ) : filteredConversations.length === 0 ? (
             <div style={styles.emptyList}>No chats found</div>
           ) : (
@@ -537,7 +545,7 @@ function ChatContent() {
             {/* Chat Message History */}
             <div style={styles.messageHistory}>
               {loadingMsg ? (
-                <div style={styles.centered}>Loading history...</div>
+                <AiLoader size="sm" label="Decrypting Thread Messages..." sublabel="Loading encrypted message stream" />
               ) : messages.length === 0 ? (
                 <div style={styles.centered}>Send a message to start the conversation!</div>
               ) : (
