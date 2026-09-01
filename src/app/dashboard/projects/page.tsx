@@ -7,6 +7,7 @@ import {
   CircleDollarSign, LayoutGrid, Table, Clock, User, ArrowRight, Trash2
 } from "lucide-react";
 import { useDashboard } from "../layout";
+import AiLoader from "@/components/AiLoader";
 
 const KANBAN_STAGES = [
   { id: "Not Started", label: "Not Started", color: "var(--text-tertiary)" },
@@ -169,9 +170,7 @@ export default function ProjectsPage() {
 
       {/* Projects Display */}
       {loading ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
-          <div style={{ width: "32px", height: "32px", border: "3px solid var(--border-primary)", borderTopColor: "var(--primary-color)", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-        </div>
+        <AiLoader label="Loading Workspace Projects..." sublabel="Fetching milestones, Kanban stages, and deliverable statuses" />
       ) : filteredProjects.length === 0 ? (
         <div className="crm-card" style={{ padding: "4rem 2rem", textAlign: "center" }}>
           <h3>No projects match your filter query</h3>

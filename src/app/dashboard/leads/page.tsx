@@ -8,6 +8,7 @@ import {
   Users, MapPin
 } from "lucide-react";
 import { useDashboard } from "../layout";
+import AiLoader from "@/components/AiLoader";
 
 export default function LeadsPage() {
   const router = useRouter();
@@ -323,9 +324,7 @@ export default function LeadsPage() {
 
       {/* Leads Table */}
       {loading ? (
-        <div style={styles.loadingContainer}>
-          <div style={styles.spinner} />
-        </div>
+        <AiLoader label="Scanning AI Lead Database..." sublabel="Extracting prospect scores, contact insights, and pipeline status" />
       ) : filteredLeads.length === 0 ? (
         <div className="crm-card" style={styles.emptyStateCard}>
           <Users size={48} style={{ color: "var(--text-tertiary)", marginBottom: "1rem" }} />

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, RotateCcw, AlertTriangle, Users, Briefcase, UserSquare2 } from "lucide-react";
 import { useDashboard } from "../layout";
+import AiLoader from "@/components/AiLoader";
 
 export default function TrashPage() {
   const router = useRouter();
@@ -93,9 +94,7 @@ export default function TrashPage() {
       </div>
 
       {loading ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
-          <div style={{ width: "32px", height: "32px", border: "3px solid var(--border-primary)", borderTopColor: "var(--primary-color)", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-        </div>
+        <AiLoader label="Retrieving System Archives..." sublabel="Loading recoverable leads and deleted project records" />
       ) : !hasTrash ? (
         <div className="crm-card" style={{ padding: "4rem 2rem", textAlign: "center" }}>
           <Trash2 size={48} style={{ color: "var(--text-tertiary)", marginBottom: "1rem" }} />

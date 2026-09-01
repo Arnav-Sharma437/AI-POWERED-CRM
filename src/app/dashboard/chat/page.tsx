@@ -7,9 +7,11 @@ import {
   Trash2, X, FileText, CheckCircle2, ChevronLeft, CalendarRange
 } from "lucide-react";
 
+import AiLoader from "@/components/AiLoader";
+
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center", color: "var(--text-secondary)" }}>Loading Chat Room...</div>}>
+    <Suspense fallback={<AiLoader label="Connecting to Real-time Neural Chat..." sublabel="Establishing encrypted peer sync" />}>
       <ChatContent />
     </Suspense>
   );

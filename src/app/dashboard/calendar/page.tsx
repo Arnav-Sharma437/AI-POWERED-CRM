@@ -8,6 +8,7 @@ import {
   Video, Plus, ExternalLink, CheckCircle2, Sparkles, UserCheck, Trash2, CalendarCheck, Edit3
 } from "lucide-react";
 import { useDashboard } from "../layout";
+import AiLoader from "@/components/AiLoader";
 
 type CalendarView = "month" | "week" | "day" | "list";
 
@@ -295,9 +296,7 @@ export default function CalendarPage() {
 
       {/* Calendar Display */}
       {loading ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: "6rem" }}>
-          <div style={{ width: "32px", height: "32px", border: "3px solid var(--border-primary)", borderTopColor: "var(--primary-color)", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-        </div>
+        <AiLoader label="Synchronizing Global Calendar Events..." sublabel="Fetching Google Meet appointments, deadlines, and team schedules" />
       ) : view === "month" ? (
         <div style={styles.calendarGrid}>
           {/* Weekday Names */}

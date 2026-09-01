@@ -303,3 +303,50 @@ body {
 .crm-btn-danger:hover {
   opacity: 0.9;
 }
+
+/* =========================================================
+   FUTURISTIC AI NEXUS LOADER & GLOW ANIMATIONS
+   ========================================================= */
+@keyframes ai-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes ai-spin-reverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes ai-pulse-glow {
+  0%, 100% {
+    transform: scale(0.92);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.4), 0 0 30px rgba(168, 85, 247, 0.2);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.8), 0 0 60px rgba(236, 72, 153, 0.5);
+    opacity: 1;
+  }
+}
+
+@keyframes ai-particle-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(180deg); }
+}
+
+@keyframes ai-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.ai-shimmer-text {
+  background: linear-gradient(90deg, #6366f1 0%, #a855f7 25%, #ec4899 50%, #6366f1 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: ai-shimmer 2.8s linear infinite;
+  font-weight: 700;
+}
+
