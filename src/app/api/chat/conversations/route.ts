@@ -80,18 +80,22 @@ export async function GET(request: Request) {
         // Identify recipient details for 1-to-1 direct chats
         let name = "Conversation";
         let subtitle = "";
+        let peerId = "";
         if (c.type === "DIRECT") {
           const recipientMember = c.members.find((m) => m.userId !== user.id);
           if (recipientMember) {
             name = recipientMember.user.name;
             subtitle = recipientMember.user.role?.name || "Team Member";
+            peerId = recipientMember.userId;
           } else {
             name = "Me (Notes)";
             subtitle = "Personal Space";
+            peerId = user.id;
           }
         } else if (c.type === "PROJECT" && c.project) {
           name = c.project.name;
           subtitle = "Project Chat";
+          peerId = c.projectId || "";
         }
 
         return {
@@ -99,6 +103,7 @@ export async function GET(request: Request) {
           type: c.type,
           name,
           subtitle,
+          peerId,
           projectId: c.projectId,
           project: c.project,
           members: c.members.map(m => m.user),
@@ -115,7 +120,16 @@ export async function GET(request: Request) {
       })
     );
 
-    return NextResponse.json({ success: true, conversations: mapped });
+    // Deduplicate so each user or project only has exactly one conversation entry in list
+    const seenKeys = new Set<string>();
+    const deduplicated = mapped.filter((item) => {
+      const key = `${item.type}_${item.peerId || item.id}`;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    });
+
+    return NextResponse.json({ success: true, conversations: deduplicated });
   } catch (error) {
     console.error("GET conversations error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

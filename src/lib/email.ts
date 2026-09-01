@@ -316,7 +316,7 @@ AI POWERED BDA CRM
     await transporter.sendMail({
       from: smtpFrom,
       to: devEmail,
-      subject: `[AI POWERED BDA CRM] New Task Assigned: ${projectName}`,
+      subject: `[AI POWERED CRM] New Task Assigned: ${projectName}`,
       text: messageText,
       html: messageHtml
     });
@@ -330,6 +330,115 @@ AI POWERED BDA CRM
     console.log(`Project: ${projectName}`);
     console.log(`Requirements: ${workDetails}`);
     console.log("==================================================\n");
+    return true;
+  }
+}
+
+export async function sendMeetingScheduleEmail({
+  attendeeEmail,
+  attendeeName,
+  organizerName,
+  meetingTitle,
+  meetingType,
+  startTime,
+  notes,
+  meetLink
+}: {
+  attendeeEmail: string;
+  attendeeName: string;
+  organizerName: string;
+  meetingTitle: string;
+  meetingType: string;
+  startTime: string;
+  notes?: string;
+  meetLink?: string;
+}): Promise<boolean> {
+  const smtpFrom = process.env.SMTP_FROM || "no-reply@bda-crm.com";
+  const dateFormatted = new Date(startTime).toLocaleString([], { dateStyle: "full", timeStyle: "short" });
+
+  const messageText = `
+AI POWERED CRM - Meeting Invitation
+
+Hello ${attendeeName},
+
+You have been scheduled for a ${meetingType} by ${organizerName}.
+
+Topic: ${meetingTitle}
+Date & Time: ${dateFormatted}
+${meetLink ? `Meeting Link: ${meetLink}` : ""}
+${notes ? `Notes / Agenda: ${notes}` : ""}
+
+Please open your CRM dashboard calendar to view the schedule.
+`;
+
+  const messageHtml = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 25px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 580px; background-color: #ffffff; color: #1f2937;">
+      <div style="border-bottom: 2px solid #6366f1; padding-bottom: 15px; margin-bottom: 20px;">
+        <h2 style="color: #6366f1; margin: 0; font-size: 22px;">NEXUS AI CRM</h2>
+        <p style="color: #6b7280; font-size: 14px; margin: 4px 0 0 0;">New Meeting / Discussion Scheduled</p>
+      </div>
+
+      <p style="font-size: 16px; font-weight: 600; margin-bottom: 10px;">Hello ${attendeeName},</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+        <strong>${organizerName}</strong> has scheduled a new <strong>${meetingType}</strong> with you.
+      </p>
+
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 6px 0; color: #64748b; width: 130px;"><strong>Topic:</strong></td>
+            <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${meetingTitle}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;"><strong>Date & Time:</strong></td>
+            <td style="padding: 6px 0; color: #6366f1; font-weight: 600;">${dateFormatted}</td>
+          </tr>
+          ${notes ? `<tr>
+            <td style="padding: 6px 0; color: #64748b; vertical-align: top;"><strong>Agenda / Notes:</strong></td>
+            <td style="padding: 6px 0; color: #334155; white-space: pre-wrap;">${notes}</td>
+          </tr>` : ""}
+        </table>
+      </div>
+
+      ${meetLink ? `
+      <div style="text-align: center; margin: 25px 0;">
+        <a href="${meetLink}" target="_blank" style="background-color: #6366f1; color: #ffffff; padding: 12px 28px; text-decoration: none; font-weight: 600; font-size: 15px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.25);">
+          Join Google Meet / Call ↗
+        </a>
+      </div>
+      ` : ""}
+
+      <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+      <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">
+        This meeting is linked to your CRM calendar schedule.
+      </p>
+    </div>
+  `;
+
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.log("\n==================================================");
+    console.log(`[MEETING SCHEDULE EMAIL MOCK]`);
+    console.log(`To: ${attendeeEmail}`);
+    console.log(`Attendee: ${attendeeName}`);
+    console.log(`Meeting: ${meetingTitle}`);
+    console.log(`Time: ${dateFormatted}`);
+    if (meetLink) console.log(`Link: ${meetLink}`);
+    console.log("==================================================\n");
+    return true;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: attendeeEmail,
+      subject: `[AI POWERED CRM] Meeting Scheduled: ${meetingTitle}`,
+      text: messageText,
+      html: messageHtml
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send Meeting Schedule Email via SMTP:", error);
     return true;
   }
 }

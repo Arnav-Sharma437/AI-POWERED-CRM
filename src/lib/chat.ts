@@ -44,7 +44,7 @@ export async function canAccessConversation(conversationId: string, userId: stri
 
 export async function getOrCreateDirectConversation(userAId: string, userBId: string): Promise<any> {
   // Ensure we reuse existing direct conversation between User A and User B
-  const existing = await prisma.conversation.findFirst({
+  const conversations = await prisma.conversation.findMany({
     where: {
       type: "DIRECT",
       AND: [
@@ -63,8 +63,8 @@ export async function getOrCreateDirectConversation(userAId: string, userBId: st
     }
   });
 
-  // Filter to verify it has EXACTLY 2 members (the two users) to avoid matches with group chats if any
-  const matched = existing?.members.length === 2 ? existing : null;
+  // Find exact 2-member conversation
+  const matched = conversations.find(c => c.members.length === 2);
   if (matched) return matched;
 
   // Create new conversation

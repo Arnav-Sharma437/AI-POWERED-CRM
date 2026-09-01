@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 import { mockDb, Lead, Client, Project, Payment, Meeting, Activity, User, Role, Notification, Attachment } from "./mockData";
-import { sendTaskAssignmentRealEmail } from "./email";
+import { sendTaskAssignmentRealEmail, sendMeetingScheduleEmail } from "./email";
 import * as bcrypt from "bcryptjs";
 
 // Global flag to track if we're using mock mode (Prisma connection failed)
@@ -1243,6 +1243,47 @@ export async function createMeeting(data: any, userId: string): Promise<any> {
         projectId: data.projectId || null
       }
     });
+
+    // Create notifications for all assigned users & send email
+    const assignedIds: string[] = data.assignedUserIds || [userId];
+    const organizer = await prisma.user.findUnique({ where: { id: userId } });
+    const organizerName = organizer?.name || "Team Member";
+
+    // Extract meet link from notes if present
+    const meetLinkMatch = data.notes?.match(/https:\/\/[^\s]+/);
+    const meetLink = meetLinkMatch ? meetLinkMatch[0] : undefined;
+
+    for (const uid of assignedIds) {
+      // 1. Create in-app notification
+      await prisma.notification.create({
+        data: {
+          title: `Meeting Scheduled: ${data.title}`,
+          message: `${organizerName} scheduled a ${data.type || "Meeting"} for ${new Date(data.startTime).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}`,
+          type: "MeetingReminder",
+          userId: uid,
+          linkUrl: `/dashboard/calendar`
+        }
+      }).catch(e => console.error("Notification creation error:", e));
+
+      // 2. Send email notification if user has an email
+      try {
+        const attendee = await prisma.user.findUnique({ where: { id: uid } });
+        if (attendee?.email) {
+          await sendMeetingScheduleEmail({
+            attendeeEmail: attendee.email,
+            attendeeName: attendee.name,
+            organizerName,
+            meetingTitle: data.title,
+            meetingType: data.type || "Meeting",
+            startTime: data.startTime,
+            notes: data.notes,
+            meetLink
+          });
+        }
+      } catch (emailErr) {
+        console.error("Failed to send meeting email notification:", emailErr);
+      }
+    }
 
     return meeting;
   }

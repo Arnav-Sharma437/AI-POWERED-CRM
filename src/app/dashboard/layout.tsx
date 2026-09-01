@@ -126,6 +126,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   };
 
+  // Request browser desktop notification permission on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  const sendDesktopNotification = (title: string, body: string, url?: string) => {
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      try {
+        const notif = new Notification(title, {
+          body,
+          icon: "/favicon.ico",
+          badge: "/favicon.ico",
+          tag: `crm-${Date.now()}`
+        });
+        notif.onclick = () => {
+          window.focus();
+          if (url) router.push(url);
+          notif.close();
+        };
+      } catch (e) {
+        console.error("Desktop notification trigger failed:", e);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!currentUser) return;
     const eventSource = new EventSource("/api/chat/realtime");
@@ -145,6 +174,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               linkUrl: `/dashboard/chat?id=${newMsg.conversationId}`
             });
 
+            // Native Desktop / System popup notification if user is in another tab or minimized
+            sendDesktopNotification(
+              `New Message from ${newMsg.senderName}`,
+              newMsg.content || "Sent an attachment in CRM chat",
+              `/dashboard/chat?id=${newMsg.conversationId}`
+            );
+
             // Auto dismiss popup after 6 seconds
             setTimeout(() => {
               setPopupNotification(null);
@@ -156,6 +192,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           // Instant sync for all dashboards, calendar, leads, and projects
           setTriggerRefresh(prev => prev + 1);
           fetchNotifications();
+
+          const upd = payload.data;
+          if (upd && upd.entity === "meeting") {
+            const meeting = upd.meeting;
+            const assignedIds = meeting?.assignedUserIds || meeting?.assignments?.map((a: any) => a.userId) || [];
+            if (assignedIds.includes(currentUser.id)) {
+              setPopupNotification({
+                title: `Meeting Invitation`,
+                message: `Scheduled: "${meeting.title}"`,
+                linkUrl: `/dashboard/calendar`
+              });
+              sendDesktopNotification(
+                `📅 Meeting Scheduled: ${meeting.title}`,
+                `You have a new meeting scheduled on your calendar. Click to view.`,
+                `/dashboard/calendar`
+              );
+              setTimeout(() => {
+                setPopupNotification(null);
+              }, 6000);
+            }
+          }
         }
       } catch (err) {
         console.error("SSE parse error in layout:", err);
