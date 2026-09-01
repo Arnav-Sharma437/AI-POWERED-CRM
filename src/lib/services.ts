@@ -696,7 +696,8 @@ export async function getProjectById(id: string): Promise<any | null> {
         payments: { orderBy: { paymentDate: "desc" } },
         ownershipHistory: { include: { newBda: true }, orderBy: { takeoverDate: "desc" } },
         activities: { include: { user: true }, orderBy: { timestamp: "desc" } },
-        attachments: { include: { uploadedBy: true } }
+        attachments: { include: { uploadedBy: true } },
+        conversations: { select: { id: true } }
       }
     });
 
@@ -995,6 +996,48 @@ export async function sendDevAssignmentEmail(projectId: string, devId: string, w
         projectId
       }
     });
+
+    try {
+      // Find or create Project conversation
+      let conv = await prisma.conversation.findUnique({
+        where: { projectId }
+      });
+      if (!conv) {
+        // Find project BDA to add as default BDA member
+        const proj = await prisma.project.findUnique({ where: { id: projectId } });
+        conv = await prisma.conversation.create({
+          data: {
+            type: "PROJECT",
+            projectId,
+            members: proj ? {
+              create: {
+                userId: proj.primaryBdaId
+              }
+            } : undefined
+          }
+        });
+      }
+
+      // Add developer as conversation member
+      const existingMember = await prisma.conversationMember.findUnique({
+        where: {
+          conversationId_userId: {
+            conversationId: conv.id,
+            userId: devId
+          }
+        }
+      });
+      if (!existingMember) {
+        await prisma.conversationMember.create({
+          data: {
+            conversationId: conv.id,
+            userId: devId
+          }
+        });
+      }
+    } catch (chatErr) {
+      console.error("Failed to add developer to project conversation:", chatErr);
+    }
   }
   return true;
 }

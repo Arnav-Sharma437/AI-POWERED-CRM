@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { 
   LayoutDashboard, Users, UserSquare2, Briefcase, Calendar, 
   Activity, Bell, Trash2, Settings, Plus, Search, LogOut, 
-  User, CheckCircle2, AlertCircle, FileText, CalendarRange, Clock, CreditCard
+  User, CheckCircle2, AlertCircle, FileText, CalendarRange, Clock, CreditCard, MessageSquare
 } from "lucide-react";
 
 // Context for global state sharing (Quick Add triggers, etc.)
@@ -66,6 +66,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+  
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await fetch("/api/chat/conversations");
+      if (res.ok) {
+        const data = await res.json();
+        const count = data.conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+        setUnreadChatCount(count);
+      }
+    } catch (err) {
+      console.error("Failed to fetch unread chat count:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchUnreadCount();
+    }
+  }, [currentUser, triggerRefresh]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const eventSource = new EventSource("/api/chat/realtime");
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === "message" || payload.type === "read") {
+          fetchUnreadCount();
+        }
+      } catch (err) {
+        console.error("SSE parse error in layout:", err);
+      }
+    };
+    return () => {
+      eventSource.close();
+    };
+  }, [currentUser]);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
     setToast({ message, type });
@@ -290,6 +329,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Projects", icon: Briefcase, path: "/dashboard/projects" },
     { name: "Calendar", icon: Calendar, path: "/dashboard/calendar" },
     { name: "Activities", icon: Activity, path: "/dashboard/activities" },
+    { name: "Chat", icon: MessageSquare, path: "/dashboard/chat" },
     { name: "Team", icon: Users, path: "/dashboard/team" },
     { name: "Trash", icon: Trash2, path: "/dashboard/trash" },
   ];
@@ -329,11 +369,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     ...sidebarStyles.navItem,
                     backgroundColor: active ? "var(--primary-light)" : "transparent",
                     color: active ? "var(--primary-color)" : "var(--text-secondary)",
-                    fontWeight: active ? 600 : 500
+                    fontWeight: active ? 600 : 500,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%"
                   }}
                 >
-                  <item.icon size={18} />
-                  {item.name}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <item.icon size={18} />
+                    <span>{item.name}</span>
+                  </div>
+                  {item.name === "Chat" && unreadChatCount > 0 && (
+                    <span style={{
+                      backgroundColor: "var(--danger-color)",
+                      color: "#ffffff",
+                      fontSize: "0.675rem",
+                      fontWeight: 600,
+                      borderRadius: "10px",
+                      padding: "2px 6px",
+                      lineHeight: 1
+                    }}>
+                      {unreadChatCount}
+                    </span>
+                  )}
                 </button>
               );
             })}

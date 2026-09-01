@@ -11,7 +11,38 @@ export async function GET(
     const { id } = await params;
     const project = await getProjectById(id);
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    return NextResponse.json({ success: true, project });
+
+    const conversations = (project as any).conversations || [];
+    let conversationId = conversations[0]?.id;
+
+    if (!conversationId) {
+      const { prisma } = await import("@/lib/db");
+      let conv = await prisma.conversation.findUnique({
+        where: { projectId: id }
+      });
+      if (!conv) {
+        conv = await prisma.conversation.create({
+          data: {
+            type: "PROJECT",
+            projectId: id,
+            members: {
+              create: {
+                userId: project.primaryBdaId
+              }
+            }
+          }
+        });
+      }
+      conversationId = conv.id;
+    }
+
+    return NextResponse.json({
+      success: true,
+      project: {
+        ...project,
+        conversationId
+      }
+    });
   } catch (error) {
     console.error("Project GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -102,7 +102,7 @@ export default function TeamPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Action failed");
 
-      showToast(`User ${activeModal === "edit" ? "updated" : "added"} successfully!`);
+      showToast(activeModal === "edit" ? "User updated successfully!" : "User added successfully & onboarding email sent!");
       setActiveModal(null);
       setTriggerRefresh(prev => prev + 1);
     } catch (err: any) {

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, use, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, CreditCard, UserPlus, RefreshCw, AlertOctagon, 
-  Plus, Calendar, Mail, FileText, CheckCircle2, DollarSign 
+  Plus, Calendar, Mail, FileText, CheckCircle2, DollarSign,
+  Send, Paperclip, MessageSquare, Trash2, X
 } from "lucide-react";
 import { useDashboard } from "../../layout";
 
@@ -19,6 +20,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<any>(null);
 
+  // Mini chat states
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatText, setChatText] = useState("");
+  const [chatStagedAttachments, setChatStagedAttachments] = useState<any[]>([]);
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
+
   // Modal / Input States
   const [activeModal, setActiveModal] = useState<string | null>(null); // 'payment' | 'takeover' | 'assign' | 'status'
   const [paymentForm, setPaymentForm] = useState({ amount: "", note: "" });
@@ -28,6 +36,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const [actionLoading, setActionLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+
+  const loadChatMessages = async (convId: string) => {
+    try {
+      const res = await fetch(`/api/chat/conversations/${convId}/messages`);
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages(data.messages || []);
+      }
+    } catch (err) {
+      console.error("Failed to load project chat messages:", err);
+    }
+  };
 
   useEffect(() => {
     async function loadProjectDetails() {
@@ -41,6 +61,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           status: data.project.status,
           issueDescription: data.project.issueDescription || ""
         });
+
+        if (data.project.conversationId) {
+          loadChatMessages(data.project.conversationId);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -49,6 +73,118 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
     loadProjectDetails();
   }, [id, triggerRefresh]);
+
+  // SSE subscription for project detail chat
+  useEffect(() => {
+    if (!currentUser || !project?.conversationId) return;
+
+    const eventSource = new EventSource("/api/chat/realtime");
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === "message" && payload.data.conversationId === project.conversationId) {
+          const newMsg = payload.data;
+          setChatMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+        } else if (payload.type === "delete" && payload.data.conversationId === project.conversationId) {
+          const deleteData = payload.data;
+          setChatMessages((prev) =>
+            prev.map((m) =>
+              m.id === deleteData.id
+                ? { ...m, content: "This message was deleted.", isDeleted: true }
+                : m
+            )
+          );
+        }
+      } catch (err) {
+        console.error("SSE parse error in project details:", err);
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [currentUser, project?.conversationId]);
+
+  // Auto-scroll project chat
+  useEffect(() => {
+    chatMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  const handleSendChatMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatText.trim() && chatStagedAttachments.length === 0) return;
+    if (!project?.conversationId) return;
+
+    const payload = {
+      content: chatText,
+      attachments: chatStagedAttachments.map((a) => ({
+        fileName: a.name,
+        fileType: a.type,
+        base64: a.base64
+      }))
+    };
+
+    setChatText("");
+    setChatStagedAttachments([]);
+
+    try {
+      const res = await fetch(`/api/chat/conversations/${project.conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(errData.error || "Failed to send message");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleChatFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`${file.name} exceeds the 10MB limit.`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64String = (reader.result as string).split(",")[1];
+        setChatStagedAttachments((prev) => [
+          ...prev,
+          {
+            name: file.name,
+            type: file.type || "application/octet-stream",
+            size: file.size,
+            base64: base64String
+          }
+        ]);
+      };
+    });
+  };
+
+  const handleDeleteChatMessage = async (msgId: string) => {
+    if (!confirm("Delete this message?")) return;
+    try {
+      const res = await fetch(`/api/chat/messages/${msgId}/delete`, { method: "POST" });
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(errData.error || "Failed to delete message");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleActionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -299,6 +435,216 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
       </div>
+
+      {/* Project Chat Card */}
+      {project?.conversationId && (
+        <div className="crm-card" style={{ marginTop: "1.5rem", padding: "1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <MessageSquare size={18} style={{ color: "var(--primary-color)" }} />
+              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: 0 }}>
+                Project Team Chat
+              </h3>
+            </div>
+            <button 
+              onClick={() => router.push(`/dashboard/chat?id=${project.conversationId}`)}
+              style={{
+                border: "none",
+                background: "none",
+                color: "var(--primary-color)",
+                fontSize: "0.8125rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                textDecoration: "underline"
+              }}
+            >
+              Open Full Chat View
+            </button>
+          </div>
+          
+          <div style={{ 
+            height: "350px", 
+            display: "flex", 
+            flexDirection: "column", 
+            border: "1px solid var(--border-primary)", 
+            borderRadius: "8px", 
+            overflow: "hidden",
+            backgroundColor: "var(--bg-secondary)"
+          }}>
+            {/* Messages Panel */}
+            <div style={{ 
+              flex: 1, 
+              overflowY: "auto", 
+              padding: "1rem", 
+              display: "flex", 
+              flexDirection: "column", 
+              gap: "0.75rem" 
+            }}>
+              {chatMessages.length === 0 ? (
+                <div style={{ margin: "auto", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+                  No messages yet. Send a message to start!
+                </div>
+              ) : (
+                chatMessages.map((m) => {
+                  const isMe = m.senderId === currentUser?.id;
+                  return (
+                    <div 
+                      key={m.id} 
+                      style={{ 
+                        display: "flex", 
+                        justifyContent: isMe ? "flex-end" : "flex-start",
+                        width: "100%"
+                      }}
+                    >
+                      <div style={{ 
+                        maxWidth: "80%", 
+                        padding: "0.5rem 0.75rem", 
+                        borderRadius: "8px", 
+                        backgroundColor: isMe ? "var(--primary-color)" : "var(--bg-primary)",
+                        color: isMe ? "#ffffff" : "var(--text-primary)"
+                      }}>
+                        {!isMe && (
+                          <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--primary-color)", marginBottom: "0.15rem" }}>
+                            {m.senderName}
+                          </div>
+                        )}
+                        <div style={{ fontSize: "0.875rem" }}>{m.content}</div>
+
+                        {/* Attachments rendering */}
+                        {m.attachments && m.attachments.length > 0 && (
+                          <div style={{ marginTop: "0.25rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                            {m.attachments.map((att: any) => {
+                              const isImage = att.fileType.startsWith("image/");
+                              return (
+                                <div key={att.id}>
+                                  {isImage ? (
+                                    <a href={`/api/chat/attachments/${att.id}`} target="_blank" rel="noopener noreferrer">
+                                      <img 
+                                        src={`/api/chat/attachments/${att.id}`} 
+                                        alt={att.fileName} 
+                                        style={{ maxWidth: "120px", maxHeight: "100px", borderRadius: "4px", marginTop: "0.25rem" }} 
+                                      />
+                                    </a>
+                                  ) : (
+                                    <a 
+                                      href={`/api/chat/attachments/${att.id}`} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "0.25rem",
+                                        fontSize: "0.75rem",
+                                        color: isMe ? "#ffffff" : "var(--primary-color)"
+                                      }}
+                                    >
+                                      <FileText size={14} />
+                                      <span style={{ textDecoration: "underline" }}>{att.fileName}</span>
+                                    </a>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.35rem", fontSize: "0.675rem", opacity: 0.8, marginTop: "0.15rem" }}>
+                          <span>
+                            {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          {isMe && !m.isDeleted && (
+                            <button 
+                              onClick={() => handleDeleteChatMessage(m.id)}
+                              style={{ border: "none", background: "none", color: "var(--danger-color)", cursor: "pointer", padding: 0 }}
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={chatMessagesEndRef} />
+            </div>
+
+            {/* Composer Panel */}
+            <form onSubmit={handleSendChatMessage} style={{ 
+              borderTop: "1px solid var(--border-primary)", 
+              padding: "0.5rem 0.75rem", 
+              backgroundColor: "var(--bg-primary)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.25rem"
+            }}>
+              {chatStagedAttachments.length > 0 && (
+                <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap", marginBottom: "0.25rem" }}>
+                  {chatStagedAttachments.map((att, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.25rem", backgroundColor: "var(--bg-secondary)", borderRadius: "4px", padding: "0.15rem 0.35rem", fontSize: "0.75rem" }}>
+                      <FileText size={12} />
+                      <span style={{ maxWidth: "80px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.name}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setChatStagedAttachments(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ border: "none", background: "none", color: "var(--danger-color)", cursor: "pointer", padding: 0 }}
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <button 
+                  type="button" 
+                  onClick={() => chatFileInputRef.current?.click()}
+                  style={{ border: "none", background: "none", color: "var(--text-secondary)", cursor: "pointer", padding: "0.25rem" }}
+                >
+                  <Paperclip size={16} />
+                </button>
+                <input 
+                  type="file" 
+                  multiple 
+                  ref={chatFileInputRef}
+                  onChange={handleChatFileChange}
+                  style={{ display: "none" }}
+                />
+                <input 
+                  type="text" 
+                  placeholder="Type message..." 
+                  value={chatText}
+                  onChange={(e) => setChatText(e.target.value)}
+                  style={{ 
+                    flex: 1, 
+                    padding: "0.375rem 0.75rem", 
+                    borderRadius: "4px", 
+                    border: "1px solid var(--border-primary)", 
+                    backgroundColor: "var(--bg-secondary)", 
+                    color: "var(--text-primary)",
+                    fontSize: "0.875rem",
+                    outline: "none"
+                  }}
+                />
+                <button type="submit" style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  width: "28px", 
+                  height: "28px", 
+                  borderRadius: "4px", 
+                  border: "none", 
+                  backgroundColor: "var(--primary-color)", 
+                  color: "#ffffff", 
+                  cursor: "pointer" 
+                }}>
+                  <Send size={12} />
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Toast Alert */}
       {toastMessage && (

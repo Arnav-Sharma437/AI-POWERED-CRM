@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyJWT } from "@/lib/auth";
 import { listUsers, getUserById } from "@/lib/services";
+import { sendTeamMemberWelcomeEmail } from "@/lib/email";
 import * as bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -78,6 +79,23 @@ export async function POST(request: Request) {
         role: true
       }
     });
+
+    // Send onboarding welcome email with login details and task notification
+    const host = request.headers.get("host") || "localhost:3000";
+    const protocol = request.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+    const loginUrl = `${protocol}://${host}/login`;
+
+    try {
+      await sendTeamMemberWelcomeEmail({
+        name: newUser.name,
+        email: newUser.email,
+        roleName: newUser.role.name,
+        password,
+        loginUrl
+      });
+    } catch (emailErr) {
+      console.error("Failed to send welcome email to new team member:", emailErr);
+    }
 
     return NextResponse.json({
       success: true,
