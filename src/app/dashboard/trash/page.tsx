@@ -16,14 +16,14 @@ export default function TrashPage() {
   useEffect(() => {
     async function loadTrashData() {
       try {
-        const leadRes = await fetch("/api/leads");
+        const leadRes = await fetch("/api/leads?includeTrashed=true");
         if (leadRes.ok) {
           const leadData = await leadRes.json();
           // Filter trashed leads
           setTrashedLeads(leadData.leads?.filter((l: any) => l.isTrashed) || []);
         }
 
-        const projectRes = await fetch("/api/projects");
+        const projectRes = await fetch("/api/projects?includeTrashed=true");
         if (projectRes.ok) {
           const projectData = await projectRes.json();
           // Filter trashed projects

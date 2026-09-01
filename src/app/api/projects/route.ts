@@ -6,9 +6,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const includeTrashed = searchParams.get("includeTrashed") === "true";
+
     const session = await verifySession(request);
     const userContext = session ? { userId: session.userId, roleName: session.roleName } : undefined;
-    const projects = await listProjects(false, userContext);
+    const projects = await listProjects(includeTrashed, userContext);
     return NextResponse.json({ success: true, projects });
   } catch (error) {
     console.error("Projects GET error:", error);

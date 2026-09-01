@@ -4,9 +4,12 @@ import { listLeads, createLead } from "@/lib/services";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const leads = await listLeads();
+    const { searchParams } = new URL(request.url);
+    const includeTrashed = searchParams.get("includeTrashed") === "true";
+
+    const leads = await listLeads(includeTrashed);
     return NextResponse.json({ success: true, leads });
   } catch (error) {
     console.error("Leads GET error:", error);
