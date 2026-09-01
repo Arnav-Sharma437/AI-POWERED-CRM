@@ -147,20 +147,23 @@ export default function CalendarPage() {
     if (!meetingForm.title || !meetingForm.startTime) return;
     setScheduleLoading(true);
 
-    // Generate google meet room ID
-    const randomCode = Math.random().toString(36).substring(2, 5) + "-" + Math.random().toString(36).substring(2, 6) + "-" + Math.random().toString(36).substring(2, 5);
-    const gmeetLink = meetingForm.customMeetLink.trim() || `https://meet.google.com/${randomCode}`;
+    const gmeetLink = meetingForm.customMeetLink.trim();
 
     const attendees = Array.from(new Set([
       ...(meetingForm.assignedUserIds.length > 0 ? meetingForm.assignedUserIds : []),
       currentUser?.id
     ].filter(Boolean)));
 
+    let notesText = meetingForm.notes ? meetingForm.notes.trim() : "";
+    if (gmeetLink) {
+      notesText = notesText ? `${notesText}\n\nGoogle Meet Link: ${gmeetLink}` : `Google Meet Link: ${gmeetLink}`;
+    }
+
     const newMeetingData = {
       title: meetingForm.title,
       type: "Meeting",
       startTime: new Date(meetingForm.startTime).toISOString(),
-      notes: `${meetingForm.notes ? meetingForm.notes + "\n\n" : ""}Google Meet Link: ${gmeetLink}`,
+      notes: notesText,
       projectId: meetingForm.projectId || undefined,
       assignedUserIds: attendees
     };
@@ -556,16 +559,29 @@ export default function CalendarPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
-                  Custom Google Meet URL (Leave blank to auto-generate)
-                </label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+                    Google Meet URL / Meeting Link
+                  </label>
+                  <a 
+                    href="https://meet.google.com/new" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ fontSize: "0.75rem", color: "var(--primary-color)", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: "3px" }}
+                  >
+                    <Plus size={12} /> Create on Google Meet <ExternalLink size={11} />
+                  </a>
+                </div>
                 <input 
                   type="url" 
                   className="crm-input"
-                  placeholder="https://meet.google.com/xxx-yyyy-zzz"
+                  placeholder="https://meet.google.com/abc-defg-hij"
                   value={meetingForm.customMeetLink}
                   onChange={(e) => setMeetingForm(prev => ({ ...prev, customMeetLink: e.target.value }))}
                 />
+                <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "3px", display: "block" }}>
+                  Click "Create on Google Meet" to open a real meeting room, then paste the link here.
+                </span>
               </div>
 
               <div>
