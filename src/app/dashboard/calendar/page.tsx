@@ -728,6 +728,62 @@ export default function CalendarPage() {
                   <Briefcase size={15} /> View Project Workspace →
                 </button>
               )}
+
+              {/* Super Admin Manage & Delete Controls */}
+              {selectedEvent.eventKind !== "deadline" && (
+                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", borderTop: "1px solid var(--border-primary)", paddingTop: "1rem" }}>
+                  {currentUser?.roleName === "Super Admin" || currentUser?.roleName === "BDA" ? (
+                    <button
+                      onClick={async () => {
+                        const newStatus = selectedEvent.status === "Completed" ? "Upcoming" : "Completed";
+                        try {
+                          const res = await fetch(`/api/meetings/${selectedEvent.id}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ status: newStatus })
+                          });
+                          if (res.ok) {
+                            setMeetings(prev => prev.map(m => m.id === selectedEvent.id ? { ...m, status: newStatus } : m));
+                            setSelectedEvent(null);
+                          }
+                        } catch (e) {
+                          console.error(e);
+                        }
+                      }}
+                      className="crm-btn crm-btn-secondary"
+                      style={{ flex: 1, justifyContent: "center", fontSize: "0.75rem" }}
+                    >
+                      <CheckCircle2 size={13} /> {selectedEvent.status === "Completed" ? "Mark Upcoming" : "Mark Completed"}
+                    </button>
+                  ) : null}
+
+                  {currentUser?.roleName === "Super Admin" && (
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Are you sure you want to delete meeting "${selectedEvent.title}"?`)) {
+                          try {
+                            const res = await fetch(`/api/meetings/${selectedEvent.id}`, { method: "DELETE" });
+                            if (res.ok) {
+                              setMeetings(prev => prev.filter(m => m.id !== selectedEvent.id));
+                              setSelectedEvent(null);
+                            } else {
+                              const err = await res.json();
+                              alert(err.error || "Failed to delete meeting");
+                            }
+                          } catch (e) {
+                            console.error(e);
+                          }
+                        }
+                      }}
+                      className="crm-btn"
+                      style={{ backgroundColor: "var(--danger-light)", color: "var(--danger-color)", borderColor: "var(--danger-color)", fontSize: "0.75rem", padding: "0.5rem 0.75rem" }}
+                      title="Delete meeting (Super Admin)"
+                    >
+                      <Trash2 size={13} /> Delete
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

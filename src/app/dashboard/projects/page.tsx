@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Search, Plus, Calendar, AlertCircle, CheckCircle2, 
-  CircleDollarSign, LayoutGrid, Table, Clock, User, ArrowRight
+  CircleDollarSign, LayoutGrid, Table, Clock, User, ArrowRight, Trash2
 } from "lucide-react";
 import { useDashboard } from "../layout";
 
@@ -372,13 +372,40 @@ export default function ProjectsPage() {
                       </div>
                     </td>
                     <td style={{ textAlign: "right" }}>
-                      <button 
-                        onClick={() => router.push(`/dashboard/projects/${p.id}`)}
-                        className="crm-btn crm-btn-secondary"
-                        style={{ padding: "0.375rem 0.75rem", fontSize: "0.75rem" }}
-                      >
-                        Project board
-                      </button>
+                      <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", alignItems: "center" }}>
+                        <button 
+                          onClick={() => router.push(`/dashboard/projects/${p.id}`)}
+                          className="crm-btn crm-btn-secondary"
+                          style={{ padding: "0.375rem 0.75rem", fontSize: "0.75rem" }}
+                        >
+                          Project board
+                        </button>
+                        {currentUser?.roleName === "Super Admin" && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (confirm(`Delete project "${p.name}"?`)) {
+                                try {
+                                  const res = await fetch(`/api/projects/${p.id}`, { method: "DELETE" });
+                                  if (res.ok) {
+                                    setProjects(prev => prev.filter(item => item.id !== p.id));
+                                  } else {
+                                    const data = await res.json();
+                                    alert(data.error || "Failed to delete project");
+                                  }
+                                } catch (err) {
+                                  console.error(err);
+                                }
+                              }
+                            }}
+                            className="crm-btn"
+                            style={{ padding: "0.375rem 0.5rem", fontSize: "0.75rem", color: "var(--danger-color)", backgroundColor: "var(--danger-light)", borderColor: "var(--danger-color)" }}
+                            title="Delete Project"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

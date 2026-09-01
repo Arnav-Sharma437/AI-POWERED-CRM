@@ -1363,6 +1363,21 @@ export async function updateMeeting(id: string, data: any, userId: string): Prom
   }
 }
 
+export async function deleteMeeting(id: string, userId: string): Promise<boolean> {
+  await checkDbConnection();
+  if (isMockMode) {
+    const idx = mockDb.meetings.findIndex(m => m.id === id);
+    if (idx !== -1) {
+      mockDb.meetings.splice(idx, 1);
+    }
+    return true;
+  } else {
+    await prisma.meetingAssignment.deleteMany({ where: { meetingId: id } });
+    await prisma.meeting.delete({ where: { id } });
+    return true;
+  }
+}
+
 // -------------------------------------------------------------
 // NOTIFICATIONS SERVICES
 // -------------------------------------------------------------

@@ -312,7 +312,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
           <button onClick={() => setActiveModal("status")} className="crm-btn crm-btn-secondary"><RefreshCw size={14} /> Update Status ({project.status})</button>
           {!isDeveloper && (
             <>
@@ -320,6 +320,32 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <button onClick={() => setActiveModal("takeover")} className="crm-btn crm-btn-secondary"><UserPlus size={14} /> BDA Takeover</button>
               <button onClick={() => setActiveModal("assign")} className="crm-btn crm-btn-primary"><Mail size={14} /> Assign Developer</button>
             </>
+          )}
+          {currentUser?.roleName === "Super Admin" && (
+            <button
+              onClick={async () => {
+                if (confirm(`Are you sure you want to delete project "${project.name}"? It will be moved to Trash.`)) {
+                  try {
+                    const res = await fetch(`/api/projects/${project.id}`, { method: "DELETE" });
+                    if (res.ok) {
+                      setTriggerRefresh(prev => prev + 1);
+                      router.push("/dashboard/projects");
+                    } else {
+                      const data = await res.json();
+                      alert(data.error || "Failed to delete project");
+                    }
+                  } catch (e) {
+                    console.error(e);
+                    alert("Failed to delete project");
+                  }
+                }
+              }}
+              className="crm-btn"
+              style={{ backgroundColor: "var(--danger-light)", color: "var(--danger-color)", borderColor: "var(--danger-color)" }}
+              title="Delete Project (Super Admin only)"
+            >
+              <Trash2 size={14} /> Delete Project
+            </button>
           )}
         </div>
       </div>
