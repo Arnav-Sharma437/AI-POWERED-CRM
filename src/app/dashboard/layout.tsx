@@ -367,9 +367,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Trash", icon: Trash2, path: "/dashboard/trash" },
   ];
 
-  // Role-based navigation: Developers only see Dashboard, Projects, and Chat
+  // Role-based navigation: Developers see Dashboard, Projects, Calendar, and Chat
   const navItems = currentUser?.roleName === "Developer"
-    ? allNavItems.filter(item => ["Dashboard", "Projects", "Chat"].includes(item.name))
+    ? allNavItems.filter(item => ["Dashboard", "Projects", "Calendar", "Chat"].includes(item.name))
     : allNavItems;
 
   return (

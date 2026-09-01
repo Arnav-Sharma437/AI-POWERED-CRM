@@ -13,9 +13,11 @@ type CalendarView = "month" | "week" | "day" | "list";
 export default function CalendarPage() {
   const router = useRouter();
   const { currentUser, bdas } = useDashboard();
+  const isDeveloper = currentUser?.roleName === "Developer";
   
   const [loading, setLoading] = useState(true);
   const [meetings, setMeetings] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>("month");
   
@@ -23,20 +25,27 @@ export default function CalendarPage() {
   const [filterType, setFilterType] = useState<"all" | "my" | string>("all"); // 'all' | 'my' | bdaUserId
 
   useEffect(() => {
-    async function loadMeetings() {
+    async function loadCalendarData() {
       try {
-        const res = await fetch("/api/meetings");
-        if (res.ok) {
-          const data = await res.json();
-          setMeetings(data.meetings || []);
+        const [meetRes, projRes] = await Promise.all([
+          fetch("/api/meetings"),
+          fetch("/api/projects")
+        ]);
+        if (meetRes.ok) {
+          const meetData = await meetRes.json();
+          setMeetings(meetData.meetings || []);
+        }
+        if (projRes.ok) {
+          const projData = await projRes.json();
+          setProjects(projData.projects || []);
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error loading calendar events:", err);
       } finally {
         setLoading(false);
       }
     }
-    loadMeetings();
+    loadCalendarData();
   }, []);
 
   // Filter meetings
@@ -46,6 +55,18 @@ export default function CalendarPage() {
       return m.assignedUserIds?.includes(currentUser.id) || m.assignments?.some((a: any) => a.userId === currentUser.id);
     }
     return m.assignedUserIds?.includes(filterType) || m.assignments?.some((a: any) => a.userId === filterType);
+  });
+
+  // Filter projects with deadlines
+  const filteredProjects = projects.filter(p => {
+    if (!p.deadline) return false;
+    if (filterType === "my" && currentUser && !isDeveloper) {
+      return p.primaryBdaId === currentUser.id;
+    }
+    if (filterType !== "all" && filterType !== "my") {
+      return p.primaryBdaId === filterType;
+    }
+    return true;
   });
 
   // Month navigation
@@ -73,15 +94,34 @@ export default function CalendarPage() {
   const daysArray = Array.from({ length: days }, (_, i) => i + 1);
   const blanksArray = Array.from({ length: firstDayIndex }, (_, i) => i);
 
-  const getMeetingsForDay = (day: number) => {
-    return filteredMeetings.filter(m => {
+  const getEventsForDay = (day: number) => {
+    const dayMeetings = filteredMeetings.filter(m => {
       const mDate = new Date(m.startTime);
       return (
         mDate.getDate() === day &&
         mDate.getMonth() === currentDate.getMonth() &&
         mDate.getFullYear() === currentDate.getFullYear()
       );
-    });
+    }).map(m => ({ ...m, eventKind: "meeting" }));
+
+    const dayDeadlines = filteredProjects.filter(p => {
+      const pDate = new Date(p.deadline);
+      return (
+        pDate.getDate() === day &&
+        pDate.getMonth() === currentDate.getMonth() &&
+        pDate.getFullYear() === currentDate.getFullYear()
+      );
+    }).map(p => ({
+      id: `proj-${p.id}`,
+      title: `🏁 Deadline: ${p.name}`,
+      type: "Deadline",
+      startTime: p.deadline,
+      projectId: p.id,
+      status: p.status,
+      eventKind: "deadline"
+    }));
+
+    return [...dayMeetings, ...dayDeadlines];
   };
 
   return (
@@ -164,7 +204,7 @@ export default function CalendarPage() {
 
           {/* Actual days */}
           {daysArray.map(day => {
-            const dayMeetings = getMeetingsForDay(day);
+            const dayEvents = getEventsForDay(day);
             const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
             return (
               <div key={day} style={{ ...styles.calendarCell, backgroundColor: isToday ? "rgba(99, 102, 241, 0.03)" : "var(--bg-secondary)" }}>
@@ -177,21 +217,22 @@ export default function CalendarPage() {
                 </span>
 
                 <div style={styles.eventContainer}>
-                  {dayMeetings.map(m => (
+                  {dayEvents.map(m => (
                     <div 
                       key={m.id} 
                       onClick={() => {
-                        if (m.leadId) router.push(`/dashboard/leads/${m.leadId}`);
-                        else if (m.projectId) router.push(`/dashboard/projects/${m.projectId}`);
+                        if (m.projectId) router.push(`/dashboard/projects/${m.projectId}`);
+                        else if (m.leadId) router.push(`/dashboard/leads/${m.leadId}`);
                       }}
                       style={{
                         ...styles.eventItem,
-                        borderLeftColor: m.type === "Call" ? "var(--info-color)" : m.type === "Follow-up" ? "var(--warning-color)" : "var(--primary-color)"
+                        borderLeftColor: m.eventKind === "deadline" ? "var(--danger-color)" : m.type === "Call" ? "var(--info-color)" : m.type === "Follow-up" ? "var(--warning-color)" : "var(--primary-color)",
+                        backgroundColor: m.eventKind === "deadline" ? "rgba(239, 68, 68, 0.08)" : "var(--bg-primary)"
                       }}
                     >
-                      <div style={styles.eventTitle}>{m.title}</div>
+                      <div style={{ ...styles.eventTitle, fontWeight: m.eventKind === "deadline" ? 600 : 500 }}>{m.title}</div>
                       <div style={styles.eventTime}>
-                        {new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {m.eventKind === "deadline" ? "Target Due" : new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   ))}
@@ -203,25 +244,37 @@ export default function CalendarPage() {
       ) : (
         /* List View */
         <div className="crm-card" style={{ padding: 0 }}>
-          {filteredMeetings.length === 0 ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-tertiary)" }}>No meetings scheduled for this filter.</div>
+          {filteredMeetings.length === 0 && filteredProjects.length === 0 ? (
+            <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-tertiary)" }}>No meetings or deadlines scheduled for this filter.</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column" }}>
-              {filteredMeetings.sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()).map((m) => (
+              {[
+                ...filteredMeetings.map(m => ({ ...m, eventKind: "meeting" })),
+                ...filteredProjects.map(p => ({
+                  id: `proj-${p.id}`,
+                  title: `Deadline: ${p.name}`,
+                  type: "Project Deadline",
+                  startTime: p.deadline,
+                  projectId: p.id,
+                  status: p.status,
+                  eventKind: "deadline",
+                  project: p
+                }))
+              ].sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()).map((m) => (
                 <div 
                   key={m.id} 
                   onClick={() => {
-                    if (m.leadId) router.push(`/dashboard/leads/${m.leadId}`);
-                    else if (m.projectId) router.push(`/dashboard/projects/${m.projectId}`);
+                    if (m.projectId) router.push(`/dashboard/projects/${m.projectId}`);
+                    else if (m.leadId) router.push(`/dashboard/leads/${m.leadId}`);
                   }}
                   style={styles.listItem}
                 >
                   <div style={styles.listItemTimeCol}>
-                    <CalendarIcon size={16} style={{ color: "var(--text-tertiary)" }} />
+                    <CalendarIcon size={16} style={{ color: m.eventKind === "deadline" ? "var(--danger-color)" : "var(--text-tertiary)" }} />
                     <div>
-                      <div style={{ fontWeight: 600 }}>{new Date(m.startTime).toLocaleDateString()}</div>
+                      <div style={{ fontWeight: 600, color: m.eventKind === "deadline" ? "var(--danger-color)" : "inherit" }}>{new Date(m.startTime).toLocaleDateString()}</div>
                       <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                        {new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {m.eventKind === "deadline" ? "Deadline" : new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>
@@ -234,7 +287,7 @@ export default function CalendarPage() {
                   </div>
 
                   <div>
-                    <span className={`badge ${m.status === "Completed" ? "badge-success" : "badge-info"}`}>{m.status}</span>
+                    <span className={`badge ${m.status === "Completed" ? "badge-success" : m.status === "Issue" ? "badge-danger" : "badge-info"}`}>{m.status}</span>
                   </div>
                 </div>
               ))}
