@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Loader2, ArrowRight, ShieldCheck, RefreshCw } from "lucide-react";
+import { Lock, Mail, Loader2, ArrowRight, ShieldCheck, RefreshCw, Sparkles } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -121,14 +121,59 @@ export default function LoginPage() {
     <div style={styles.container}>
       <div style={styles.glassCard} className="animate-fade-in">
         <div style={styles.header}>
-          <div style={styles.logoBox}>
-            <span style={styles.logoText}>BDA</span>
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "56px",
+            height: "56px",
+            borderRadius: "14px",
+            background: "linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)",
+            boxShadow: "0 6px 20px rgba(99, 102, 241, 0.4)",
+            marginBottom: "1rem",
+            position: "relative"
+          }}>
+            <Sparkles size={28} color="#ffffff" />
+            <span style={{
+              position: "absolute",
+              top: "-2px",
+              right: "-2px",
+              width: "10px",
+              height: "10px",
+              borderRadius: "50%",
+              backgroundColor: "#10b981",
+              boxShadow: "0 0 10px #10b981"
+            }} />
+          </div>
+          
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
+            <span style={{
+              fontSize: "1.5rem",
+              fontWeight: 800,
+              background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              letterSpacing: "-0.5px"
+            }}>
+              NEXUS AI
+            </span>
+            <span style={{
+              fontSize: "0.7rem",
+              fontWeight: 700,
+              backgroundColor: "rgba(99, 102, 241, 0.15)",
+              color: "var(--primary-color)",
+              padding: "2px 6px",
+              borderRadius: "4px",
+              border: "1px solid rgba(99, 102, 241, 0.3)"
+            }}>
+              CRM
+            </span>
           </div>
           
           {!requiresOtp ? (
             <>
-              <h2 style={styles.title}>Welcome Back</h2>
-              <p style={styles.subtitle}>Sign in to access your CRM Dashboard</p>
+              <h2 style={styles.title}>AI-Powered Lead Management</h2>
+              <p style={styles.subtitle}>Sign in to access your intelligent sales & project workspace</p>
             </>
           ) : (
             <>

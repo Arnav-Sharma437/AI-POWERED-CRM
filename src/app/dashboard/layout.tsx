@@ -5,7 +5,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { 
   LayoutDashboard, Users, UserSquare2, Briefcase, Calendar, 
   Activity, Bell, Trash2, Settings, Plus, Search, LogOut, 
-  User, CheckCircle2, AlertCircle, FileText, CalendarRange, Clock, CreditCard, MessageSquare
+  User, CheckCircle2, AlertCircle, FileText, CalendarRange, Clock, CreditCard, MessageSquare,
+  Sparkles, Zap, Cpu, Bot
 } from "lucide-react";
 
 // Context for global state sharing (Quick Add triggers, etc.)
@@ -392,8 +393,68 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Left Sidebar */}
         <aside className="crm-sidebar">
           <div style={sidebarStyles.logoArea}>
-            <div style={sidebarStyles.logo}>BDA</div>
-            <span style={sidebarStyles.logoSubtitle}>Internal CRM</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", cursor: "pointer" }} onClick={() => router.push("/dashboard")}>
+              <div style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "10px",
+                background: "linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 14px rgba(99, 102, 241, 0.4)",
+                flexShrink: 0,
+                position: "relative"
+              }}>
+                <Sparkles size={22} color="#ffffff" />
+                <span style={{
+                  position: "absolute",
+                  top: "-2px",
+                  right: "-2px",
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  backgroundColor: "#10b981",
+                  boxShadow: "0 0 8px #10b981"
+                }} />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <span style={{
+                    fontSize: "1.1rem",
+                    fontWeight: 800,
+                    letterSpacing: "-0.4px",
+                    background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent"
+                  }}>
+                    NEXUS AI
+                  </span>
+                  <span style={{
+                    fontSize: "0.6rem",
+                    fontWeight: 700,
+                    backgroundColor: "rgba(99, 102, 241, 0.15)",
+                    color: "var(--primary-color)",
+                    padding: "1px 5px",
+                    borderRadius: "4px",
+                    border: "1px solid rgba(99, 102, 241, 0.3)",
+                    letterSpacing: "0.5px"
+                  }}>
+                    PRO
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: "0.65rem",
+                  fontWeight: 600,
+                  color: "var(--text-tertiary)",
+                  letterSpacing: "0.4px",
+                  lineHeight: 1.2,
+                  marginTop: "1px"
+                }}>
+                  AI Lead Management CRM
+                </span>
+              </div>
+            </div>
           </div>
 
           <nav style={sidebarStyles.nav}>

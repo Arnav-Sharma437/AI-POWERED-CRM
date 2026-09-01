@@ -20,7 +20,7 @@ export default function SettingsPage() {
         {/* Profile Card */}
         {currentUser && (
           <div className="crm-card">
-            <h3 style={styles.cardTitle}>My BDA Profile</h3>
+            <h3 style={styles.cardTitle}>My Profile</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
               <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
                 <div style={{ 
