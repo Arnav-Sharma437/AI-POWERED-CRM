@@ -11,18 +11,27 @@ import { useDashboard } from "./layout";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { openQuickAdd, triggerRefresh } = useDashboard();
+  const { openQuickAdd, triggerRefresh, currentUser } = useDashboard();
+  const isDeveloper = currentUser?.roleName === "Developer";
   
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const [devProjects, setDevProjects] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch("/api/dashboard/stats");
-        if (res.ok) {
-          const statsData = await res.json();
+        const [statsRes, projRes] = await Promise.all([
+          fetch("/api/dashboard/stats"),
+          fetch("/api/projects")
+        ]);
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
           setData(statsData.stats);
+        }
+        if (projRes.ok) {
+          const projData = await projRes.json();
+          setDevProjects(projData.projects || []);
         }
       } catch (err) {
         console.error("Error loading dashboard stats", err);
@@ -37,13 +46,26 @@ export default function DashboardPage() {
     return (
       <div style={styles.loadingContainer}>
         <div style={styles.spinner} />
-        <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>Loading CRM Analytics...</p>
+        <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>Loading Workspace...</p>
       </div>
     );
   }
 
   if (!data) return <div style={{ padding: "2rem" }}>Error loading dashboard data.</div>;
 
+  // Developer Specific KPIs
+  const devKpiList = [
+    { name: "Assigned Projects", val: devProjects.length, icon: Briefcase, color: "var(--primary-color)", bg: "var(--primary-light)", link: "/dashboard/projects" },
+    { name: "In Progress", val: devProjects.filter(p => p.status === "Work in Progress").length, icon: Clock, color: "var(--info-color)", bg: "var(--info-light)", link: "/dashboard/projects" },
+    { name: "In Review / QA", val: devProjects.filter(p => p.status === "Review").length, icon: CheckCircle, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", link: "/dashboard/projects" },
+    { name: "Flagged Issues", val: devProjects.filter(p => p.status === "Issue").length, icon: AlertTriangle, color: "var(--danger-color)", bg: "var(--danger-light)", link: "/dashboard/projects" },
+    { name: "Deadlines This Week", val: devProjects.filter(p => {
+      const d = new Date(p.deadline).getTime();
+      return d >= Date.now() && d <= Date.now() + 7 * 24 * 60 * 60 * 1000;
+    }).length, icon: Calendar, color: "var(--warning-color)", bg: "var(--warning-light)", link: "/dashboard/calendar" },
+  ];
+
+  // Admin / BDA KPIs
   const kpiList = [
     { name: "Total Leads", val: data.kpis.totalLeads, icon: Users, color: "var(--primary-color)", bg: "var(--primary-light)", link: "/dashboard/leads" },
     { name: "Hot Leads", val: data.kpis.hotLeads, icon: Flame, color: "var(--danger-color)", bg: "var(--danger-light)", link: "/dashboard/leads?priority=Hot" },
@@ -59,23 +81,31 @@ export default function DashboardPage() {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>CRM Operations Dashboard</h1>
-          <p style={styles.subtitle}>Real-time metrics, pipeline distribution, and team schedules</p>
+          <h1 style={styles.title}>
+            {isDeveloper ? "Developer Workspace" : "CRM Operations Dashboard"}
+          </h1>
+          <p style={styles.subtitle}>
+            {isDeveloper 
+              ? "Your active development tasks, milestone deliverables, and schedule."
+              : "Real-time metrics, pipeline distribution, and team schedules"}
+          </p>
         </div>
-        <div style={styles.headerActions}>
-          <button 
-            onClick={() => openQuickAdd("lead")} 
-            className="crm-btn crm-btn-primary"
-          >
-            <Plus size={16} />
-            Add Lead URL
-          </button>
-        </div>
+        {!isDeveloper && (
+          <div style={styles.headerActions}>
+            <button 
+              onClick={() => openQuickAdd("lead")} 
+              className="crm-btn crm-btn-primary"
+            >
+              <Plus size={16} />
+              Add Lead URL
+            </button>
+          </div>
+        )}
       </div>
 
       {/* KPI Grid */}
       <div style={styles.kpiGrid}>
-        {kpiList.map((kpi, idx) => (
+        {(isDeveloper ? devKpiList : kpiList).map((kpi, idx) => (
           <div key={idx} onClick={() => router.push(kpi.link)} className="crm-card" style={styles.kpiCard}>
             <div style={{ ...styles.kpiIconBox, backgroundColor: kpi.bg, color: kpi.color }}>
               <kpi.icon size={20} />
@@ -89,63 +119,140 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Pipeline Funnel & Distributions Row */}
-      <div style={styles.distributionRow}>
-        {/* Lead Funnel */}
-        <div className="crm-card" style={{ flexGrow: 2, flexBasis: "400px" }}>
-          <h3 style={styles.sectionTitle}>Lead conversion Funnel</h3>
-          <div style={styles.funnelList}>
-            {data.distributions.leadFunnel.map((item: any, idx: number) => {
-              const maxCount = Math.max(...data.distributions.leadFunnel.map((f: any) => f.count), 1);
-              const percent = (item.count / maxCount) * 100;
-              return (
-                <div key={idx} style={styles.funnelItem}>
-                  <div style={styles.funnelLabel}>
-                    <span>{item.status}</span>
-                    <strong>{item.count}</strong>
-                  </div>
-                  <div style={styles.progressBarBg}>
-                    <div style={{ ...styles.progressBar, width: `${percent}%`, backgroundColor: item.status === "Won" ? "#10b981" : "var(--primary-color)" }} />
-                  </div>
+      {/* Developer View: Project Milestones & Calendar Schedule */}
+      {isDeveloper ? (
+        <div style={styles.listsGrid}>
+          {/* Assigned Projects */}
+          <div className="crm-card">
+            <h3 style={styles.sectionTitle}>My Assigned Projects & Tasks</h3>
+            <div style={styles.listContainer}>
+              {devProjects.length === 0 ? (
+                <div style={styles.emptyState}>No projects assigned yet</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {devProjects.map((p) => {
+                    const isOverdue = new Date(p.deadline).getTime() < Date.now() && p.status !== "Completed" && p.status !== "Cancelled";
+                    return (
+                      <div key={p.id} onClick={() => router.push(`/dashboard/projects/${p.id}`)} style={styles.listItemClickable}>
+                        <div>
+                          <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{p.name}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                            Client: {p.client?.name} • {p.serviceType}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <span className={`badge ${
+                            p.status === "Completed" ? "badge-success" : 
+                            p.status === "Issue" ? "badge-danger" :
+                            p.status === "Work in Progress" ? "badge-info" : "badge-primary"
+                          }`} style={{ marginBottom: "4px" }}>
+                            {p.status}
+                          </span>
+                          <div style={{ fontSize: "0.75rem", color: isOverdue ? "var(--danger-color)" : "var(--text-tertiary)", fontWeight: isOverdue ? 600 : 400 }}>
+                            Due: {new Date(p.deadline).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Distributions */}
-        <div className="crm-card" style={{ flexGrow: 1, flexBasis: "300px" }}>
-          <h3 style={styles.sectionTitle}>Leads by Requirement</h3>
-          <div style={styles.distributionList}>
-            {data.distributions.leadsByService.length === 0 ? (
-              <div style={styles.emptyState}>No service records yet</div>
-            ) : (
-              data.distributions.leadsByService.slice(0, 5).map((item: any, idx: number) => (
-                <div key={idx} style={styles.distItem}>
-                  <span style={styles.distLabel}>{item.name}</span>
-                  <span className="badge badge-primary">{item.value} leads</span>
+          {/* Today's Schedule & Deadlines */}
+          <div className="crm-card">
+            <h3 style={styles.sectionTitle}>Upcoming Milestones & Deadlines</h3>
+            <div style={styles.listContainer}>
+              {devProjects.length === 0 ? (
+                <div style={styles.emptyState}>No deadlines scheduled</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {devProjects.map((p) => {
+                    const deadline = new Date(p.deadline);
+                    const isClose = (deadline.getTime() - Date.now()) < 3 * 24 * 60 * 60 * 1000;
+                    return (
+                      <div key={p.id} onClick={() => router.push(`/dashboard/projects/${p.id}`)} style={styles.listItemClickable}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>🏁 {p.name}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                            Manager: {p.primaryBda?.name || "BDA Team"}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: isClose ? "var(--danger-color)" : "var(--text-primary)" }}>
+                            {deadline.toLocaleDateString()}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "var(--primary-color)" }}>Open board →</div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))
-            )}
+              )}
+            </div>
           </div>
         </div>
+      ) : (
+        /* BDA & Super Admin View */
+        <>
+          {/* Pipeline Funnel & Distributions Row */}
+          <div style={styles.distributionRow}>
+            {/* Lead Funnel */}
+            <div className="crm-card" style={{ flexGrow: 2, flexBasis: "400px" }}>
+              <h3 style={styles.sectionTitle}>Lead conversion Funnel</h3>
+              <div style={styles.funnelList}>
+                {data.distributions.leadFunnel.map((item: any, idx: number) => {
+                  const maxCount = Math.max(...data.distributions.leadFunnel.map((f: any) => f.count), 1);
+                  const percent = (item.count / maxCount) * 100;
+                  return (
+                    <div key={idx} style={styles.funnelItem}>
+                      <div style={styles.funnelLabel}>
+                        <span>{item.status}</span>
+                        <strong>{item.count}</strong>
+                      </div>
+                      <div style={styles.progressBarBg}>
+                        <div style={{ ...styles.progressBar, width: `${percent}%`, backgroundColor: item.status === "Won" ? "#10b981" : "var(--primary-color)" }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-        <div className="crm-card" style={{ flexGrow: 1, flexBasis: "300px" }}>
-          <h3 style={styles.sectionTitle}>Leads by BDA</h3>
-          <div style={styles.distributionList}>
-            {data.distributions.leadsByBda.length === 0 ? (
-              <div style={styles.emptyState}>No BDA records yet</div>
-            ) : (
-              data.distributions.leadsByBda.map((item: any, idx: number) => (
-                <div key={idx} style={styles.distItem}>
-                  <span style={styles.distLabel}>{item.name}</span>
-                  <span className="badge badge-success">{item.value} leads</span>
-                </div>
-              ))
-            )}
+            {/* Distributions */}
+            <div className="crm-card" style={{ flexGrow: 1, flexBasis: "300px" }}>
+              <h3 style={styles.sectionTitle}>Leads by Requirement</h3>
+              <div style={styles.distributionList}>
+                {data.distributions.leadsByService.length === 0 ? (
+                  <div style={styles.emptyState}>No service records yet</div>
+                ) : (
+                  data.distributions.leadsByService.slice(0, 5).map((item: any, idx: number) => (
+                    <div key={idx} style={styles.distItem}>
+                      <span style={styles.distLabel}>{item.name}</span>
+                      <span className="badge badge-primary">{item.value} leads</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="crm-card" style={{ flexGrow: 1, flexBasis: "300px" }}>
+              <h3 style={styles.sectionTitle}>Leads by BDA</h3>
+              <div style={styles.distributionList}>
+                {data.distributions.leadsByBda.length === 0 ? (
+                  <div style={styles.emptyState}>No BDA records yet</div>
+                ) : (
+                  data.distributions.leadsByBda.map((item: any, idx: number) => (
+                    <div key={idx} style={styles.distItem}>
+                      <span style={styles.distLabel}>{item.name}</span>
+                      <span className="badge badge-success">{item.value} leads</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
       {/* Grid of lists */}
       <div style={styles.listsGrid}>
@@ -273,6 +380,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

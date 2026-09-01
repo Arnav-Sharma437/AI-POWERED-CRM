@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, UserSquare2, Briefcase, Calendar, 
   Activity, Bell, Trash2, Settings, Plus, Search, LogOut, 
   User, CheckCircle2, AlertCircle, FileText, CalendarRange, Clock, CreditCard, MessageSquare,
-  Sparkles, Zap, Cpu, Bot
+  Sparkles, Zap, Cpu, Bot, Sun, Moon
 } from "lucide-react";
 
 // Context for global state sharing (Quick Add triggers, etc.)
@@ -50,6 +50,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [quickAddType, setQuickAddType] = useState<string | null>(null); // 'lead' | 'client' | 'project' | 'meeting' | 'payment' | 'note'
   const [showQuickAddMenu, setShowQuickAddMenu] = useState(false);
+
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("crm_theme") as "light" | "dark" | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.className = savedTheme;
+    } else {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const initial = prefersDark ? "dark" : "light";
+      setTheme(initial);
+      document.documentElement.className = initial;
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    localStorage.setItem("crm_theme", newTheme);
+    document.documentElement.className = newTheme;
+  };
 
   // Quick Add forms state
   const [leadForm, setLeadForm] = useState({ name: "", linkedinUrl: "", company: "", jobTitle: "", country: "", city: "", industry: "", profilePhoto: "", source: "LinkedIn", customSource: "", priority: "Warm", status: "New", notes: "", tags: "", primaryBdaId: "", assignedBdaIds: [] as string[] });
@@ -607,6 +629,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   )}
                 </div>
               )}
+
+              {/* Light / Dark Mode Toggle */}
+              <button
+                onClick={toggleTheme}
+                style={{ ...topbarStyles.iconBtn, color: "var(--text-secondary)" }}
+                title={`Switch to ${theme === "dark" ? "Light" : "Dark"} Mode`}
+              >
+                {theme === "dark" ? <Sun size={19} color="#f59e0b" /> : <Moon size={19} color="var(--primary-color)" />}
+              </button>
 
               {/* Notifications Bell */}
               <div style={{ position: "relative" }}>

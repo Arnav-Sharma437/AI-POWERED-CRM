@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Calendar as CalendarIcon, Clock, User, Filter, 
-  ChevronLeft, ChevronRight, List, Grid3X3, Briefcase, Users 
+  ChevronLeft, ChevronRight, List, Grid3X3, Briefcase, Users,
+  Video, Plus, ExternalLink, CheckCircle2, Sparkles
 } from "lucide-react";
 import { useDashboard } from "../layout";
 
@@ -12,7 +13,7 @@ type CalendarView = "month" | "week" | "day" | "list";
 
 export default function CalendarPage() {
   const router = useRouter();
-  const { currentUser, bdas } = useDashboard();
+  const { currentUser, bdas, openQuickAdd } = useDashboard();
   const isDeveloper = currentUser?.roleName === "Developer";
   
   const [loading, setLoading] = useState(true);
@@ -20,6 +21,19 @@ export default function CalendarPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>("month");
+  
+  // Schedule Google Meet Modal
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [meetingForm, setMeetingForm] = useState({
+    title: "",
+    type: "Meeting",
+    startTime: "",
+    durationMinutes: "30",
+    projectId: "",
+    notes: "",
+    customMeetLink: ""
+  });
   
   // Filtering state
   const [filterType, setFilterType] = useState<"all" | "my" | string>("all"); // 'all' | 'my' | bdaUserId
@@ -124,48 +138,110 @@ export default function CalendarPage() {
     return [...dayMeetings, ...dayDeadlines];
   };
 
+  const handleScheduleGMeetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!meetingForm.title || !meetingForm.startTime) return;
+    setScheduleLoading(true);
+
+    // Generate google meet room ID
+    const randomCode = Math.random().toString(36).substring(2, 5) + "-" + Math.random().toString(36).substring(2, 6) + "-" + Math.random().toString(36).substring(2, 5);
+    const gmeetLink = meetingForm.customMeetLink.trim() || `https://meet.google.com/${randomCode}`;
+
+    const newMeetingData = {
+      title: meetingForm.title,
+      type: "Meeting",
+      startTime: new Date(meetingForm.startTime).toISOString(),
+      notes: `${meetingForm.notes ? meetingForm.notes + "\n\n" : ""}Google Meet Link: ${gmeetLink}`,
+      projectId: meetingForm.projectId || undefined,
+      assignedUserIds: [currentUser?.id]
+    };
+
+    try {
+      const res = await fetch("/api/meetings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newMeetingData)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMeetings(prev => [...prev, data.meeting]);
+        setShowScheduleModal(false);
+        setMeetingForm({
+          title: "",
+          type: "Meeting",
+          startTime: "",
+          durationMinutes: "30",
+          projectId: "",
+          notes: "",
+          customMeetLink: ""
+        });
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to schedule meeting");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to schedule meeting");
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
   return (
     <div className="crm-container animate-fade-in">
       {/* Header controls */}
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Shared Calendar</h1>
-          <p style={styles.subtitle}>Team meetings, client onboarding, and lead follow-up calendars</p>
+          <p style={styles.subtitle}>Team meetings, client calls, Google Meet discussions, and project deadlines</p>
         </div>
         
-        {/* Filters */}
-        <div style={styles.filterBar}>
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+          {/* Schedule GMeet Button */}
           <button 
-            onClick={() => setFilterType("all")} 
-            className="crm-btn"
-            style={{
-              ...styles.filterTab,
-              backgroundColor: filterType === "all" ? "var(--primary-color)" : "var(--bg-secondary)",
-              color: filterType === "all" ? "#ffffff" : "var(--text-secondary)"
-            }}
+            onClick={() => setShowScheduleModal(true)} 
+            className="crm-btn crm-btn-primary"
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
           >
-            All Calendar
+            <Video size={16} /> Schedule Google Meet
           </button>
-          <button 
-            onClick={() => setFilterType("my")} 
-            className="crm-btn"
-            style={{
-              ...styles.filterTab,
-              backgroundColor: filterType === "my" ? "var(--primary-color)" : "var(--bg-secondary)",
-              color: filterType === "my" ? "#ffffff" : "var(--text-secondary)"
-            }}
-          >
-            My Schedule
-          </button>
-          <select 
-            className="crm-select" 
-            style={{ width: "160px", height: "38px", padding: "0 0.5rem" }}
-            value={filterType === "all" || filterType === "my" ? "" : filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-          >
-            <option value="">Select BDA</option>
-            {bdas.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
+
+          {/* Filters */}
+          <div style={styles.filterBar}>
+            <button 
+              onClick={() => setFilterType("all")} 
+              className="crm-btn"
+              style={{
+                ...styles.filterTab,
+                backgroundColor: filterType === "all" ? "var(--primary-color)" : "var(--bg-secondary)",
+                color: filterType === "all" ? "#ffffff" : "var(--text-secondary)"
+              }}
+            >
+              All Calendar
+            </button>
+            <button 
+              onClick={() => setFilterType("my")} 
+              className="crm-btn"
+              style={{
+                ...styles.filterTab,
+                backgroundColor: filterType === "my" ? "var(--primary-color)" : "var(--bg-secondary)",
+                color: filterType === "my" ? "#ffffff" : "var(--text-secondary)"
+              }}
+            >
+              My Schedule
+            </button>
+            {!isDeveloper && (
+              <select 
+                className="crm-select" 
+                style={{ width: "160px", height: "38px", padding: "0 0.5rem" }}
+                value={filterType === "all" || filterType === "my" ? "" : filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+              >
+                <option value="">Select BDA</option>
+                {bdas.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            )}
+          </div>
         </div>
       </div>
 
@@ -280,10 +356,41 @@ export default function CalendarPage() {
                   </div>
 
                   <div style={{ flexGrow: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: "1rem" }}>{m.title}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <div style={{ fontWeight: 600, fontSize: "1rem" }}>{m.title}</div>
+                      {m.notes?.includes("meet.google.com") && (
+                        <span style={{ fontSize: "0.7rem", backgroundColor: "rgba(99, 102, 241, 0.15)", color: "var(--primary-color)", padding: "1px 6px", borderRadius: "4px", fontWeight: 600, display: "flex", alignItems: "center", gap: "3px" }}>
+                          <Video size={10} /> Google Meet
+                        </span>
+                      )}
+                    </div>
                     <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "4px" }}>
                       Type: {m.type} {m.lead && `• Lead: ${m.lead.name} (${m.lead.company})`} {m.project && `• Project: ${m.project.name}`}
                     </div>
+                    {m.notes?.includes("meet.google.com") && (
+                      <div style={{ marginTop: "6px" }}>
+                        <a
+                          href={m.notes.split("Google Meet Link:")[1]?.trim().split(" ")[0] || m.notes.match(/https:\/\/meet\.google\.com\/[a-zA-Z0-9-]+/)?.[0] || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                            color: "#ffffff",
+                            backgroundColor: "var(--primary-color)",
+                            padding: "0.25rem 0.625rem",
+                            borderRadius: "6px",
+                            textDecoration: "none"
+                          }}
+                        >
+                          <Video size={12} /> Join Google Meet <ExternalLink size={11} />
+                        </a>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -293,6 +400,140 @@ export default function CalendarPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Schedule Google Meet Modal */}
+      {showScheduleModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "1rem"
+        }}>
+          <div className="animate-fade-in" style={{
+            width: "100%",
+            maxWidth: "480px",
+            backgroundColor: "var(--bg-secondary)",
+            borderRadius: "12px",
+            border: "1px solid var(--border-primary)",
+            padding: "1.75rem",
+            boxShadow: "var(--shadow-lg)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", borderBottom: "1px solid var(--border-primary)", paddingBottom: "0.75rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "rgba(99, 102, 241, 0.15)", color: "var(--primary-color)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Video size={18} />
+                </div>
+                <h3 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>Schedule Google Meet</h3>
+              </div>
+              <button onClick={() => setShowScheduleModal(false)} style={{ border: "none", background: "none", fontSize: "1.25rem", cursor: "pointer", color: "var(--text-tertiary)" }}>&times;</button>
+            </div>
+
+            <form onSubmit={handleScheduleGMeetSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div>
+                <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
+                  Meeting Title / Topic
+                </label>
+                <input 
+                  type="text" 
+                  className="crm-input"
+                  placeholder="e.g. Sprint Review / Architecture Discussion"
+                  value={meetingForm.title}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, title: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div>
+                  <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
+                    Date & Time
+                  </label>
+                  <input 
+                    type="datetime-local" 
+                    className="crm-input"
+                    value={meetingForm.startTime}
+                    onChange={(e) => setMeetingForm(prev => ({ ...prev, startTime: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
+                    Duration
+                  </label>
+                  <select 
+                    className="crm-select"
+                    value={meetingForm.durationMinutes}
+                    onChange={(e) => setMeetingForm(prev => ({ ...prev, durationMinutes: e.target.value }))}
+                  >
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">1 hour</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
+                  Related Project (Optional)
+                </label>
+                <select 
+                  className="crm-select"
+                  value={meetingForm.projectId}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, projectId: e.target.value }))}
+                >
+                  <option value="">None (General Meeting)</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
+                  Custom Google Meet URL (Leave blank to auto-generate)
+                </label>
+                <input 
+                  type="url" 
+                  className="crm-input"
+                  placeholder="https://meet.google.com/xxx-yyyy-zzz"
+                  value={meetingForm.customMeetLink}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, customMeetLink: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
+                  Meeting Agenda / Notes
+                </label>
+                <textarea 
+                  className="crm-textarea"
+                  rows={2}
+                  placeholder="Briefly describe key agenda points..."
+                  value={meetingForm.notes}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, notes: e.target.value }))}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.5rem" }}>
+                <button type="button" onClick={() => setShowScheduleModal(false)} className="crm-btn crm-btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" disabled={scheduleLoading} className="crm-btn crm-btn-primary" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Video size={16} />
+                  {scheduleLoading ? "Scheduling..." : "Create GMeet Schedule"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
