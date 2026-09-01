@@ -41,8 +41,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Activity Timeline State
+  const [showAllActivities, setShowAllActivities] = useState(false);
+  const [timelineForm, setTimelineForm] = useState({ type: "Note", notes: "" });
+
   // Modal / Input States
-  const [activeModal, setActiveModal] = useState<string | null>(null); // 'payment' | 'takeover' | 'assign' | 'status'
+  const [activeModal, setActiveModal] = useState<string | null>(null); // 'payment' | 'takeover' | 'assign' | 'status' | 'timeline'
   const [paymentForm, setPaymentForm] = useState({ amount: "", note: "" });
   const [takeoverForm, setTakeoverForm] = useState({ newBdaId: "", note: "" });
   const [assignForm, setAssignForm] = useState({ devId: "", workDetails: "" });
@@ -297,6 +301,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         method = "POST";
         body = assignForm;
         break;
+      case "timeline":
+        url = `/api/activities`;
+        method = "POST";
+        body = {
+          projectId: id,
+          clientId: project?.clientId,
+          type: timelineForm.type,
+          notes: timelineForm.notes
+        };
+        break;
       case "status":
         body = statusForm;
         break;
@@ -475,6 +489,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <button onClick={() => setActiveModal("status")} className="crm-btn crm-btn-secondary"><RefreshCw size={14} /> Update Status ({project.status})</button>
           {!isDeveloper && (
             <>
+              <button onClick={() => {
+                setTimelineForm({ type: "Note", notes: "" });
+                setActiveModal("timeline");
+              }} className="crm-btn crm-btn-secondary"><Plus size={14} /> Post Timeline Update</button>
               <button onClick={() => setActiveModal("payment")} className="crm-btn crm-btn-secondary"><CreditCard size={14} /> Record Payment</button>
               <button onClick={() => setActiveModal("takeover")} className="crm-btn crm-btn-secondary"><UserPlus size={14} /> BDA Takeover</button>
               <button onClick={() => setActiveModal("assign")} className="crm-btn crm-btn-primary"><Mail size={14} /> Assign Developer</button>
@@ -642,22 +660,60 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Activity Log */}
           <div className="crm-card">
-            <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: "1.25rem" }}>Project timeline & logs</h3>
-            <div style={timelineStyles.timeline}>
-              {project.activities?.map((act: any) => (
-                <div key={act.id} style={timelineStyles.timelineItem}>
-                  <div style={timelineStyles.timelineDot} />
-                  <div style={timelineStyles.timelineContent}>
-                    <div style={{ fontSize: "0.875rem", color: "var(--text-primary)" }}>
-                      <strong>{act.user?.name || "System"}</strong>: {act.notes}
-                    </div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
-                      {new Date(act.timestamp).toLocaleString()} • {act.type}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: 0 }}>Project timeline & logs</h3>
+              {!isDeveloper && (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setTimelineForm({ type: "Note", notes: "" });
+                    setActiveModal("timeline");
+                  }}
+                  style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.8125rem", fontWeight: 600, cursor: "pointer" }}
+                >
+                  + Add Update
+                </button>
+              )}
             </div>
+
+            {(!project.activities || project.activities.length === 0) ? (
+              <div style={{ padding: "1.5rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+                No activity logs recorded yet.
+              </div>
+            ) : (
+              <>
+                <div style={timelineStyles.timeline}>
+                  {(showAllActivities ? project.activities : project.activities.slice(0, 3)).map((act: any) => (
+                    <div key={act.id} style={timelineStyles.timelineItem}>
+                      <div style={timelineStyles.timelineDot} />
+                      <div style={timelineStyles.timelineContent}>
+                        <div style={{ fontSize: "0.875rem", color: "var(--text-primary)" }}>
+                          <strong>{act.user?.name || "System"}</strong>: {act.notes}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                          {new Date(act.timestamp).toLocaleString()} • {act.type}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {project.activities.length > 3 && (
+                  <div style={{ marginTop: "1rem", textAlign: "center", borderTop: "1px solid var(--border-primary)", paddingTop: "0.75rem" }}>
+                    <button 
+                      type="button"
+                      onClick={() => setShowAllActivities(!showAllActivities)}
+                      className="crm-btn crm-btn-secondary"
+                      style={{ fontSize: "0.775rem", padding: "4px 12px", width: "100%", justifyContent: "center" }}
+                    >
+                      {showAllActivities 
+                        ? `Show Less (Collapse)` 
+                        : `Show More (${project.activities.length - 3} older updates)`}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -989,6 +1045,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <div style={modalStyles.container} className="animate-fade-in">
             <div style={modalStyles.header}>
               <h3 style={modalStyles.title}>
+                {activeModal === "timeline" && "Post Project Timeline & Activity Update"}
                 {activeModal === "payment" && "Record Milestone Payment"}
                 {activeModal === "takeover" && "Relinquish and Takeover Project BDA"}
                 {activeModal === "assign" && "Assign Developer Task details"}
@@ -998,6 +1055,38 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             <form onSubmit={handleActionSubmit} style={modalStyles.body}>
+              
+              {/* Timeline Update Form */}
+              {activeModal === "timeline" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div>
+                    <label style={modalStyles.label}>Update / Action Type</label>
+                    <select 
+                      className="crm-select"
+                      value={timelineForm.type}
+                      onChange={(e) => setTimelineForm(prev => ({ ...prev, type: e.target.value }))}
+                    >
+                      <option value="Note">Note / General Update</option>
+                      <option value="Meeting">Meeting Completed</option>
+                      <option value="Call">Client / Developer Call</option>
+                      <option value="Email">Email Communication</option>
+                      <option value="WhatsApp">WhatsApp Message</option>
+                      <option value="System">Milestone Progress</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={modalStyles.label}>Timeline Update Notes / Milestones</label>
+                    <textarea 
+                      className="crm-textarea" 
+                      rows={4} 
+                      placeholder="e.g. Design review completed with client. Frontend development started on staging..."
+                      value={timelineForm.notes}
+                      onChange={(e) => setTimelineForm(prev => ({ ...prev, notes: e.target.value }))}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
               
               {/* Payment Form */}
               {activeModal === "payment" && (
