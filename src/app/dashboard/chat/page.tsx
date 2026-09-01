@@ -307,7 +307,7 @@ function ChatContent() {
     });
   };
 
-  // Handle soft delete
+  // Handle soft delete message
   const handleDeleteMessage = async (msgId: string) => {
     if (!confirm("Are you sure you want to delete this message?")) return;
 
@@ -318,6 +318,30 @@ function ChatContent() {
       if (!res.ok) {
         const errData = await res.json();
         alert(errData.error || "Failed to delete message");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Handle delete or clear conversation
+  const handleDeleteConversation = async (convId: string, convName: string) => {
+    if (!confirm(`Are you sure you want to delete chat with "${convName}"? All message history will be cleared.`)) return;
+
+    try {
+      const res = await fetch(`/api/chat/conversations/${convId}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        setConversations(prev => prev.filter(c => c.id !== convId));
+        if (activeConvId === convId) {
+          setActiveConvId(null);
+          setMessages([]);
+          router.replace("/dashboard/chat");
+        }
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Failed to delete conversation");
       }
     } catch (err) {
       console.error(err);
@@ -413,13 +437,34 @@ function ChatContent() {
                   <div style={styles.convInfo}>
                     <div style={styles.convHeader}>
                       <div style={styles.convName}>{c.name}</div>
-                      <div style={styles.convTime}>
-                        {c.lastMessage
-                          ? new Date(c.lastMessage.createdAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit"
-                            })
-                          : ""}
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <div style={styles.convTime}>
+                          {c.lastMessage
+                            ? new Date(c.lastMessage.createdAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })
+                            : ""}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteConversation(c.id, c.name);
+                          }}
+                          style={{
+                            border: "none",
+                            background: "none",
+                            color: "var(--text-tertiary)",
+                            cursor: "pointer",
+                            padding: "2px",
+                            display: "flex",
+                            alignItems: "center"
+                          }}
+                          title="Delete this chat"
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       </div>
                     </div>
                     <div style={styles.convSubHeader}>
@@ -460,6 +505,30 @@ function ChatContent() {
                     {activeConversation.type === "PROJECT" ? "Project Workspace" : "Online"}
                   </div>
                 </div>
+              </div>
+
+              {/* Chat action buttons */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <button
+                  onClick={() => handleDeleteConversation(activeConversation.id, activeConversation.name)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    fontSize: "0.75rem",
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-primary)",
+                    backgroundColor: "transparent",
+                    color: "var(--danger-color)",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                  title="Delete entire chat history"
+                >
+                  <Trash2 size={14} />
+                  <span>Delete Chat</span>
+                </button>
               </div>
             </div>
 
