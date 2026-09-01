@@ -17,21 +17,34 @@ export default function ChatPage() {
   );
 }
 
+// Global in-memory cache for instant switching between pages/chats
+const globalChatCache = {
+  conversations: null as any[] | null,
+  teamMembers: null as any[] | null,
+  messagesByConv: {} as Record<string, any[]>
+};
+
 function ChatContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialConvId = searchParams.get("id");
 
-  // State variables
-  const [conversations, setConversations] = useState<any[]>([]);
+  // State variables with cached initial states for instant 0ms render
+  const [conversations, setConversations] = useState<any[]>(globalChatCache.conversations || []);
   const [activeConvId, setActiveConvId] = useState<string | null>(initialConvId);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>(
+    initialConvId && globalChatCache.messagesByConv[initialConvId] 
+      ? globalChatCache.messagesByConv[initialConvId] 
+      : []
+  );
+  const [teamMembers, setTeamMembers] = useState<any[]>(globalChatCache.teamMembers || []);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
-  const [loadingConv, setLoadingConv] = useState(true);
-  const [loadingMsg, setLoadingMsg] = useState(false);
+  const [loadingConv, setLoadingConv] = useState(!globalChatCache.conversations);
+  const [loadingMsg, setLoadingMsg] = useState(
+    Boolean(initialConvId && !globalChatCache.messagesByConv[initialConvId])
+  );
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Attachment states
@@ -65,6 +78,7 @@ function ChatContent() {
         const res = await fetch("/api/users");
         if (res.ok) {
           const data = await res.json();
+          globalChatCache.teamMembers = data.users || [];
           setTeamMembers(data.users || []);
         }
       } catch (err) {
@@ -80,7 +94,9 @@ function ChatContent() {
       const res = await fetch("/api/chat/conversations");
       if (res.ok) {
         const data = await res.json();
-        setConversations(data.conversations || []);
+        const convList = data.conversations || [];
+        globalChatCache.conversations = convList;
+        setConversations(convList);
       }
     } catch (err) {
       console.error(err);
@@ -95,18 +111,26 @@ function ChatContent() {
     }
   }, [currentUser]);
 
-  // Fetch messages for active conversation
+  // Fetch messages for active conversation with 0ms cache-first rendering
   const fetchMessages = async (convId: string) => {
-    setLoadingMsg(true);
+    // If cached, show cached immediately without loader
+    if (globalChatCache.messagesByConv[convId]) {
+      setMessages(globalChatCache.messagesByConv[convId]);
+      setLoadingMsg(false);
+    } else {
+      setLoadingMsg(true);
+    }
+
     try {
       const res = await fetch(`/api/chat/conversations/${convId}/messages`);
       if (res.ok) {
         const data = await res.json();
-        setMessages(data.messages || []);
+        const msgList = data.messages || [];
+        globalChatCache.messagesByConv[convId] = msgList;
+        setMessages(msgList);
         
-        // Mark conversation as read
-        await fetch(`/api/chat/conversations/${convId}/read`, { method: "POST" });
-        fetchConversations();
+        // Mark conversation as read in background
+        fetch(`/api/chat/conversations/${convId}/read`, { method: "POST" });
       }
     } catch (err) {
       console.error(err);
@@ -140,23 +164,28 @@ function ChatContent() {
           if (newMsg.conversationId === activeConvId) {
             setMessages((prev) => {
               if (prev.some((m) => m.id === newMsg.id)) return prev;
-              return [...prev, newMsg];
+              const next = [...prev, newMsg];
+              globalChatCache.messagesByConv[newMsg.conversationId] = next;
+              return next;
             });
             // Mark as read instantly on active conversation
             fetch(`/api/chat/conversations/${activeConvId}/read`, { method: "POST" });
+          } else {
+            // Update cache for other conversations
+            if (globalChatCache.messagesByConv[newMsg.conversationId]) {
+              globalChatCache.messagesByConv[newMsg.conversationId].push(newMsg);
+            }
           }
           // Refresh list to show latest message / unread counts
           fetchConversations();
         } else if (payload.type === "delete") {
           const deleteData = payload.data;
           if (deleteData.conversationId === activeConvId) {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === deleteData.id
-                  ? { ...m, content: "This message was deleted.", isDeleted: true }
-                  : m
-              )
-            );
+            setMessages((prev) => {
+              const updated = prev.filter((m) => m.id !== deleteData.id);
+              globalChatCache.messagesByConv[deleteData.conversationId] = updated;
+              return updated;
+            });
           }
         } else if (payload.type === "read") {
           const readData = payload.data;
@@ -248,13 +277,13 @@ function ChatContent() {
         const errData = await res.json();
         alert(errData.error || "Failed to send message");
         // Remove optimistic message on failure
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      } else {
         const data = await res.json();
         if (data.message) {
-          setMessages((prev) =>
-            prev.map((m) => (m.id === tempId ? data.message : m))
-          );
+          setMessages((prev) => {
+            const updated = prev.map((m) => (m.id === tempId ? data.message : m));
+            if (activeConvId) globalChatCache.messagesByConv[activeConvId] = updated;
+            return updated;
+          });
         }
       }
     } catch (err) {
@@ -336,6 +365,10 @@ function ChatContent() {
     if (!confirm(`Are you sure you want to delete chat with "${convName}"? All message history will be cleared.`)) return;
 
     // Instant optimistic UI cleanup
+    delete globalChatCache.messagesByConv[convId];
+    if (globalChatCache.conversations) {
+      globalChatCache.conversations = globalChatCache.conversations.filter(c => c.id !== convId);
+    }
     setConversations((prev) => prev.filter((c) => c.id !== convId));
     if (activeConvId === convId) {
       setActiveConvId(null);
