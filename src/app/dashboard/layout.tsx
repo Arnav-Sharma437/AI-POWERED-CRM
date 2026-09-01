@@ -1286,6 +1286,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
 
                     <div>
+                      <label style={modalStyles.label}>Invite Team Members / Developers</label>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", maxHeight: "100px", overflowY: "auto", padding: "0.5rem", border: "1px solid var(--border-primary)", borderRadius: "8px", backgroundColor: "var(--bg-primary)" }}>
+                        {[...bdas, ...devs].map((user: any) => {
+                          const isSelected = meetingForm.assignedUserIds.includes(user.id);
+                          return (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => {
+                                setMeetingForm(prev => ({
+                                  ...prev,
+                                  assignedUserIds: isSelected 
+                                    ? prev.assignedUserIds.filter(id => id !== user.id)
+                                    : [...prev.assignedUserIds, user.id]
+                                }));
+                              }}
+                              style={{
+                                fontSize: "0.75rem",
+                                padding: "3px 8px",
+                                borderRadius: "6px",
+                                border: isSelected ? "1px solid var(--primary-color)" : "1px solid var(--border-secondary)",
+                                backgroundColor: isSelected ? "var(--primary-light)" : "var(--bg-secondary)",
+                                color: isSelected ? "var(--primary-color)" : "var(--text-primary)",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                fontWeight: isSelected ? 600 : 400
+                              }}
+                            >
+                              {isSelected ? <CheckCircle2 size={12} /> : null}
+                              {user.name} ({user.roleName || "Member"})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
                       <label style={modalStyles.label}>Brief Notes / Agenda</label>
                       <textarea 
                         className="crm-textarea" 

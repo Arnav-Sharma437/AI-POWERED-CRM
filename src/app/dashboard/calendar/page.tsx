@@ -42,12 +42,15 @@ export default function CalendarPage() {
   // Filtering state
   const [filterType, setFilterType] = useState<"all" | "my" | string>("all"); // 'all' | 'my' | bdaUserId
 
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+
   useEffect(() => {
     async function loadCalendarData() {
       try {
-        const [meetRes, projRes] = await Promise.all([
+        const [meetRes, projRes, userRes] = await Promise.all([
           fetch("/api/meetings"),
-          fetch("/api/projects")
+          fetch("/api/projects"),
+          fetch("/api/users")
         ]);
         if (meetRes.ok) {
           const meetData = await meetRes.json();
@@ -56,6 +59,10 @@ export default function CalendarPage() {
         if (projRes.ok) {
           const projData = await projRes.json();
           setProjects(projData.projects || []);
+        }
+        if (userRes.ok) {
+          const uData = await userRes.json();
+          setAllUsers(uData.users || []);
         }
       } catch (err) {
         console.error("Error loading calendar events:", err);
@@ -518,11 +525,37 @@ export default function CalendarPage() {
 
               {/* Invite Team Members */}
               <div>
-                <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
-                  Invite Team Members / Developers
-                </label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", maxHeight: "100px", overflowY: "auto", padding: "0.5rem", border: "1px solid var(--border-primary)", borderRadius: "8px", backgroundColor: "var(--bg-primary)" }}>
-                  {[...bdas, ...devs].map((user: any) => {
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", margin: 0 }}>
+                    Invite Team Members / Developers ({meetingForm.assignedUserIds.length} selected)
+                  </label>
+                  <div style={{ display: "flex", gap: "0.35rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetList = allUsers.length > 0 ? allUsers : [...bdas, ...devs];
+                        setMeetingForm(prev => ({
+                          ...prev,
+                          assignedUserIds: targetList.map((u: any) => u.id)
+                        }));
+                      }}
+                      style={{ fontSize: "0.7rem", color: "var(--primary-color)", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
+                    >
+                      Select All
+                    </button>
+                    <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>•</span>
+                    <button
+                      type="button"
+                      onClick={() => setMeetingForm(prev => ({ ...prev, assignedUserIds: [] }))}
+                      style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", background: "none", border: "none", cursor: "pointer" }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", maxHeight: "120px", overflowY: "auto", padding: "0.6rem", border: "1px solid var(--border-primary)", borderRadius: "8px", backgroundColor: "var(--bg-primary)" }}>
+                  {(allUsers.length > 0 ? allUsers : [...bdas, ...devs]).map((user: any) => {
                     const isSelected = meetingForm.assignedUserIds.includes(user.id);
                     return (
                       <button
@@ -538,7 +571,7 @@ export default function CalendarPage() {
                         }}
                         style={{
                           fontSize: "0.75rem",
-                          padding: "3px 8px",
+                          padding: "4px 10px",
                           borderRadius: "6px",
                           border: isSelected ? "1px solid var(--primary-color)" : "1px solid var(--border-secondary)",
                           backgroundColor: isSelected ? "var(--primary-light)" : "var(--bg-secondary)",
@@ -546,12 +579,12 @@ export default function CalendarPage() {
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
-                          gap: "4px",
+                          gap: "5px",
                           fontWeight: isSelected ? 600 : 400
                         }}
                       >
-                        {isSelected && <CheckCircle2 size={12} />}
-                        {user.name} ({user.roleName || user.role?.name || "Member"})
+                        {isSelected ? <CheckCircle2 size={13} /> : <span style={{ width: "10px", height: "10px", borderRadius: "50%", border: "1px solid var(--border-secondary)" }} />}
+                        {user.name} <span style={{ fontSize: "0.68rem", opacity: 0.75 }}>({user.roleName || user.role?.name || "Member"})</span>
                       </button>
                     );
                   })}
