@@ -257,6 +257,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
+  const isDeveloper = currentUser?.roleName === "Developer";
   const hasOutstanding = project.pendingAmount > 0;
 
   return (
@@ -280,43 +281,49 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <button onClick={() => setActiveModal("status")} className="crm-btn crm-btn-secondary"><RefreshCw size={14} /> Update Status ({project.status})</button>
-          <button onClick={() => setActiveModal("payment")} className="crm-btn crm-btn-secondary"><CreditCard size={14} /> Record Payment</button>
-          <button onClick={() => setActiveModal("takeover")} className="crm-btn crm-btn-secondary"><UserPlus size={14} /> BDA Takeover</button>
-          <button onClick={() => setActiveModal("assign")} className="crm-btn crm-btn-primary"><Mail size={14} /> Assign Developer</button>
+          {!isDeveloper && (
+            <>
+              <button onClick={() => setActiveModal("payment")} className="crm-btn crm-btn-secondary"><CreditCard size={14} /> Record Payment</button>
+              <button onClick={() => setActiveModal("takeover")} className="crm-btn crm-btn-secondary"><UserPlus size={14} /> BDA Takeover</button>
+              <button onClick={() => setActiveModal("assign")} className="crm-btn crm-btn-primary"><Mail size={14} /> Assign Developer</button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Financials Overview Card */}
-      <div className="crm-card" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem", marginBottom: "1.5rem", backgroundColor: "var(--bg-secondary)" }}>
-        <div style={{ padding: "0.5rem" }}>
-          <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Contract Budget</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
-            {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(project.finalBudget)}
+      {/* Financials Overview Card - Hidden for Developer */}
+      {!isDeveloper && (
+        <div className="crm-card" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem", marginBottom: "1.5rem", backgroundColor: "var(--bg-secondary)" }}>
+          <div style={{ padding: "0.5rem" }}>
+            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Contract Budget</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
+              {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(project.finalBudget)}
+            </div>
+            {project.bonus > 0 && <span style={{ fontSize: "0.75rem", color: "var(--success-color)", fontWeight: 500 }}>+ {project.bonus} Bonus</span>}
           </div>
-          {project.bonus > 0 && <span style={{ fontSize: "0.75rem", color: "var(--success-color)", fontWeight: 500 }}>+ {project.bonus} Bonus</span>}
-        </div>
 
-        <div style={{ padding: "0.5rem" }}>
-          <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Total Collected</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--success-color)", marginTop: "4px" }}>
-            {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(project.totalReceived)}
+          <div style={{ padding: "0.5rem" }}>
+            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Total Collected</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--success-color)", marginTop: "4px" }}>
+              {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(project.totalReceived)}
+            </div>
           </div>
-        </div>
 
-        <div style={{ padding: "0.5rem" }}>
-          <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Outstanding Balance</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", marginTop: "4px" }}>
-            {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(project.pendingAmount)}
+          <div style={{ padding: "0.5rem" }}>
+            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Outstanding Balance</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", marginTop: "4px" }}>
+              {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(project.pendingAmount)}
+            </div>
           </div>
-        </div>
 
-        <div style={{ padding: "0.5rem" }}>
-          <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Primary BDA Manager</div>
-          <div style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--text-primary)", marginTop: "6px" }}>
-            {project.primaryBda?.name}
+          <div style={{ padding: "0.5rem" }}>
+            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Primary BDA Manager</div>
+            <div style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--text-primary)", marginTop: "6px" }}>
+              {project.primaryBda?.name}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {project.status === "Issue" && project.issueDescription && (
         <div style={{ 
@@ -362,33 +369,35 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          {/* Payment Milestone Log Card */}
-          <div className="crm-card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: 0 }}>Milestone Payments Log</h3>
-              <button onClick={() => setActiveModal("payment")} style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.8125rem", fontWeight: 600, cursor: "pointer" }}>
-                + Add Transaction
-              </button>
-            </div>
-
-            {project.payments?.length === 0 ? (
-              <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>No payments recorded yet.</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {project.payments.map((pay: any) => (
-                  <div key={pay.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)", fontSize: "0.875rem" }}>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(pay.amount)}</div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>{pay.note || "No note"}</div>
-                    </div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                      {new Date(pay.paymentDate).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))}
+          {/* Payment Milestone Log Card - Hidden for Developer */}
+          {!isDeveloper && (
+            <div className="crm-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: 0 }}>Milestone Payments Log</h3>
+                <button onClick={() => setActiveModal("payment")} style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.8125rem", fontWeight: 600, cursor: "pointer" }}>
+                  + Add Transaction
+                </button>
               </div>
-            )}
-          </div>
+
+              {project.payments?.length === 0 ? (
+                <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>No payments recorded yet.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {project.payments.map((pay: any) => (
+                    <div key={pay.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)", fontSize: "0.875rem" }}>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(pay.amount)}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>{pay.note || "No note"}</div>
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                        {new Date(pay.paymentDate).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Column: Ownership & History */}

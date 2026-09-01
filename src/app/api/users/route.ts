@@ -37,9 +37,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
-    // Role restrictions: Only Super Admin can assign/create another Super Admin
-    if (roleName === "Super Admin" && currentUserRole !== "Super Admin") {
-      return NextResponse.json({ error: "Only Super Admin users can assign or create Super Admin accounts" }, { status: 403 });
+    // Role restrictions: Only Super Admin can create/add team members
+    if (currentUserRole !== "Super Admin") {
+      return NextResponse.json({ error: "Only Super Admin users can add team members" }, { status: 403 });
     }
 
     const cleanEmail = email.trim().toLowerCase();

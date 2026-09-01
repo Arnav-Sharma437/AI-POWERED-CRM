@@ -9,8 +9,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const project = await getProjectById(id);
-    if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    const { verifySession } = await import("@/lib/auth");
+    const session = await verifySession(request);
+    const userContext = session ? { userId: session.userId, roleName: session.roleName } : undefined;
+    const project = await getProjectById(id, userContext);
+    if (!project) return NextResponse.json({ error: "Project not found or unauthorized" }, { status: 404 });
 
     const conversations = (project as any).conversations || [];
     let conversationId = conversations[0]?.id;

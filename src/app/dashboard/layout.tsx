@@ -322,7 +322,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   };
 
-  const navItems = [
+  const allNavItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Leads", icon: UserSquare2, path: "/dashboard/leads" },
     { name: "Clients", icon: UserSquare2, path: "/dashboard/clients" },
@@ -333,6 +333,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Team", icon: Users, path: "/dashboard/team" },
     { name: "Trash", icon: Trash2, path: "/dashboard/trash" },
   ];
+
+  // Role-based navigation: Developers only see Dashboard, Projects, and Chat
+  const navItems = currentUser?.roleName === "Developer"
+    ? allNavItems.filter(item => ["Dashboard", "Projects", "Chat"].includes(item.name))
+    : allNavItems;
 
   return (
     <DashboardContext.Provider value={{
@@ -484,28 +489,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Topbar Actions */}
             <div style={topbarStyles.actions}>
-              {/* Quick Add Dropdown Trigger */}
-              <div style={{ position: "relative" }}>
-                <button 
-                  onClick={() => setShowQuickAddMenu(!showQuickAddMenu)}
-                  className="crm-btn crm-btn-primary"
-                  style={{ padding: "0.5rem 1rem", height: "40px" }}
-                >
-                  <Plus size={16} />
-                  Quick Add
-                </button>
-                {showQuickAddMenu && (
-                  <div style={topbarStyles.quickAddMenu}>
-                    <div style={topbarStyles.menuTitle}>Create New Record</div>
-                    <button onClick={() => { setQuickAddType("lead"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><Users size={14} /> Add Lead</button>
-                    <button onClick={() => { setQuickAddType("client"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><UserSquare2 size={14} /> Add Client</button>
-                    <button onClick={() => { setQuickAddType("project"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><Briefcase size={14} /> Add Project</button>
-                    <button onClick={() => { setQuickAddType("meeting"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><CalendarRange size={14} /> Schedule Activity</button>
-                    <button onClick={() => { setQuickAddType("payment"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><CreditCard size={14} /> Add Payment</button>
-                    <button onClick={() => { setQuickAddType("note"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><FileText size={14} /> Add Timeline Note</button>
-                  </div>
-                )}
-              </div>
+              {/* Quick Add Dropdown Trigger - hidden for Developer role */}
+              {currentUser?.roleName !== "Developer" && (
+                <div style={{ position: "relative" }}>
+                  <button 
+                    onClick={() => setShowQuickAddMenu(!showQuickAddMenu)}
+                    className="crm-btn crm-btn-primary"
+                    style={{ padding: "0.5rem 1rem", height: "40px" }}
+                  >
+                    <Plus size={16} />
+                    Quick Add
+                  </button>
+                  {showQuickAddMenu && (
+                    <div style={topbarStyles.quickAddMenu}>
+                      <div style={topbarStyles.menuTitle}>Create New Record</div>
+                      <button onClick={() => { setQuickAddType("lead"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><Users size={14} /> Add Lead</button>
+                      <button onClick={() => { setQuickAddType("client"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><UserSquare2 size={14} /> Add Client</button>
+                      <button onClick={() => { setQuickAddType("project"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><Briefcase size={14} /> Add Project</button>
+                      <button onClick={() => { setQuickAddType("meeting"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><CalendarRange size={14} /> Schedule Activity</button>
+                      <button onClick={() => { setQuickAddType("payment"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><CreditCard size={14} /> Add Payment</button>
+                      <button onClick={() => { setQuickAddType("note"); setShowQuickAddMenu(false); }} style={topbarStyles.menuItem}><FileText size={14} /> Add Timeline Note</button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Notifications Bell */}
               <div style={{ position: "relative" }}>

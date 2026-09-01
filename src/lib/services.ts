@@ -56,12 +56,20 @@ export async function loginUser(email: string, passwordPlain: string): Promise<U
   }
 }
 
-export async function getUserById(id: string): Promise<User | null> {
+export async function getUserById(id: string): Promise<(User & { role?: Role; roleName?: string }) | null> {
   await checkDbConnection();
   if (isMockMode) {
-    return mockDb.users.find(u => u.id === id) || null;
+    const u = mockDb.users.find(u => u.id === id);
+    if (!u) return null;
+    const role = mockDb.roles.find(r => r.id === u.roleId);
+    return { ...u, role, roleName: role?.name };
   } else {
-    return await prisma.user.findUnique({ where: { id } });
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: { role: true }
+    });
+    if (!user) return null;
+    return { ...user, roleName: user.role.name };
   }
 }
 
@@ -620,56 +628,82 @@ export async function convertLeadToClient(leadId: string, clientData: any, userI
 // PROJECT MANAGEMENT
 // -------------------------------------------------------------
 
-export async function listProjects(includeTrashed = false): Promise<any[]> {
+export async function listProjects(includeTrashed = false, userContext?: { userId: string; roleName: string }): Promise<any[]> {
   await checkDbConnection();
+  const isDeveloper = userContext?.roleName === "Developer";
+  const userId = userContext?.userId;
+
   if (isMockMode) {
-    const active = mockDb.projects.filter(p => includeTrashed || !p.isTrashed);
+    let active = mockDb.projects.filter(p => includeTrashed || !p.isTrashed);
     return active.map(p => {
       const client = mockDb.clients.find(c => c.id === p.clientId);
       const primaryBda = mockDb.users.find(u => u.id === p.primaryBdaId);
-      const payments = mockDb.payments.filter(pay => pay.projectId === p.id);
-      const totalReceived = payments.reduce((sum, pay) => sum + pay.amount, 0);
+      const payments = isDeveloper ? [] : mockDb.payments.filter(pay => pay.projectId === p.id);
+      const totalReceived = isDeveloper ? 0 : payments.reduce((sum, pay) => sum + pay.amount, 0);
       return {
         ...p,
+        finalBudget: isDeveloper ? 0 : p.finalBudget,
+        bonus: isDeveloper ? 0 : p.bonus,
         client,
         primaryBda,
         totalReceived,
-        pendingAmount: p.finalBudget - totalReceived,
+        pendingAmount: isDeveloper ? 0 : p.finalBudget - totalReceived,
         payments
       };
     });
   } else {
+    // If developer, only fetch projects where developer is assigned (or member of project conversation)
+    const whereClause: any = includeTrashed ? {} : { isTrashed: false };
+    if (isDeveloper && userId) {
+      whereClause.conversations = {
+        some: {
+          members: {
+            some: {
+              userId
+            }
+          }
+        }
+      };
+    }
+
     const projects = await prisma.project.findMany({
-      where: includeTrashed ? {} : { isTrashed: false },
+      where: whereClause,
       include: {
         client: true,
         primaryBda: true,
-        payments: true
+        payments: !isDeveloper
       },
       orderBy: { deadline: "asc" }
     });
 
     return projects.map(p => {
-      const totalReceived = p.payments.reduce((sum, pay) => sum + pay.amount, 0);
+      const payments = (p as any).payments || [];
+      const totalReceived = isDeveloper ? 0 : payments.reduce((sum: number, pay: any) => sum + pay.amount, 0);
       return {
         ...p,
+        finalBudget: isDeveloper ? 0 : p.finalBudget,
+        bonus: isDeveloper ? 0 : p.bonus,
         totalReceived,
-        pendingAmount: p.finalBudget - totalReceived
+        pendingAmount: isDeveloper ? 0 : p.finalBudget - totalReceived,
+        payments: isDeveloper ? [] : payments
       };
     });
   }
 }
 
-export async function getProjectById(id: string): Promise<any | null> {
+export async function getProjectById(id: string, userContext?: { userId: string; roleName: string }): Promise<any | null> {
   await checkDbConnection();
+  const isDeveloper = userContext?.roleName === "Developer";
+  const userId = userContext?.userId;
+
   if (isMockMode) {
     const project = mockDb.projects.find(p => p.id === id);
     if (!project) return null;
     const client = mockDb.clients.find(c => c.id === project.clientId);
     const primaryBda = mockDb.users.find(u => u.id === project.primaryBdaId);
-    const payments = mockDb.payments.filter(pay => pay.projectId === id).sort((a, b) => b.paymentDate.getTime() - a.paymentDate.getTime());
-    const totalReceived = payments.reduce((sum, pay) => sum + pay.amount, 0);
-    const ownershipHistory = mockDb.ownershipHistory
+    const payments = isDeveloper ? [] : mockDb.payments.filter(pay => pay.projectId === id).sort((a, b) => b.paymentDate.getTime() - a.paymentDate.getTime());
+    const totalReceived = isDeveloper ? 0 : payments.reduce((sum, pay) => sum + pay.amount, 0);
+    const ownershipHistory = isDeveloper ? [] : mockDb.ownershipHistory
       .filter(h => h.projectId === id)
       .map(h => ({
         ...h,
@@ -679,11 +713,13 @@ export async function getProjectById(id: string): Promise<any | null> {
 
     return {
       ...project,
+      finalBudget: isDeveloper ? 0 : project.finalBudget,
+      bonus: isDeveloper ? 0 : project.bonus,
       client,
       primaryBda,
       payments,
       totalReceived,
-      pendingAmount: project.finalBudget - totalReceived,
+      pendingAmount: isDeveloper ? 0 : project.finalBudget - totalReceived,
       ownershipHistory,
       activities: mockDb.activities.filter(a => a.projectId === id).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
       attachments: mockDb.attachments.filter(att => att.projectId === id)
@@ -694,20 +730,37 @@ export async function getProjectById(id: string): Promise<any | null> {
       include: {
         client: true,
         primaryBda: true,
-        payments: { orderBy: { paymentDate: "desc" } },
-        ownershipHistory: { include: { newBda: true }, orderBy: { takeoverDate: "desc" } },
+        payments: isDeveloper ? false : { orderBy: { paymentDate: "desc" } },
+        ownershipHistory: isDeveloper ? false : { include: { newBda: true }, orderBy: { takeoverDate: "desc" } },
         activities: { include: { user: true }, orderBy: { timestamp: "desc" } },
         attachments: { include: { uploadedBy: true } },
-        conversations: { select: { id: true } }
+        conversations: {
+          select: {
+            id: true,
+            members: { select: { userId: true } }
+          }
+        }
       }
     });
 
     if (!project) return null;
-    const totalReceived = project.payments.reduce((sum, pay) => sum + pay.amount, 0);
+
+    // If developer, verify developer is assigned to this project
+    if (isDeveloper && userId) {
+      const isMember = project.conversations.some(c => c.members.some(m => m.userId === userId));
+      if (!isMember) return null; // Developer unauthorized to view unassigned project
+    }
+
+    const payments = (project as any).payments || [];
+    const totalReceived = isDeveloper ? 0 : payments.reduce((sum: number, pay: any) => sum + pay.amount, 0);
     return {
       ...project,
+      finalBudget: isDeveloper ? 0 : project.finalBudget,
+      bonus: isDeveloper ? 0 : project.bonus,
       totalReceived,
-      pendingAmount: project.finalBudget - totalReceived
+      pendingAmount: isDeveloper ? 0 : project.finalBudget - totalReceived,
+      payments: isDeveloper ? [] : payments,
+      ownershipHistory: isDeveloper ? [] : (project as any).ownershipHistory || []
     };
   }
 }

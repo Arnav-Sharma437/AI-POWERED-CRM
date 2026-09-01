@@ -166,9 +166,11 @@ export default function TeamPage() {
             Add, update, activate, and manage user roles and permissions.
           </p>
         </div>
-        <button onClick={handleOpenAdd} className="crm-btn crm-btn-primary">
-          <Plus size={16} /> Add Team Member
-        </button>
+        {currentUserRole === "Super Admin" && (
+          <button onClick={handleOpenAdd} className="crm-btn crm-btn-primary">
+            <Plus size={16} /> Add Team Member
+          </button>
+        )}
       </div>
 
       {/* Search & Filters */}
@@ -262,31 +264,40 @@ export default function TeamPage() {
                     </td>
                     <td>
                       <button 
-                        onClick={() => !isSelf && handleToggleStatus(u)}
-                        disabled={isSelf}
+                        onClick={() => currentUserRole === "Super Admin" && !isSelf && handleToggleStatus(u)}
+                        disabled={currentUserRole !== "Super Admin" || isSelf}
                         className={`badge ${u.isActive ? "badge-success" : "badge-secondary"}`}
-                        style={{ border: "none", cursor: isSelf ? "default" : "pointer" }}
+                        style={{ border: "none", cursor: currentUserRole === "Super Admin" && !isSelf ? "pointer" : "default" }}
                       >
                         {u.isActive ? "Active" : "Inactive"}
                       </button>
                     </td>
                     <td style={{ textAlign: "right" }}>
                       <div style={{ display: "inline-flex", gap: "0.5rem" }}>
-                        <button 
-                          onClick={() => handleOpenEdit(u)}
-                          className="crm-btn crm-btn-secondary"
-                          style={{ padding: "0.375rem 0.5rem" }}
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button 
-                          onClick={() => !isSelf && handleDelete(u)}
-                          disabled={isSelf}
-                          className="crm-btn crm-btn-danger"
-                          style={{ padding: "0.375rem 0.5rem", opacity: isSelf ? 0.3 : 1 }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {(currentUserRole === "Super Admin" || isSelf) && (
+                          <button 
+                            onClick={() => handleOpenEdit(u)}
+                            className="crm-btn crm-btn-secondary"
+                            style={{ padding: "0.375rem 0.5rem" }}
+                            title="Edit"
+                          >
+                            <Edit size={14} />
+                          </button>
+                        )}
+                        {currentUserRole === "Super Admin" && (
+                          <button 
+                            onClick={() => !isSelf && handleDelete(u)}
+                            disabled={isSelf}
+                            className="crm-btn crm-btn-danger"
+                            style={{ padding: "0.375rem 0.5rem", opacity: isSelf ? 0.3 : 1 }}
+                            title="Delete"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        {currentUserRole !== "Super Admin" && !isSelf && (
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>Read-only</span>
+                        )}
                       </div>
                     </td>
                   </tr>

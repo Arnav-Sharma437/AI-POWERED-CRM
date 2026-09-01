@@ -4,9 +4,11 @@ import { listProjects, createProject } from "@/lib/services";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const projects = await listProjects();
+    const session = await verifySession(request);
+    const userContext = session ? { userId: session.userId, roleName: session.roleName } : undefined;
+    const projects = await listProjects(false, userContext);
     return NextResponse.json({ success: true, projects });
   } catch (error) {
     console.error("Projects GET error:", error);

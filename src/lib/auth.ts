@@ -92,7 +92,8 @@ export async function verifySession(request: Request): Promise<any | null> {
       userId: user.id,
       name: user.name,
       email: user.email,
-      roleId: user.roleId
+      roleId: user.roleId,
+      roleName: user.roleName || user.role?.name || "BDA"
     };
   } catch (error) {
     console.error("verifySession error:", error);

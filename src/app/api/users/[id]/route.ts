@@ -25,8 +25,13 @@ export async function PUT(
     const body = await request.json();
     const { name, email, roleName, isActive, password } = body;
 
-    // Validation: Only Super Admin can edit another Super Admin, or assign Super Admin role
-    if ((userToEdit.roleName === "Super Admin" || roleName === "Super Admin") && currentUserRole !== "Super Admin") {
+    // Validation: Only Super Admin can modify team members (or a user editing their own profile name/password)
+    const isSelf = currentUserDecoded.userId === id;
+    if (currentUserRole !== "Super Admin" && !isSelf) {
+      return NextResponse.json({ error: "Only Super Admin users can modify team members" }, { status: 403 });
+    }
+
+    if (!isSelf && roleName === "Super Admin" && currentUserRole !== "Super Admin") {
       return NextResponse.json({ error: "Unauthorized. Only Super Admin users can modify Super Admin accounts" }, { status: 403 });
     }
 
@@ -101,9 +106,9 @@ export async function DELETE(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Role checks
-    if (userToDelete.roleName === "Super Admin" && currentUserRole !== "Super Admin") {
-      return NextResponse.json({ error: "Only Super Admin users can delete another Super Admin" }, { status: 403 });
+    // Role checks: Only Super Admin can delete/soft-delete team members
+    if (currentUserRole !== "Super Admin") {
+      return NextResponse.json({ error: "Only Super Admin users can delete team members" }, { status: 403 });
     }
 
     const { prisma } = await import("@/lib/db");

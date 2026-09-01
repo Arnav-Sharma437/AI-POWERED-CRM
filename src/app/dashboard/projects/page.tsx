@@ -7,7 +7,8 @@ import { useDashboard } from "../layout";
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { openQuickAdd, triggerRefresh } = useDashboard();
+  const { openQuickAdd, triggerRefresh, currentUser } = useDashboard();
+  const isDeveloper = currentUser?.roleName === "Developer";
   
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<any[]>([]);
@@ -44,14 +45,20 @@ export default function ProjectsPage() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
         <div>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Active Contracts & Projects</h1>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>
+            {isDeveloper ? "Assigned Projects & Tasks" : "Active Contracts & Projects"}
+          </h1>
           <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Track project deliverables, budgets, milestone completions, and flagged project issues.
+            {isDeveloper 
+              ? "View tasks, milestone requirements, deliverable deadlines, and team communications." 
+              : "Track project deliverables, budgets, milestone completions, and flagged project issues."}
           </p>
         </div>
-        <button onClick={() => openQuickAdd("project")} className="crm-btn crm-btn-primary">
-          <Plus size={16} /> Add Project
-        </button>
+        {!isDeveloper && (
+          <button onClick={() => openQuickAdd("project")} className="crm-btn crm-btn-primary">
+            <Plus size={16} /> Add Project
+          </button>
+        )}
       </div>
 
       {/* Search & Filter Controls */}
@@ -105,9 +112,9 @@ export default function ProjectsPage() {
                 <th>Client Account</th>
                 <th>Milestone Status</th>
                 <th>BDA Owner</th>
-                <th>Milestone Budget</th>
-                <th>Paid</th>
-                <th>Outstanding</th>
+                {!isDeveloper && <th>Milestone Budget</th>}
+                {!isDeveloper && <th>Paid</th>}
+                {!isDeveloper && <th>Outstanding</th>}
                 <th>Deadline</th>
                 <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
@@ -135,15 +142,21 @@ export default function ProjectsPage() {
                       )}
                     </td>
                     <td>{p.primaryBda?.name}</td>
-                    <td>
-                      {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p.finalBudget)}
-                    </td>
-                    <td style={{ color: "var(--success-color)", fontWeight: 500 }}>
-                      {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p.totalReceived)}
-                    </td>
-                    <td style={{ color: p.pendingAmount > 0 ? "var(--warning-color)" : "var(--text-tertiary)", fontWeight: 500 }}>
-                      {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p.pendingAmount)}
-                    </td>
+                    {!isDeveloper && (
+                      <td>
+                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p.finalBudget)}
+                      </td>
+                    )}
+                    {!isDeveloper && (
+                      <td style={{ color: "var(--success-color)", fontWeight: 500 }}>
+                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p.totalReceived)}
+                      </td>
+                    )}
+                    {!isDeveloper && (
+                      <td style={{ color: p.pendingAmount > 0 ? "var(--warning-color)" : "var(--text-tertiary)", fontWeight: 500 }}>
+                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p.pendingAmount)}
+                      </td>
+                    )}
                     <td>
                       <div style={{ 
                         display: "flex", 
