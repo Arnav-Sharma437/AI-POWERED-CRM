@@ -8,6 +8,7 @@ import {
   MapPin, ClipboardList, CheckCircle, Clock
 } from "lucide-react";
 import { useDashboard } from "./layout";
+import AiLoader from "@/components/AiLoader";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -44,9 +45,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.spinner} />
-        <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>Loading Workspace...</p>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+        <AiLoader label="Initializing Nexus AI Operations..." sublabel="Aggregating pipeline metrics, milestone KPIs, and real-time feeds" />
       </div>
     );
   }

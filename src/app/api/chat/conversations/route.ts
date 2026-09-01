@@ -18,16 +18,26 @@ export async function GET(request: Request) {
 
     const isSuperAdmin = user.role.name === "Super Admin";
 
-    // Retrieve conversations
+    // Retrieve conversations: exclude empty direct conversations (ghost chats)
     const conversations = await prisma.conversation.findMany({
-      where: isSuperAdmin
-        ? {}
-        : {
+      where: {
+        AND: [
+          isSuperAdmin
+            ? {}
+            : {
+                OR: [
+                  { members: { some: { userId: user.id } } },
+                  { project: { primaryBdaId: user.id } }
+                ]
+              },
+          {
             OR: [
-              { members: { some: { userId: user.id } } },
-              { project: { primaryBdaId: user.id } }
+              { type: "PROJECT" },
+              { messages: { some: {} } }
             ]
-          },
+          }
+        ]
+      },
       include: {
         project: {
           select: { id: true, name: true, primaryBdaId: true }
