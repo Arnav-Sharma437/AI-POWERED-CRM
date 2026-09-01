@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { mockDb, Lead, Client, Project, Payment, Meeting, Activity, User, Role, Notification, Attachment } from "./mockData";
+import { sendTaskAssignmentRealEmail } from "./email";
 import * as bcrypt from "bcryptjs";
 
 // Global flag to track if we're using mock mode (Prisma connection failed)
@@ -967,18 +968,16 @@ export async function addPayment(projectId: string, amount: number, note: string
 }
 
 export async function sendDevAssignmentEmail(projectId: string, devId: string, workDetails: string): Promise<boolean> {
-  // Simulate email dispatch
-  console.log(`[MOCK EMAIL] Sending developer assignment email...`);
-  console.log(`To: ${devId}@bda.com`);
-  console.log(`Content: Project ${projectId} assigned with work: ${workDetails}`);
-  
-  // Create system log
   await checkDbConnection();
-  const devName = isMockMode 
-    ? (mockDb.users.find(u => u.id === devId)?.name || "Developer")
-    : (await prisma.user.findUnique({ where: { id: devId } }))?.name || "Developer";
+
+  let devUser: any = null;
+  let projectData: any = null;
 
   if (isMockMode) {
+    devUser = mockDb.users.find(u => u.id === devId);
+    projectData = mockDb.projects.find(p => p.id === projectId);
+    const devName = devUser?.name || "Developer";
+
     mockDb.activities.push({
       id: `act-${Date.now()}`,
       timestamp: new Date(),
@@ -988,6 +987,14 @@ export async function sendDevAssignmentEmail(projectId: string, devId: string, w
       projectId
     });
   } else {
+    devUser = await prisma.user.findUnique({ where: { id: devId } });
+    projectData = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: { client: true }
+    });
+
+    const devName = devUser?.name || "Developer";
+
     await prisma.activity.create({
       data: {
         userId: devId,
@@ -996,6 +1003,21 @@ export async function sendDevAssignmentEmail(projectId: string, devId: string, w
         projectId
       }
     });
+
+    // In-App Notification for developer
+    try {
+      await prisma.notification.create({
+        data: {
+          title: "New Task Assigned",
+          message: `You have been assigned a task on project: ${projectData?.name || "Project"}`,
+          type: "NewProject",
+          userId: devId,
+          linkUrl: `/dashboard/projects/${projectId}`
+        }
+      });
+    } catch (notifErr) {
+      console.error("Failed to create in-app notification for dev assignment:", notifErr);
+    }
 
     try {
       // Find or create Project conversation
@@ -1039,6 +1061,25 @@ export async function sendDevAssignmentEmail(projectId: string, devId: string, w
       console.error("Failed to add developer to project conversation:", chatErr);
     }
   }
+
+  // Send real email via Gmail SMTP
+  if (devUser?.email && projectData) {
+    try {
+      await sendTaskAssignmentRealEmail({
+        devName: devUser.name,
+        devEmail: devUser.email,
+        projectName: projectData.name,
+        clientName: projectData.client?.name ? `${projectData.client.name} (${projectData.client.company || ""})` : undefined,
+        serviceType: projectData.serviceType,
+        deadline: projectData.deadline ? new Date(projectData.deadline).toLocaleDateString() : undefined,
+        workDetails,
+        projectUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/projects/${projectId}`
+      });
+    } catch (emailError) {
+      console.error("Error sending real developer task assignment email:", emailError);
+    }
+  }
+
   return true;
 }
 

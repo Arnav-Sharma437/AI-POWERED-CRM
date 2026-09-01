@@ -206,3 +206,130 @@ BDA CRM Team
     return true;
   }
 }
+
+export interface TaskAssignmentEmailParams {
+  devName: string;
+  devEmail: string;
+  projectName: string;
+  clientName?: string;
+  serviceType?: string;
+  deadline?: string;
+  workDetails: string;
+  projectUrl?: string;
+}
+
+export async function sendTaskAssignmentRealEmail(params: TaskAssignmentEmailParams): Promise<boolean> {
+  const { devName, devEmail, projectName, clientName, serviceType, deadline, workDetails, projectUrl } = params;
+  const smtpFrom = process.env.SMTP_FROM || "no-reply@bda-crm.com";
+  const effectiveProjectUrl = projectUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000/dashboard/projects";
+
+  const messageText = `
+New Task / Project Assigned: ${projectName}
+
+Hello ${devName},
+
+You have been assigned a new task on project: ${projectName}.
+
+Project Details:
+- Project Name: ${projectName}
+${serviceType ? `- Service Type: ${serviceType}` : ""}
+${clientName ? `- Client: ${clientName}` : ""}
+${deadline ? `- Target Deadline: ${deadline}` : ""}
+
+Task Requirements & Notes:
+${workDetails}
+
+View Project & Task Workspace:
+${effectiveProjectUrl}
+
+Note: Budget and financial details are confidential and hidden from developer view.
+
+Best regards,
+AI POWERED BDA CRM
+`;
+
+  const messageHtml = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 25px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 580px; background-color: #ffffff; color: #1f2937;">
+      <div style="border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px;">
+        <h2 style="color: #2563eb; margin: 0; font-size: 22px;">AI POWERED BDA CRM</h2>
+        <p style="color: #6b7280; font-size: 14px; margin: 4px 0 0 0;">New Task & Project Assignment</p>
+      </div>
+
+      <p style="font-size: 16px; font-weight: 600; margin-bottom: 10px;">Hello ${devName},</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+        A new task has been assigned to you for the project <strong>${projectName}</strong>. Please review the requirement details below:
+      </p>
+
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <h3 style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Project Summary</h3>
+        <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 6px 0; color: #64748b; width: 140px;"><strong>Project:</strong></td>
+            <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${projectName}</td>
+          </tr>
+          ${serviceType ? `<tr>
+            <td style="padding: 6px 0; color: #64748b;"><strong>Service Type:</strong></td>
+            <td style="padding: 6px 0; color: #2563eb; font-weight: 600;">${serviceType}</td>
+          </tr>` : ""}
+          ${clientName ? `<tr>
+            <td style="padding: 6px 0; color: #64748b;"><strong>Client:</strong></td>
+            <td style="padding: 6px 0; color: #0f172a;">${clientName}</td>
+          </tr>` : ""}
+          ${deadline ? `<tr>
+            <td style="padding: 6px 0; color: #64748b;"><strong>Target Deadline:</strong></td>
+            <td style="padding: 6px 0; color: #ef4444; font-weight: 600;">${deadline}</td>
+          </tr>` : ""}
+        </table>
+      </div>
+
+      <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <h4 style="font-size: 13px; font-weight: 700; color: #334155; margin: 0 0 8px 0; text-transform: uppercase;">Task Requirements & Deliverables</h4>
+        <div style="font-size: 14px; line-height: 1.6; color: #1e293b; white-space: pre-wrap; background-color: #f1f5f9; padding: 12px; border-radius: 6px;">${workDetails}</div>
+      </div>
+
+      <div style="text-align: center; margin: 25px 0;">
+        <a href="${effectiveProjectUrl}" target="_blank" style="background-color: #2563eb; color: #ffffff; padding: 12px 28px; text-decoration: none; font-weight: 600; font-size: 15px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">
+          Open Project & Team Chat
+        </a>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+      <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">
+        Confidential Notice: Financials and budget details are kept private and managed by project BDAs.
+      </p>
+    </div>
+  `;
+
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.log("\n==================================================");
+    console.log(`[TASK ASSIGNMENT EMAIL DISPATCH MOCK]`);
+    console.log(`To: ${devEmail}`);
+    console.log(`Developer: ${devName}`);
+    console.log(`Project: ${projectName}`);
+    console.log(`Requirements: ${workDetails}`);
+    console.log("==================================================\n");
+    return true;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: devEmail,
+      subject: `[AI POWERED BDA CRM] New Task Assigned: ${projectName}`,
+      text: messageText,
+      html: messageHtml
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send Task Assignment Email via SMTP:", error);
+    console.log("\n==================================================");
+    console.log(`[TASK ASSIGNMENT EMAIL FALLBACK]`);
+    console.log(`To: ${devEmail}`);
+    console.log(`Developer: ${devName}`);
+    console.log(`Project: ${projectName}`);
+    console.log(`Requirements: ${workDetails}`);
+    console.log("==================================================\n");
+    return true;
+  }
+}
