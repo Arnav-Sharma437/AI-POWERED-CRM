@@ -353,21 +353,49 @@ model Invoice {
   invoiceNumber      String        @unique // e.g. "PI-000088"
   clientId           String?
   client             Client?       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  // Issuer / Company Details (Customizable per invoice or defaulted)
+  companyName        String?       @default("Pixxelu Digital Technology")
+  companyAddress     String?       @default("Building no 256, Dharamshala\nkangra Himachal Pradesh 176215\nIndia")
+  companyPhone       String?       @default("9218000707")
+  companyEmail       String?       @default("rakeshrinku16@gmail.com")
+  companyWebsite     String?       @default("www.pixxelu.com")
+  companyGstin       String?       @default("02ABBFP9262H1ZA")
+  companyPan         String?       @default("ABBFP9262H")
+
+  // Customer / Recipient Details
   customerName       String?       // For ad-hoc or unlisted clients
   customerEmail      String?
   customerCompany    String?
-  placeOfSupply      String        // e.g. "[HR] - Haryana"
+  customerAddress    String?       // Detailed multiline address (e.g. Ansal Palam Corporate Plaza...)
+  placeOfSupply      String        // e.g. "Haryana (06)" or "[HR] - Haryana"
   gstTreatment       String?       @default("Registered Business - Regular")
   gstin              String?       // Customer GSTIN
+
+  // Invoice Dates & Terms
   invoiceDate        DateTime      @default(now())
   dueDate            DateTime
   paymentTerms       String        @default("Due on Receipt") // Due on Receipt, Net 15, Net 30, Net 60, Custom
-  currency           String        @default("INR")
+  currency           String        @default("INR") // INR, USD, EUR, GBP, AED, CAD, AUD
+
+  // Financials
   subtotal           Float         @default(0)
   taxTotal           Float         @default(0)
   totalAmount        Float         @default(0)
-  customerNotes      String?
+  totalInWords       String?       // e.g. "Indian Rupee Seventeen Thousand Seven Hundred Only"
+
+  // Bank & Payment Details
+  bankName           String?       @default("Bank of Baroda")
+  accountNumber      String?       @default("10520200000277")
+  ifscCode           String?       @default("BARB0DHAKAN")
+  accountHolder      String?       @default("Pixxelu Digital Technology")
+  
+  // Notes & Footer
+  invoiceIncludes    String?       @default("• Remaining payment for the original approved project.\n• Additional charges for the expanded scope of work requested during project execution.")
+  customerNotes      String?       @default("Thank you for your business.")
   termsAndConditions String?
+  signatoryText      String?       @default("For Pixxelu Digital Technology\nPartner")
+
   status             String        @default("Draft") // Draft, Sent, Paid, Overdue, Cancelled
   createdById        String
   createdBy          User          @relation(fields: [createdById], references: [id])

@@ -172,9 +172,17 @@ export interface Invoice {
   invoiceNumber: string;
   clientId?: string;
   client?: Client;
+  companyName?: string;
+  companyAddress?: string;
+  companyPhone?: string;
+  companyEmail?: string;
+  companyWebsite?: string;
+  companyGstin?: string;
+  companyPan?: string;
   customerName?: string;
   customerEmail?: string;
   customerCompany?: string;
+  customerAddress?: string;
   placeOfSupply: string;
   gstTreatment?: string;
   gstin?: string;
@@ -185,8 +193,15 @@ export interface Invoice {
   subtotal: number;
   taxTotal: number;
   totalAmount: number;
+  totalInWords?: string;
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  accountHolder?: string;
+  invoiceIncludes?: string;
   customerNotes?: string;
   termsAndConditions?: string;
+  signatoryText?: string;
   status: string; // Draft, Sent, Paid, Overdue, Cancelled
   createdById: string;
   items: InvoiceItem[];

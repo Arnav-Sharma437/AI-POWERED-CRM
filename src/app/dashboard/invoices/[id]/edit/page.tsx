@@ -4,32 +4,43 @@ import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { 
   FileText, Plus, Trash2, ArrowLeft, 
-  Settings, Send, ShieldAlert
+  Settings, Send, ShieldAlert,
+  Building2, CreditCard
 } from "lucide-react";
 import { useDashboard } from "../../../layout";
 import AiLoader from "@/components/AiLoader";
 
 const INDIAN_STATES = [
-  "[HR] - Haryana",
-  "[DL] - Delhi",
-  "[PB] - Punjab",
-  "[UP] - Uttar Pradesh",
-  "[RJ] - Rajasthan",
-  "[MH] - Maharashtra",
-  "[KA] - Karnataka",
-  "[TN] - Tamil Nadu",
-  "[TS] - Telangana",
-  "[GJ] - Gujarat",
-  "[WB] - West Bengal",
-  "[CH] - Chandigarh",
-  "[HP] - Himachal Pradesh",
-  "[UK] - Uttarakhand",
-  "[BR] - Bihar",
-  "[MP] - Madhya Pradesh",
-  "[KL] - Kerala",
-  "[AP] - Andhra Pradesh",
-  "[OD] - Odisha",
-  "[OTHER] - Overseas / Non-Resident"
+  "Haryana (06)",
+  "Delhi (07)",
+  "Punjab (03)",
+  "Himachal Pradesh (02)",
+  "Chandigarh (04)",
+  "Uttar Pradesh (09)",
+  "Rajasthan (08)",
+  "Maharashtra (27)",
+  "Karnataka (29)",
+  "Tamil Nadu (33)",
+  "Telangana (36)",
+  "Gujarat (24)",
+  "West Bengal (19)",
+  "Uttarakhand (05)",
+  "Bihar (10)",
+  "Madhya Pradesh (23)",
+  "Kerala (32)",
+  "Andhra Pradesh (37)",
+  "Odisha (21)",
+  "Overseas / Non-Resident (96)"
+];
+
+const CURRENCIES = [
+  { code: "INR", symbol: "₹", label: "INR (₹) - Indian Rupee" },
+  { code: "USD", symbol: "$", label: "USD ($) - US Dollar" },
+  { code: "EUR", symbol: "€", label: "EUR (€) - Euro" },
+  { code: "GBP", symbol: "£", label: "GBP (£) - British Pound" },
+  { code: "AED", symbol: "AED", label: "AED (د.إ) - UAE Dirham" },
+  { code: "CAD", symbol: "CA$", label: "CAD ($) - Canadian Dollar" },
+  { code: "AUD", symbol: "AU$", label: "AUD ($) - Australian Dollar" }
 ];
 
 const TAX_RATES = [
@@ -42,6 +53,36 @@ const TAX_RATES = [
   { label: "Non-Taxable [0%]", rate: 0, name: "Non-Taxable [0%]" }
 ];
 
+function numberToWordsINR(amount: number): string {
+  const rounded = Math.round(amount);
+  if (rounded === 0) return "Zero Rupees Only";
+
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  function inWords(num: number): string {
+    const numStr = num.toString();
+    if (numStr.length > 9) return numStr;
+    const n = ('000000000' + numStr).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n) return '';
+    let str = '';
+    const c1 = parseInt(n[1], 10);
+    const c2 = parseInt(n[2], 10);
+    const c3 = parseInt(n[3], 10);
+    const c4 = parseInt(n[4], 10);
+    const c5 = parseInt(n[5], 10);
+
+    str += (c1 !== 0) ? (a[c1] || b[parseInt(n[1][0], 10)] + ' ' + a[parseInt(n[1][1], 10)]) + ' Crore ' : '';
+    str += (c2 !== 0) ? (a[c2] || b[parseInt(n[2][0], 10)] + ' ' + a[parseInt(n[2][1], 10)]) + ' Lakh ' : '';
+    str += (c3 !== 0) ? (a[c3] || b[parseInt(n[3][0], 10)] + ' ' + a[parseInt(n[3][1], 10)]) + ' Thousand ' : '';
+    str += (c4 !== 0) ? (a[c4] || b[parseInt(n[4][0], 10)] + ' ' + a[parseInt(n[4][1], 10)]) + ' Hundred ' : '';
+    str += (c5 !== 0) ? ((str !== '') ? 'and ' : '') + (a[c5] || b[parseInt(n[5][0], 10)] + ' ' + a[parseInt(n[5][1], 10)]) : '';
+    return str.trim();
+  }
+
+  return `Indian Rupee ${inWords(rounded)} Only`;
+}
+
 export default function EditInvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
@@ -49,25 +90,45 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [simplifiedView, setSimplifiedView] = useState(false);
 
-  // Form State
+  // Company / Issuer Info
+  const [companyName, setCompanyName] = useState("Pixxelu Digital Technology");
+  const [companyAddress, setCompanyAddress] = useState("Building no 256, Dharamshala\nkangra Himachal Pradesh 176215\nIndia");
+  const [companyPhone, setCompanyPhone] = useState("9218000707");
+  const [companyEmail, setCompanyEmail] = useState("rakeshrinku16@gmail.com");
+  const [companyWebsite, setCompanyWebsite] = useState("www.pixxelu.com");
+  const [companyGstin, setCompanyGstin] = useState("02ABBFP9262H1ZA");
+  const [companyPan, setCompanyPan] = useState("ABBFP9262H");
+
+  // Customer / Recipient State
   const [customerMode, setCustomerMode] = useState<"existing" | "custom">("existing");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [customCustomerName, setCustomCustomerName] = useState("");
   const [customCustomerEmail, setCustomCustomerEmail] = useState("");
   const [customCustomerCompany, setCustomCustomerCompany] = useState("");
-  const [placeOfSupply, setPlaceOfSupply] = useState("[HR] - Haryana");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [placeOfSupply, setPlaceOfSupply] = useState("Haryana (06)");
   const [gstTreatment, setGstTreatment] = useState("Registered Business - Regular");
   const [gstin, setGstin] = useState("");
+
+  // Invoice Dates & Identifiers
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("Due on Receipt");
   const [dueDate, setDueDate] = useState("");
   const [currency, setCurrency] = useState("INR");
   const [status, setStatus] = useState("Draft");
+
+  // Bank Info
+  const [bankName, setBankName] = useState("Bank of Baroda");
+  const [accountNumber, setAccountNumber] = useState("10520200000277");
+  const [ifscCode, setIfscCode] = useState("BARB0DHAKAN");
+
+  // Notes & Breakdown
+  const [invoiceIncludes, setInvoiceIncludes] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
   const [termsAndConditions, setTermsAndConditions] = useState("");
+
   const [items, setItems] = useState<any[]>([]);
 
   useEffect(() => {
@@ -83,6 +144,15 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
         if (res.ok) {
           const data = await res.json();
           const inv = data.invoice;
+          
+          if (inv.companyName) setCompanyName(inv.companyName);
+          if (inv.companyAddress) setCompanyAddress(inv.companyAddress);
+          if (inv.companyPhone) setCompanyPhone(inv.companyPhone);
+          if (inv.companyEmail) setCompanyEmail(inv.companyEmail);
+          if (inv.companyWebsite) setCompanyWebsite(inv.companyWebsite);
+          if (inv.companyGstin) setCompanyGstin(inv.companyGstin);
+          if (inv.companyPan) setCompanyPan(inv.companyPan);
+
           if (inv.clientId) {
             setCustomerMode("existing");
             setSelectedClientId(inv.clientId);
@@ -92,7 +162,9 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
             setCustomCustomerEmail(inv.customerEmail || "");
             setCustomCustomerCompany(inv.customerCompany || "");
           }
-          setPlaceOfSupply(inv.placeOfSupply || "[HR] - Haryana");
+          
+          setCustomerAddress(inv.customerAddress || "");
+          setPlaceOfSupply(inv.placeOfSupply || "Haryana (06)");
           setGstTreatment(inv.gstTreatment || "Registered Business - Regular");
           setGstin(inv.gstin || "");
           setInvoiceNumber(inv.invoiceNumber || "");
@@ -101,21 +173,15 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
           setPaymentTerms(inv.paymentTerms || "Due on Receipt");
           setCurrency(inv.currency || "INR");
           setStatus(inv.status || "Draft");
+
+          if (inv.bankName) setBankName(inv.bankName);
+          if (inv.accountNumber) setAccountNumber(inv.accountNumber);
+          if (inv.ifscCode) setIfscCode(inv.ifscCode);
+          if (inv.invoiceIncludes) setInvoiceIncludes(inv.invoiceIncludes);
+
           setCustomerNotes(inv.customerNotes || "");
           setTermsAndConditions(inv.termsAndConditions || "");
-          setItems(inv.items && inv.items.length > 0 ? inv.items : [
-            {
-              id: "1",
-              itemDetails: "Service Item",
-              description: "",
-              sacCode: "998314",
-              quantity: 1,
-              rate: 0,
-              taxName: "IGST18 [18%]",
-              taxRate: 18,
-              amount: 0
-            }
-          ]);
+          setItems(inv.items && inv.items.length > 0 ? inv.items : []);
         }
       } catch (err) {
         console.error("Failed to load invoice for editing:", err);
@@ -192,27 +258,36 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     return sum + (lineAmt * rate) / 100;
   }, 0);
   const grandTotal = subtotal + taxTotal;
+  const totalInWords = numberToWordsINR(grandTotal);
 
   const selectedClient = clientsList.find(c => c.id === selectedClientId);
 
   const handleSubmit = async (e: React.FormEvent, newStatus?: string) => {
     e.preventDefault();
     if (customerMode === "existing" && !selectedClientId) {
-      alert("Please select a customer or switch to 'Enter New / Custom Customer'");
+      alert("Please select a customer");
       return;
     }
     if (customerMode === "custom" && !customCustomerName.trim()) {
-      alert("Please enter Customer / Company Name");
+      alert("Please enter customer name");
       return;
     }
 
     setSubmitting(true);
     try {
       const payload = {
+        companyName,
+        companyAddress,
+        companyPhone,
+        companyEmail,
+        companyWebsite,
+        companyGstin,
+        companyPan,
         clientId: customerMode === "existing" ? selectedClientId : null,
         customerName: customerMode === "custom" ? customCustomerName : (selectedClient?.company || selectedClient?.name),
         customerEmail: customerMode === "custom" ? customCustomerEmail : selectedClient?.email,
         customerCompany: customerMode === "custom" ? customCustomerCompany : selectedClient?.company,
+        customerAddress,
         placeOfSupply,
         gstTreatment,
         gstin,
@@ -220,6 +295,15 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
         dueDate,
         paymentTerms,
         currency,
+        subtotal,
+        taxTotal,
+        totalAmount: grandTotal,
+        totalInWords,
+        bankName,
+        accountNumber,
+        ifscCode,
+        accountHolder: companyName,
+        invoiceIncludes,
         customerNotes,
         termsAndConditions,
         status: newStatus || status,
@@ -278,6 +362,8 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     );
   }
 
+  const currObj = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
+
   return (
     <div className="crm-container animate-fade-in" style={{ maxWidth: "1180px", margin: "0 auto", paddingBottom: "5rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
@@ -289,258 +375,209 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
         </button>
       </div>
 
-      <form onSubmit={(e) => handleSubmit(e)} className="crm-card" style={{ padding: "2rem", border: "1px solid var(--border-primary)", backgroundColor: "var(--bg-secondary)", borderRadius: "12px", boxShadow: "var(--shadow-md)" }}>
+      <form onSubmit={(e) => handleSubmit(e)} className="crm-card" style={{ padding: "2.5rem", border: "1px solid var(--border-primary)", backgroundColor: "var(--bg-secondary)", borderRadius: "12px", boxShadow: "var(--shadow-md)" }}>
         
-        {/* Header matching reference image */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-primary)", paddingBottom: "1.25rem", marginBottom: "2rem" }}>
+        {/* Header & Currency */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid var(--border-primary)", paddingBottom: "1.25rem", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <FileText size={24} color="var(--primary-color)" />
-            <h1 style={{ fontSize: "1.35rem", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+            <FileText size={28} color="var(--primary-color)" />
+            <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
               Edit Invoice <span style={{ color: "var(--primary-color)", fontFamily: "monospace" }}>{invoiceNumber}</span>
             </h1>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <label style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "0.45rem", cursor: "pointer" }}>
-              <span>Use Simplified View</span>
-              <input 
-                type="checkbox" 
-                checked={simplifiedView} 
-                onChange={(e) => setSimplifiedView(e.target.checked)}
-                style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--primary-color)" }}
-              />
-            </label>
+            <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--text-primary)" }}>Currency:</span>
+            <select
+              className="crm-select"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              style={{ width: "220px", fontWeight: 700 }}
+            >
+              {CURRENCIES.map(curr => (
+                <option key={curr.code} value={curr.code}>{curr.label}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Top Info Rows */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginBottom: "2.5rem" }}>
+        {/* Section 1: Issuer & Customer Details */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginBottom: "2rem" }}>
           
-          {/* Customer Name Row */}
-          <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", alignItems: "start", gap: "1rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--danger-color)", paddingTop: "0.5rem" }}>
-              Customer Name*
-            </label>
-            <div>
-              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+          {/* Business Issuer Info */}
+          <div style={{ padding: "1.25rem", backgroundColor: "var(--bg-primary)", borderRadius: "10px", border: "1px solid var(--border-primary)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", color: "var(--primary-color)", fontWeight: 700, fontSize: "0.875rem", textTransform: "uppercase" }}>
+              <Building2 size={16} /> Issuer Company Details (From)
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <input 
+                type="text" 
+                className="crm-input" 
+                placeholder="Company Name"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                style={{ fontWeight: 700 }}
+              />
+              <textarea 
+                className="crm-textarea" 
+                rows={3} 
+                placeholder="Building, Street, City, State, Pincode"
+                value={companyAddress}
+                onChange={(e) => setCompanyAddress(e.target.value)}
+                style={{ fontSize: "0.8125rem" }}
+              />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                <input 
+                  type="text" 
+                  className="crm-input" 
+                  placeholder="Phone"
+                  value={companyPhone}
+                  onChange={(e) => setCompanyPhone(e.target.value)}
+                  style={{ fontSize: "0.8125rem" }}
+                />
+                <input 
+                  type="email" 
+                  className="crm-input" 
+                  placeholder="Email"
+                  value={companyEmail}
+                  onChange={(e) => setCompanyEmail(e.target.value)}
+                  style={{ fontSize: "0.8125rem" }}
+                />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                <input 
+                  type="text" 
+                  className="crm-input" 
+                  placeholder="Website"
+                  value={companyWebsite}
+                  onChange={(e) => setCompanyWebsite(e.target.value)}
+                  style={{ fontSize: "0.8125rem" }}
+                />
+                <input 
+                  type="text" 
+                  className="crm-input" 
+                  placeholder="GSTIN"
+                  value={companyGstin}
+                  onChange={(e) => setCompanyGstin(e.target.value)}
+                  style={{ fontSize: "0.8125rem", fontWeight: 600 }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Customer (To) Info */}
+          <div style={{ padding: "1.25rem", backgroundColor: "var(--bg-primary)", borderRadius: "10px", border: "1px solid var(--border-primary)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+              <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "0.875rem", textTransform: "uppercase" }}>
+                Billed To (Customer Details)
+              </span>
+              <div style={{ display: "flex", gap: "0.25rem" }}>
                 <button
                   type="button"
                   onClick={() => setCustomerMode("existing")}
                   style={{
-                    padding: "0.3rem 0.75rem",
-                    borderRadius: "6px",
-                    fontSize: "0.75rem",
+                    padding: "0.25rem 0.5rem",
+                    borderRadius: "4px",
+                    fontSize: "0.7rem",
                     fontWeight: 700,
-                    border: customerMode === "existing" ? "1px solid var(--primary-color)" : "1px solid var(--border-primary)",
-                    backgroundColor: customerMode === "existing" ? "var(--primary-light)" : "var(--bg-primary)",
-                    color: customerMode === "existing" ? "var(--primary-color)" : "var(--text-secondary)",
+                    border: "none",
+                    backgroundColor: customerMode === "existing" ? "var(--primary-color)" : "var(--bg-secondary)",
+                    color: customerMode === "existing" ? "#ffffff" : "var(--text-secondary)",
                     cursor: "pointer"
                   }}
                 >
-                  Select Existing Client
+                  CRM Client
                 </button>
                 <button
                   type="button"
                   onClick={() => setCustomerMode("custom")}
                   style={{
-                    padding: "0.3rem 0.75rem",
-                    borderRadius: "6px",
-                    fontSize: "0.75rem",
+                    padding: "0.25rem 0.5rem",
+                    borderRadius: "4px",
+                    fontSize: "0.7rem",
                     fontWeight: 700,
-                    border: customerMode === "custom" ? "1px solid var(--primary-color)" : "1px solid var(--border-primary)",
-                    backgroundColor: customerMode === "custom" ? "var(--primary-light)" : "var(--bg-primary)",
-                    color: customerMode === "custom" ? "var(--primary-color)" : "var(--text-secondary)",
+                    border: "none",
+                    backgroundColor: customerMode === "custom" ? "var(--primary-color)" : "var(--bg-secondary)",
+                    color: customerMode === "custom" ? "#ffffff" : "var(--text-secondary)",
                     cursor: "pointer"
                   }}
                 >
-                  + Enter New / Custom Customer
+                  Custom
                 </button>
               </div>
+            </div>
 
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {customerMode === "existing" ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", maxWidth: "500px" }}>
-                  <select 
-                    className="crm-select"
-                    value={selectedClientId}
-                    onChange={(e) => setSelectedClientId(e.target.value)}
-                    style={{ flexGrow: 1, fontWeight: 600 }}
-                  >
-                    <option value="">Select Customer / Client</option>
-                    {clientsList.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.company ? `${c.company} (${c.name})` : c.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div style={{ 
-                    display: "inline-flex", 
-                    alignItems: "center", 
-                    gap: "0.25rem", 
-                    padding: "0.45rem 0.65rem", 
-                    backgroundColor: "rgba(16, 185, 129, 0.12)", 
-                    color: "#10b981", 
-                    borderRadius: "6px",
-                    fontSize: "0.75rem",
-                    fontWeight: 700
-                  }}>
-                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10b981" }} />
-                    INR
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxWidth: "500px" }}>
-                  <input 
-                    type="text" 
-                    className="crm-input" 
-                    placeholder="Customer / Company Name (e.g. Techphosis Pvt Ltd)"
-                    value={customCustomerName}
-                    onChange={(e) => setCustomCustomerName(e.target.value)}
-                    required
-                    style={{ fontWeight: 600 }}
-                  />
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-                    <input 
-                      type="email" 
-                      className="crm-input" 
-                      placeholder="Recipient Email (client@company.com)"
-                      value={customCustomerEmail}
-                      onChange={(e) => setCustomCustomerEmail(e.target.value)}
-                      style={{ fontSize: "0.8125rem" }}
-                    />
-                    <input 
-                      type="text" 
-                      className="crm-input" 
-                      placeholder="Legal Entity / Brand Name"
-                      value={customCustomerCompany}
-                      onChange={(e) => setCustomCustomerCompany(e.target.value)}
-                      style={{ fontSize: "0.8125rem" }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Billing / Shipping GST Details Preview (from Reference Image) */}
-              {(selectedClient || customerMode === "custom") && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginTop: "0.75rem", maxWidth: "600px", padding: "0.75rem 1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)", fontSize: "0.75rem" }}>
-                  <div>
-                    <div style={{ color: "var(--text-tertiary)", fontWeight: 700, textTransform: "uppercase", marginBottom: "4px" }}>
-                      Billing Recipient GST Details
-                    </div>
-                    <div>GST Treatment: <strong>{gstTreatment}</strong></div>
-                    <div style={{ marginTop: "2px" }}>
-                      GSTIN: <input 
-                        type="text" 
-                        value={gstin} 
-                        onChange={(e) => setGstin(e.target.value)}
-                        placeholder="e.g. 06AAKCT4257D1ZC"
-                        style={{ border: "none", borderBottom: "1px dashed var(--primary-color)", background: "transparent", color: "var(--primary-color)", fontWeight: 700, padding: "0 2px", fontSize: "0.75rem", outline: "none", width: "160px" }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ color: "var(--text-tertiary)", fontWeight: 700, textTransform: "uppercase", marginBottom: "4px" }}>
-                      Shipping Recipient GST Details
-                    </div>
-                    <div>GSTIN: <span style={{ color: "var(--text-secondary)" }}>{gstin || "Same as Billing"}</span></div>
-                    <div>Business Legal Name: <strong style={{ color: "var(--text-primary)" }}>{customerMode === "custom" ? (customCustomerCompany || customCustomerName || "Direct Billing") : (selectedClient?.company || selectedClient?.name)}</strong></div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Place of Supply Row */}
-          <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", alignItems: "center", gap: "1rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--danger-color)" }}>
-              Place of Supply*
-            </label>
-            <div style={{ maxWidth: "350px" }}>
-              <select 
-                className="crm-select"
-                value={placeOfSupply}
-                onChange={(e) => setPlaceOfSupply(e.target.value)}
-                required
-              >
-                {INDIAN_STATES.map(st => (
-                  <option key={st} value={st}>{st}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Invoice# Row */}
-          <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", alignItems: "center", gap: "1rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--danger-color)" }}>
-              Invoice#*
-            </label>
-            <div style={{ maxWidth: "350px" }}>
-              <input 
-                type="text" 
-                className="crm-input" 
-                value={invoiceNumber}
-                disabled
-                style={{ fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.05em", opacity: 0.8 }}
-              />
-            </div>
-          </div>
-
-          {/* Invoice Date & Terms & Due Date Row */}
-          <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", alignItems: "center", gap: "1rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--danger-color)" }}>
-              Invoice Date*
-            </label>
-            <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap" }}>
-              <input 
-                type="date" 
-                className="crm-input" 
-                value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
-                required
-                style={{ width: "160px" }}
-              />
-
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>Terms</span>
                 <select 
                   className="crm-select"
-                  value={paymentTerms}
-                  onChange={(e) => handleTermsChange(e.target.value)}
-                  style={{ width: "150px" }}
+                  value={selectedClientId}
+                  onChange={(e) => {
+                    setSelectedClientId(e.target.value);
+                    const cl = clientsList.find(c => c.id === e.target.value);
+                    if (cl) {
+                      setCustomCustomerName(cl.company || cl.name);
+                      setCustomCustomerEmail(cl.email || "");
+                    }
+                  }}
+                  style={{ fontWeight: 600 }}
                 >
-                  <option value="Due on Receipt">Due on Receipt</option>
-                  <option value="Net 15">Net 15</option>
-                  <option value="Net 30">Net 30</option>
-                  <option value="Net 60">Net 60</option>
-                  <option value="Custom">Custom</option>
+                  <option value="">Select Existing Client</option>
+                  {clientsList.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.company ? `${c.company} (${c.name})` : c.name}
+                    </option>
+                  ))}
                 </select>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>Due Date</span>
+              ) : (
                 <input 
-                  type="date" 
+                  type="text" 
                   className="crm-input" 
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  placeholder="Customer Legal Name"
+                  value={customCustomerName}
+                  onChange={(e) => setCustomCustomerName(e.target.value)}
+                  style={{ fontWeight: 700 }}
                   required
-                  style={{ width: "160px" }}
                 />
-              </div>
+              )}
 
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>Status</span>
+              <input 
+                type="email" 
+                className="crm-input" 
+                placeholder="Recipient Email"
+                value={customCustomerEmail}
+                onChange={(e) => setCustomCustomerEmail(e.target.value)}
+                style={{ fontSize: "0.8125rem" }}
+              />
+
+              <textarea 
+                className="crm-textarea" 
+                rows={3} 
+                placeholder="Client Address..."
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+                style={{ fontSize: "0.8125rem" }}
+              />
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                <input 
+                  type="text" 
+                  className="crm-input" 
+                  placeholder="GSTIN"
+                  value={gstin}
+                  onChange={(e) => setGstin(e.target.value)}
+                  style={{ fontSize: "0.8125rem", fontWeight: 700 }}
+                />
                 <select 
                   className="crm-select"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  style={{ width: "120px", fontWeight: 600 }}
+                  value={placeOfSupply}
+                  onChange={(e) => setPlaceOfSupply(e.target.value)}
+                  style={{ fontSize: "0.8125rem" }}
                 >
-                  <option value="Draft">Draft</option>
-                  <option value="Sent">Sent</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Overdue">Overdue</option>
-                  <option value="Cancelled">Cancelled</option>
+                  {INDIAN_STATES.map(st => (
+                    <option key={st} value={st}>{st}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -548,11 +585,81 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
 
         </div>
 
-        {/* Item Table */}
+        {/* Section 2: Invoice Metadata */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", padding: "1.25rem", backgroundColor: "var(--bg-primary)", borderRadius: "10px", border: "1px solid var(--border-primary)", marginBottom: "2rem" }}>
+          <div>
+            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Invoice#</label>
+            <input 
+              type="text" 
+              className="crm-input" 
+              value={invoiceNumber}
+              disabled
+              style={{ fontWeight: 800, fontFamily: "monospace", marginTop: "4px", opacity: 0.8 }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Invoice Date</label>
+            <input 
+              type="date" 
+              className="crm-input" 
+              value={invoiceDate}
+              onChange={(e) => setInvoiceDate(e.target.value)}
+              style={{ marginTop: "4px" }}
+              required
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Terms</label>
+            <select 
+              className="crm-select"
+              value={paymentTerms}
+              onChange={(e) => handleTermsChange(e.target.value)}
+              style={{ marginTop: "4px" }}
+            >
+              <option value="Due on Receipt">Due on Receipt</option>
+              <option value="Net 15">Net 15</option>
+              <option value="Net 30">Net 30</option>
+              <option value="Net 60">Net 60</option>
+              <option value="Custom">Custom</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Due Date</label>
+            <input 
+              type="date" 
+              className="crm-input" 
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              style={{ marginTop: "4px" }}
+              required
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>Status</label>
+            <select 
+              className="crm-select"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              style={{ marginTop: "4px", fontWeight: 700 }}
+            >
+              <option value="Draft">Draft</option>
+              <option value="Sent">Sent</option>
+              <option value="Paid">Paid</option>
+              <option value="Overdue">Overdue</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Section 3: Item Table */}
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
-              Item Table
+            <h3 style={{ fontSize: "1rem", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
+              Itemized Deliverables
             </h3>
           </div>
 
@@ -560,57 +667,36 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
               <thead>
                 <tr style={{ backgroundColor: "var(--bg-secondary)", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)", textAlign: "left" }}>
-                  <th style={{ padding: "0.75rem 1rem", width: "45%" }}>ITEM DETAILS</th>
-                  <th style={{ padding: "0.75rem 0.5rem", width: "10%", textAlign: "center" }}>QUANTITY</th>
-                  <th style={{ padding: "0.75rem 0.5rem", width: "15%", textAlign: "right" }}>RATE (₹)</th>
-                  <th style={{ padding: "0.75rem 0.5rem", width: "15%" }}>TAX</th>
-                  <th style={{ padding: "0.75rem 1rem", width: "15%", textAlign: "right" }}>AMOUNT (₹)</th>
+                  <th style={{ padding: "0.75rem 1rem", width: "5%" }}>#</th>
+                  <th style={{ padding: "0.75rem 1rem", width: "40%" }}>DESCRIPTION</th>
+                  <th style={{ padding: "0.75rem 0.5rem", width: "10%", textAlign: "center" }}>QTY</th>
+                  <th style={{ padding: "0.75rem 0.5rem", width: "15%", textAlign: "right" }}>RATE ({currObj.symbol})</th>
+                  <th style={{ padding: "0.75rem 0.5rem", width: "15%", textAlign: "center" }}>TAX (IGST)</th>
+                  <th style={{ padding: "0.75rem 1rem", width: "15%", textAlign: "right" }}>AMOUNT ({currObj.symbol})</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, idx) => (
                   <tr key={item.id || idx} style={{ borderBottom: "1px solid var(--border-primary)", verticalAlign: "top" }}>
+                    <td style={{ padding: "1rem", color: "var(--text-secondary)", fontWeight: 700 }}>
+                      {idx + 1}
+                    </td>
                     <td style={{ padding: "1rem" }}>
                       <input 
                         type="text" 
                         className="crm-input" 
-                        placeholder="e.g. Additional Website Development Charges"
                         value={item.itemDetails}
                         onChange={(e) => handleItemChange(idx, "itemDetails", e.target.value)}
                         required
-                        style={{ fontWeight: 600, marginBottom: "0.5rem" }}
+                        style={{ fontWeight: 700, marginBottom: "0.5rem" }}
                       />
                       <textarea 
                         className="crm-textarea" 
                         rows={2}
-                        placeholder="(Including additional pages, scope expansion, UI/UX revisions...)"
                         value={item.description}
                         onChange={(e) => handleItemChange(idx, "description", e.target.value)}
-                        style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}
+                        style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}
                       />
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ 
-                          fontSize: "0.65rem", 
-                          fontWeight: 800, 
-                          backgroundColor: "#10b981", 
-                          color: "#ffffff", 
-                          padding: "1px 5px", 
-                          borderRadius: "3px", 
-                          letterSpacing: "0.05em" 
-                        }}>
-                          SERVICE
-                        </span>
-                        <span style={{ fontSize: "0.75rem", color: "var(--primary-color)", fontWeight: 600 }}>
-                          SAC:
-                        </span>
-                        <input 
-                          type="text" 
-                          value={item.sacCode} 
-                          onChange={(e) => handleItemChange(idx, "sacCode", e.target.value)}
-                          placeholder="998314"
-                          style={{ border: "none", borderBottom: "1px dashed var(--primary-color)", background: "transparent", color: "var(--primary-color)", fontWeight: 700, fontSize: "0.75rem", outline: "none", width: "70px" }}
-                        />
-                      </div>
                     </td>
 
                     <td style={{ padding: "1rem 0.5rem", textAlign: "center" }}>
@@ -632,11 +718,10 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                         className="crm-input" 
                         min="0"
                         step="any"
-                        placeholder="15000"
                         value={item.rate}
                         onChange={(e) => handleItemChange(idx, "rate", e.target.value)}
                         required
-                        style={{ textAlign: "right", fontWeight: 600 }}
+                        style={{ textAlign: "right", fontWeight: 700 }}
                       />
                     </td>
 
@@ -655,13 +740,13 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
 
                     <td style={{ padding: "1rem", textAlign: "right" }}>
                       <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--text-primary)", fontFamily: "monospace" }}>
-                        {new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.amount)}
+                        {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.amount)}
                       </div>
                       {items.length > 1 && (
                         <button 
                           type="button" 
                           onClick={() => removeItemRow(idx)}
-                          style={{ marginTop: "0.75rem", border: "none", background: "none", color: "var(--danger-color)", fontSize: "0.75rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "2px" }}
+                          style={{ marginTop: "0.5rem", border: "none", background: "none", color: "var(--danger-color)", fontSize: "0.75rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "2px" }}
                         >
                           <Trash2 size={12} /> Remove
                         </button>
@@ -673,79 +758,119 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
             </table>
           </div>
 
-          <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
-            <button 
-              type="button" 
-              onClick={addItemRow}
-              className="crm-btn crm-btn-secondary"
-              style={{ fontSize: "0.8125rem", padding: "0.4rem 0.85rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-            >
-              <Plus size={14} color="var(--primary-color)" /> + Add New Row
-            </button>
-          </div>
+          <button 
+            type="button" 
+            onClick={addItemRow}
+            className="crm-btn crm-btn-secondary"
+            style={{ fontSize: "0.8125rem", padding: "0.4rem 0.85rem", marginTop: "0.75rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+          >
+            <Plus size={14} color="var(--primary-color)" /> + Add Line Item
+          </button>
         </div>
 
-        {/* Notes and Summary */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "2rem", borderTop: "1px solid var(--border-primary)", paddingTop: "1.5rem", marginBottom: "2rem" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div>
-              <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
-                Customer Notes
-              </label>
-              <textarea 
-                className="crm-textarea" 
-                rows={3} 
-                value={customerNotes}
-                onChange={(e) => setCustomerNotes(e.target.value)}
-                placeholder="Thanks for your business..."
-              />
+        {/* Section 4: Bank, Words & Summary */}
+        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "2rem", borderTop: "2px solid var(--border-primary)", paddingTop: "1.5rem", marginBottom: "2rem" }}>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div style={{ padding: "1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "4px" }}>
+                Total In Words
+              </div>
+              <div style={{ fontWeight: 700, fontStyle: "italic", color: "var(--text-primary)", fontSize: "0.9rem" }}>
+                {totalInWords}
+              </div>
+            </div>
+
+            <div style={{ padding: "1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "8px" }}>
+                <CreditCard size={14} /> Bank Details
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                <div>
+                  <label style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Bank Name</label>
+                  <input 
+                    type="text" 
+                    className="crm-input" 
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    style={{ fontSize: "0.8125rem" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Account Number</label>
+                  <input 
+                    type="text" 
+                    className="crm-input" 
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    style={{ fontSize: "0.8125rem", fontFamily: "monospace", fontWeight: 700 }}
+                  />
+                </div>
+              </div>
+              <div style={{ marginTop: "0.5rem" }}>
+                <label style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>IFSC Code</label>
+                <input 
+                  type="text" 
+                  className="crm-input" 
+                  value={ifscCode}
+                  onChange={(e) => setIfscCode(e.target.value)}
+                  style={{ fontSize: "0.8125rem", fontFamily: "monospace", fontWeight: 700 }}
+                />
+              </div>
             </div>
 
             <div>
-              <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "4px", display: "block" }}>
-                Terms & Conditions
+              <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>
+                This Invoice Includes
               </label>
               <textarea 
                 className="crm-textarea" 
                 rows={3} 
-                value={termsAndConditions}
-                onChange={(e) => setTermsAndConditions(e.target.value)}
-                placeholder="Payment terms and jurisdiction..."
+                value={invoiceIncludes}
+                onChange={(e) => setInvoiceIncludes(e.target.value)}
+                style={{ fontSize: "0.8125rem" }}
               />
             </div>
           </div>
 
-          <div style={{ padding: "1.25rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.875rem" }}>
-              <span style={{ color: "var(--text-secondary)" }}>Sub Total</span>
-              <span style={{ fontWeight: 600, fontFamily: "monospace" }}>
-                ₹{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(subtotal)}
+          <div style={{ padding: "1.5rem", backgroundColor: "var(--bg-primary)", borderRadius: "10px", border: "1px solid var(--border-primary)", height: "fit-content" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
+              <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Sub Total</span>
+              <span style={{ fontWeight: 700, fontFamily: "monospace" }}>
+                {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(subtotal)}
               </span>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.875rem" }}>
-              <span style={{ color: "var(--text-secondary)" }}>Total Tax (GST)</span>
-              <span style={{ fontWeight: 600, color: "#10b981", fontFamily: "monospace" }}>
-                +₹{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(taxTotal)}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
+              <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Total Tax (GST)</span>
+              <span style={{ fontWeight: 700, color: "#10b981", fontFamily: "monospace" }}>
+                +{currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(taxTotal)}
               </span>
             </div>
 
-            <div style={{ borderTop: "2px dashed var(--border-primary)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>Total ( ₹ )</span>
+            <div style={{ borderTop: "2px solid var(--border-primary)", paddingTop: "1rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-primary)" }}>Total</span>
               <span style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--primary-color)", fontFamily: "monospace" }}>
-                ₹{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandTotal)}
+                {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandTotal)}
+              </span>
+            </div>
+
+            <div style={{ borderTop: "1px dashed var(--border-primary)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(99, 102, 241, 0.08)", padding: "0.75rem", borderRadius: "6px" }}>
+              <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-primary)" }}>Balance Due</span>
+              <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-primary)", fontFamily: "monospace" }}>
+                {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandTotal)}
               </span>
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", borderTop: "1px solid var(--border-primary)", paddingTop: "1.5rem" }}>
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", borderTop: "2px solid var(--border-primary)", paddingTop: "1.5rem" }}>
           <button 
             type="submit" 
             disabled={submitting} 
             className="crm-btn"
-            style={{ backgroundColor: "#10b981", color: "#ffffff", fontWeight: 700, padding: "0.6rem 1.5rem" }}
+            style={{ backgroundColor: "#10b981", color: "#ffffff", fontWeight: 800, padding: "0.65rem 1.75rem" }}
           >
             {submitting ? "Saving..." : "Save Changes"}
           </button>
@@ -755,7 +880,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
             disabled={submitting}
             onClick={(e) => handleSubmit(e, "Sent")}
             className="crm-btn crm-btn-primary"
-            style={{ fontWeight: 700, padding: "0.6rem 1.5rem", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+            style={{ fontWeight: 800, padding: "0.65rem 1.75rem", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
           >
             <Send size={16} /> Save and Send
           </button>
@@ -764,7 +889,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
             type="button" 
             onClick={() => router.push(`/dashboard/invoices/${id}`)}
             className="crm-btn crm-btn-secondary"
-            style={{ padding: "0.6rem 1.25rem" }}
+            style={{ padding: "0.65rem 1.25rem" }}
           >
             Cancel
           </button>
