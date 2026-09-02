@@ -958,6 +958,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
               )}
 
+              {/* Product Overview & Landing Page Link */}
+              <button
+                onClick={() => router.push("/")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  backgroundColor: "rgba(99, 102, 241, 0.12)",
+                  color: "var(--primary-color)",
+                  border: "1px solid rgba(99, 102, 241, 0.25)",
+                  padding: "0.45rem 0.85rem",
+                  borderRadius: "10px",
+                  fontSize: "0.775rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+                title="View Public AI CRM Landing Page & System Showcase"
+              >
+                <Sparkles size={14} />
+                <span>Product Overview</span>
+              </button>
+
               {/* Light / Dark Mode Toggle */}
               <button
                 onClick={toggleTheme}
@@ -1039,6 +1062,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{currentUser.email}</div>
                       </div>
                       <button onClick={() => { router.push("/dashboard/settings"); setShowProfileMenu(false); }} style={topbarStyles.profileMenuItem}><Settings size={14} /> Profile Settings</button>
+                      <button onClick={() => { router.push("/"); setShowProfileMenu(false); }} style={topbarStyles.profileMenuItem}><Sparkles size={14} /> Product Showcase</button>
                       <button onClick={handleLogout} style={{ ...topbarStyles.profileMenuItem, color: "var(--danger-color)" }}><LogOut size={14} /> Logout Session</button>
                     </div>
                   )}
