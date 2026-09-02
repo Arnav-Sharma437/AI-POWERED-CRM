@@ -363,10 +363,10 @@ export default function CreateInvoicePage() {
             <FileText size={28} color="var(--primary-color)" />
             <div>
               <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-                Create Tax Invoice (Zoho Format)
+                Create Official Tax Invoice
               </h1>
               <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
-                Professional standard invoice matching Pixxelu / Zoho billing architecture
+                Professional GST & multi-currency billing statement
               </span>
             </div>
           </div>

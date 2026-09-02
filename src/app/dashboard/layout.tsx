@@ -630,63 +630,53 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div style={{ ...sidebarStyles.logoArea, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", cursor: "pointer" }} onClick={() => { router.push("/dashboard"); setMobileSidebarOpen(false); }}>
               <div style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                background: "linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)",
+                height: "36px",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 14px rgba(99, 102, 241, 0.4)",
-                flexShrink: 0,
-                position: "relative"
+                padding: "2px 6px",
+                backgroundColor: "#ffffff",
+                borderRadius: "8px",
+                border: "1px solid var(--border-primary)",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
               }}>
-                <Sparkles size={22} color="#ffffff" />
-                <span style={{
-                  position: "absolute",
-                  top: "-2px",
-                  right: "-2px",
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "50%",
-                  backgroundColor: "#10b981",
-                  boxShadow: "0 0 8px #10b981"
-                }} />
+                <img 
+                  src="/logo.png" 
+                  alt="Pixxelu Logo" 
+                  style={{ height: "24px", width: "auto", objectFit: "contain" }} 
+                />
               </div>
               <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                   <span style={{
-                    fontSize: "1.1rem",
-                    fontWeight: 800,
-                    letterSpacing: "-0.4px",
-                    background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent"
+                    fontSize: "0.95rem",
+                    fontWeight: 900,
+                    letterSpacing: "-0.3px",
+                    color: "var(--text-primary)"
                   }}>
-                    NEXUS AI
+                    PIXXELU
                   </span>
                   <span style={{
                     fontSize: "0.6rem",
                     fontWeight: 700,
-                    backgroundColor: "rgba(99, 102, 241, 0.15)",
-                    color: "var(--primary-color)",
+                    backgroundColor: "rgba(224, 86, 36, 0.12)",
+                    color: "#e05624",
                     padding: "1px 5px",
                     borderRadius: "4px",
-                    border: "1px solid rgba(99, 102, 241, 0.3)",
+                    border: "1px solid rgba(224, 86, 36, 0.3)",
                     letterSpacing: "0.5px"
                   }}>
-                    PRO
+                    CRM
                   </span>
                 </div>
                 <span style={{
                   fontSize: "0.65rem",
                   fontWeight: 600,
                   color: "var(--text-tertiary)",
-                  letterSpacing: "0.4px",
+                  letterSpacing: "0.2px",
                   lineHeight: 1.2,
                   marginTop: "1px"
                 }}>
-                  AI Lead Management CRM
+                  Digital Operations & BDA Hub
                 </span>
               </div>
             </div>
