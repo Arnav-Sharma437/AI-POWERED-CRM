@@ -6,7 +6,8 @@ import {
   LayoutDashboard, Users, UserSquare2, Briefcase, Calendar, 
   Activity, Bell, Trash2, Settings, Plus, Search, LogOut, 
   User, CheckCircle2, AlertCircle, FileText, CalendarRange, Clock, CreditCard, MessageSquare,
-  Sparkles, Zap, Cpu, Bot, Sun, Moon, Building2, Home, MapPin, Menu, X, ReceiptText
+  Sparkles, Zap, Cpu, Bot, Sun, Moon, Building2, Home, MapPin, Menu, X, ReceiptText,
+  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 
 // Context for global state sharing (Quick Add triggers, etc.)
@@ -25,7 +26,9 @@ const DashboardContext = createContext<DashboardContextType | undefined>(undefin
 
 export const useDashboard = () => {
   const context = useContext(DashboardContext);
-  if (!context) throw new Error("useDashboard must be used within DashboardProvider");
+  if (!context) {
+    throw new Error("useDashboard must be used within a DashboardLayout");
+  }
   return context;
 };
 
@@ -52,6 +55,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [triggerRefresh, setTriggerRefresh] = useState(0);
   
   // UI states
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("crm_sidebar_collapsed") === "true";
+    }
+    return false;
+  });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any>(null);
@@ -626,28 +635,58 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
 
         {/* Left Sidebar */}
-        <aside className={`crm-sidebar ${mobileSidebarOpen ? "mobile-open" : ""}`}>
-          <div style={{ ...sidebarStyles.logoArea, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", textDecoration: "none", cursor: "pointer", width: "100%" }} onClick={() => { router.push("/dashboard"); setMobileSidebarOpen(false); }}>
+        <aside className={`crm-sidebar ${mobileSidebarOpen ? "mobile-open" : ""} ${isSidebarCollapsed ? "crm-sidebar-collapsed" : ""}`}>
+          <div style={{ ...sidebarStyles.logoArea, display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSidebarCollapsed ? "1.5rem 0.5rem" : "1.75rem 1.25rem", gap: "0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", textDecoration: "none", cursor: "pointer", width: "100%", justifyContent: isSidebarCollapsed ? "center" : "flex-start" }} onClick={() => { router.push("/dashboard"); setMobileSidebarOpen(false); }}>
               <div style={{
-                height: "44px",
+                height: "42px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: "4px 12px",
+                padding: isSidebarCollapsed ? "4px" : "4px 10px",
                 backgroundColor: "#ffffff",
                 borderRadius: "10px",
                 border: "1px solid var(--border-primary)",
                 boxShadow: "0 2px 10px rgba(0, 0, 0, 0.06)",
-                width: "100%"
+                width: isSidebarCollapsed ? "42px" : "100%",
+                transition: "all 0.2s ease"
               }}>
                 <img 
                   src="/logo.png" 
                   alt="Pixxelu" 
-                  style={{ height: "26px", width: "auto", objectFit: "contain" }} 
+                  style={{ height: isSidebarCollapsed ? "20px" : "24px", width: "auto", objectFit: "contain" }} 
                 />
               </div>
             </div>
+
+            {/* Minimize / Expand Toggle Button (Desktop) */}
+            <button
+              onClick={() => {
+                const nextState = !isSidebarCollapsed;
+                setIsSidebarCollapsed(nextState);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("crm_sidebar_collapsed", String(nextState));
+                }
+              }}
+              className="crm-sidebar-collapse-btn hidden md:flex"
+              title={isSidebarCollapsed ? "Expand Sidebar" : "Minimize Sidebar"}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "28px",
+                height: "28px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-primary)",
+                backgroundColor: "var(--bg-primary)",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                flexShrink: 0
+              }}
+            >
+              {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
 
             {/* Mobile Close Button */}
             <button 
@@ -659,7 +698,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
           </div>
 
-          <nav style={sidebarStyles.nav}>
+          <nav style={{ ...sidebarStyles.nav, padding: isSidebarCollapsed ? "1.25rem 0.5rem" : "1.5rem 0.75rem" }}>
             {navItems.map(item => {
               const active = pathname === item.path || (item.path !== "/dashboard" && pathname.startsWith(item.path));
               return (
@@ -669,27 +708,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     router.push(item.path);
                     setMobileSidebarOpen(false);
                   }}
+                  title={isSidebarCollapsed ? item.name : undefined}
                   style={{
                     ...sidebarStyles.navItem,
                     backgroundColor: active ? "var(--primary-light)" : "transparent",
                     color: active ? "var(--primary-color)" : "var(--text-secondary)",
-                    fontWeight: active ? 600 : 500,
+                    fontWeight: active ? 700 : 500,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    width: "100%"
+                    justifyContent: isSidebarCollapsed ? "center" : "space-between",
+                    padding: isSidebarCollapsed ? "0.75rem" : "0.75rem 1rem",
+                    width: "100%",
+                    position: "relative"
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                    <item.icon size={18} />
-                    <span>{item.name}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: isSidebarCollapsed ? "0" : "0.75rem", justifyContent: isSidebarCollapsed ? "center" : "flex-start", width: isSidebarCollapsed ? "auto" : "100%" }}>
+                    <item.icon size={isSidebarCollapsed ? 20 : 18} style={{ flexShrink: 0 }} />
+                    {!isSidebarCollapsed && <span>{item.name}</span>}
                   </div>
                   {item.name === "Chat" && unreadChatCount > 0 && (
                     <span style={{
+                      position: isSidebarCollapsed ? "absolute" : "static",
+                      top: isSidebarCollapsed ? "4px" : "auto",
+                      right: isSidebarCollapsed ? "4px" : "auto",
                       backgroundColor: "var(--danger-color)",
                       color: "#ffffff",
                       fontSize: "0.675rem",
-                      fontWeight: 600,
+                      fontWeight: 700,
                       borderRadius: "10px",
                       padding: "2px 6px",
                       lineHeight: 1
@@ -702,21 +747,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             })}
           </nav>
 
-          <div style={sidebarStyles.footer}>
+          <div style={{ ...sidebarStyles.footer, padding: isSidebarCollapsed ? "1rem 0.5rem" : "1.5rem" }}>
             {currentUser && (
-              <div style={sidebarStyles.userCard}>
+              <div style={{ ...sidebarStyles.userCard, justifyContent: isSidebarCollapsed ? "center" : "flex-start" }} title={`${currentUser.name} (${currentUser.roleName})`}>
                 <div style={sidebarStyles.avatar}>
                   {currentUser.name.charAt(0)}
                 </div>
-                <div style={sidebarStyles.userInfo}>
-                  <div style={sidebarStyles.userName}>{currentUser.name}</div>
-                  <div style={sidebarStyles.userRole}>{currentUser.roleName}</div>
-                </div>
+                {!isSidebarCollapsed && (
+                  <div style={sidebarStyles.userInfo}>
+                    <div style={sidebarStyles.userName}>{currentUser.name}</div>
+                    <div style={sidebarStyles.userRole}>{currentUser.roleName}</div>
+                  </div>
+                )}
               </div>
             )}
-            <button onClick={handleLogout} style={sidebarStyles.logoutBtn}>
+            <button 
+              onClick={handleLogout} 
+              style={{ ...sidebarStyles.logoutBtn, padding: isSidebarCollapsed ? "0.625rem 0" : "0.625rem", justifyContent: "center" }}
+              title="Logout Session"
+            >
               <LogOut size={16} />
-              Logout Session
+              {!isSidebarCollapsed && <span>Logout Session</span>}
             </button>
           </div>
         </aside>

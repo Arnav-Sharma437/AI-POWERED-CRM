@@ -135,7 +135,15 @@ body {
   position: sticky;
   top: 0;
   z-index: 50;
-  transition: all 0.3s ease;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
+}
+
+.crm-sidebar.crm-sidebar-collapsed {
+  width: 76px;
+}
+
+.crm-sidebar.crm-sidebar-collapsed .crm-sidebar-collapse-btn {
+  margin: 0 auto;
 }
 
 .crm-main-content {
@@ -145,6 +153,7 @@ body {
   min-width: 0; /* Prevents flex children from breaking parent layout */
   height: 100vh;
   overflow-y: auto;
+  transition: all 0.25s ease;
 }
 
 .crm-topbar {
@@ -533,6 +542,18 @@ body {
     border-radius: 10px !important;
   }
 
+  /* Table Horizontal Scrolling on Mobile */
+  .crm-table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-radius: 10px !important;
+  }
+
+  .crm-table th, .crm-table td {
+    padding: 0.75rem 0.75rem !important;
+    white-space: nowrap !important;
+  }
+
   /* Chat responsiveness */
   .crm-chat-container {
     height: calc(100vh - 85px) !important;
@@ -569,6 +590,13 @@ body {
   div[style*="grid-template-columns: 2fr 1fr"] {
     grid-template-columns: 1fr !important;
   }
+
+  /* Stack dashboard stats cleanly on mobile */
+  div[style*="gridTemplateColumns: \"repeat(auto-fit, minmax(240px, 1fr))\""],
+  div[style*="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))"] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.75rem !important;
+  }
 }
 
 /* Extra Small Phones (<= 480px) */
@@ -582,8 +610,13 @@ body {
   }
 
   .crm-btn {
-    padding: 0.5rem 0.85rem !important;
-    font-size: 0.8125rem !important;
+    padding: 0.45rem 0.75rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  div[style*="gridTemplateColumns: \"repeat(auto-fit, minmax(240px, 1fr))\""],
+  div[style*="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))"] {
+    grid-template-columns: 1fr !important;
   }
 }
 
