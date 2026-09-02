@@ -33,13 +33,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     totalRemainingMs: number;
   }>({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false, totalRemainingMs: 0 });
 
-  // Floating Sticky Chat states
-  const [isChatOpen, setIsChatOpen] = useState(true);
-  const [isChatMinimized, setIsChatMinimized] = useState(false);
+  // Dedicated Project Chat states
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatText, setChatText] = useState("");
   const [chatStagedAttachments, setChatStagedAttachments] = useState<any[]>([]);
-  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
 
   // Activity Timeline State
@@ -230,9 +228,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     };
   }, [currentUser, project?.conversationId]);
 
-  // Auto-scroll project chat
+  // Internal auto-scroll for chat container (prevents whole window from jumping/scrolling down)
   useEffect(() => {
-    chatMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [chatMessages]);
 
   const handleSendChatMessage = async (e: React.FormEvent) => {
@@ -832,15 +832,23 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {/* Two Columns Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", alignItems: "start" }}>
-        
-        {/* Left Column: Payments & Details */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {/* Dedicated Project Details & Messages Section */}
+      <div 
+        className="crm-project-layout-grid"
+        style={{ 
+          display: "grid", 
+          gridTemplateColumns: project?.conversationId ? "1.15fr 0.85fr" : "1fr", 
+          gap: "1.5rem", 
+          alignItems: "start" 
+        }}
+      >
+        {/* Left Column: Deadlines, Payments, Ownership & Activity Timeline */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", minWidth: 0 }}>
+          
           {/* Milestone Details Card */}
           <div className="crm-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: 0 }}>Project Deadlines</h3>
+              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: 0 }}>Project Deadlines & Scope</h3>
               {!isDeveloper && (
                 <button
                   type="button"
@@ -866,6 +874,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <span style={{ color: "var(--text-tertiary)" }}>Sales Source</span>
                 <strong>{project.source || "None"}</strong>
               </div>
+              {project.notes && (
+                <div style={{ marginTop: "0.5rem", padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", fontWeight: 700, textTransform: "uppercase", marginBottom: "4px" }}>Project Scope / Notes:</div>
+                  <div style={{ fontSize: "0.8125rem", color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>{project.notes}</div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -886,7 +900,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   {project.payments.map((pay: any) => (
                     <div key={pay.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)", fontSize: "0.875rem" }}>
                       <div>
-                        <div style={{ fontWeight: 600 }}>{new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(pay.amount)}</div>
+                        <div style={{ fontWeight: 600 }}>{new Intl.NumberFormat("en-IN", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(pay.amount)}</div>
                         <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>{pay.note || "No note"}</div>
                       </div>
                       <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
@@ -898,11 +912,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               )}
             </div>
           )}
-        </div>
 
-        {/* Right Column: Ownership & History */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          
           {/* Ownership Takeovers history */}
           {project.ownershipHistory?.length > 0 && (
             <div className="crm-card">
@@ -981,345 +991,269 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-      </div>
-
-      {/* Modern Floating Sticky Project Chat Widget */}
-      {project?.conversationId && (
-        <div 
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            right: "24px",
-            width: isChatMinimized ? "300px" : "390px",
-            maxHeight: isChatMinimized ? "52px" : "520px",
-            zIndex: 1000,
-            borderRadius: "14px",
-            boxShadow: "0 14px 40px -4px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--border-primary)",
-            backgroundColor: "var(--bg-primary)",
-            overflow: "hidden",
-            transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-            display: isChatOpen ? "flex" : "none",
-            flexDirection: "column"
-          }}
-        >
-          {/* Sticky Chat Header */}
+        {/* Right Dedicated Column: Project Team Messages & Discussions */}
+        {project?.conversationId && (
           <div 
-            onClick={() => setIsChatMinimized(!isChatMinimized)}
-            style={{
-              padding: "0.75rem 1rem",
-              background: "linear-gradient(135deg, var(--primary-color) 0%, #7c3aed 100%)",
-              color: "#ffffff",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              cursor: "pointer",
-              userSelect: "none"
+            className="crm-card" 
+            style={{ 
+              padding: 0, 
+              display: "flex", 
+              flexDirection: "column", 
+              height: "720px", 
+              maxHeight: "calc(100vh - 120px)",
+              position: "sticky", 
+              top: "90px",
+              overflow: "hidden",
+              border: "1px solid var(--border-primary)",
+              boxShadow: "var(--shadow-md)"
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <div style={{ position: "relative" }}>
-                <MessageSquare size={18} />
-                <span style={{ 
-                  position: "absolute", 
-                  top: "-2px", 
-                  right: "-2px", 
-                  width: "8px", 
-                  height: "8px", 
-                  borderRadius: "50%", 
-                  backgroundColor: "#10b981", 
-                  border: "2px solid #ffffff" 
-                }} />
-              </div>
-              <div>
-                <div style={{ fontSize: "0.875rem", fontWeight: 700, lineHeight: 1.2 }}>Project Team Chat</div>
-                <div style={{ fontSize: "0.7rem", opacity: 0.9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "150px" }}>
-                  {project.name}
+            {/* Dedicated Chat Header */}
+            <div 
+              style={{
+                padding: "0.85rem 1.25rem",
+                background: "linear-gradient(135deg, var(--primary-color) 0%, #7c3aed 100%)",
+                color: "#ffffff",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexShrink: 0
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div style={{ position: "relative" }}>
+                  <MessageSquare size={19} />
+                  <span style={{ 
+                    position: "absolute", 
+                    top: "-2px", 
+                    right: "-2px", 
+                    width: "8px", 
+                    height: "8px", 
+                    borderRadius: "50%", 
+                    backgroundColor: "#10b981", 
+                    border: "2px solid #ffffff" 
+                  }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.9375rem", fontWeight: 700, lineHeight: 1.2 }}>Project Messages & Chat</div>
+                  <div style={{ fontSize: "0.725rem", opacity: 0.9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "200px" }}>
+                    {project.name}
+                  </div>
                 </div>
               </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <button 
+                  type="button"
+                  onClick={() => router.push(`/dashboard/chat?id=${project.conversationId}`)}
+                  style={{
+                    border: "none",
+                    background: "rgba(255, 255, 255, 0.2)",
+                    color: "#ffffff",
+                    borderRadius: "6px",
+                    padding: "4px 9px",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                  title="Open full page chat"
+                >
+                  <Maximize2 size={13} /> Full Screen
+                </button>
+              </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-              <button 
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/dashboard/chat?id=${project.conversationId}`);
-                }}
-                style={{
-                  border: "none",
-                  background: "rgba(255, 255, 255, 0.2)",
-                  color: "#ffffff",
-                  borderRadius: "6px",
-                  padding: "3px 7px",
-                  fontSize: "0.7rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "3px"
-                }}
-                title="Open full page chat"
-              >
-                <Maximize2 size={11} /> Full View
-              </button>
-
-              <button 
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsChatMinimized(!isChatMinimized);
-                }}
-                style={{
-                  border: "none",
-                  background: "rgba(255, 255, 255, 0.15)",
-                  color: "#ffffff",
-                  cursor: "pointer",
-                  padding: "3px 6px",
-                  borderRadius: "6px",
-                  display: "flex",
-                  alignItems: "center"
-                }}
-                title={isChatMinimized ? "Expand Chat" : "Minimize Chat"}
-              >
-                {isChatMinimized ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-              </button>
-
-              <button 
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsChatOpen(false);
-                }}
-                style={{
-                  border: "none",
-                  background: "rgba(255, 255, 255, 0.15)",
-                  color: "#ffffff",
-                  cursor: "pointer",
-                  padding: "3px 6px",
-                  borderRadius: "6px",
-                  display: "flex",
-                  alignItems: "center"
-                }}
-                title="Close floating chat widget"
-              >
-                <X size={15} />
-              </button>
-            </div>
-          </div>
-
-          {/* Sticky Chat Body */}
-          {!isChatMinimized && (
-            <div style={{ display: "flex", flexDirection: "column", height: "420px", backgroundColor: "var(--bg-secondary)" }}>
-              {/* Messages Panel */}
-              <div style={{ 
+            {/* Dedicated Messages Scrollable Panel (Scroll strictly contained here) */}
+            <div 
+              ref={chatContainerRef}
+              style={{ 
                 flex: 1, 
                 overflowY: "auto", 
-                padding: "0.85rem", 
+                padding: "1rem", 
                 display: "flex", 
                 flexDirection: "column", 
-                gap: "0.65rem" 
-              }}>
-                {chatMessages.length === 0 ? (
-                  <div style={{ margin: "auto", color: "var(--text-tertiary)", fontSize: "0.8125rem", textAlign: "center", padding: "1rem" }}>
-                    💬 No team messages yet.<br />Post an update to collaborate!
-                  </div>
-                ) : (
-                  chatMessages.map((m) => {
-                    const isMe = m.senderId === currentUser?.id;
-                    return (
-                      <div 
-                        key={m.id} 
-                        style={{ 
-                          display: "flex", 
-                          justifyContent: isMe ? "flex-end" : "flex-start",
-                          width: "100%"
-                        }}
-                      >
-                        <div style={{ 
-                          maxWidth: "85%", 
-                          padding: "0.5rem 0.75rem", 
-                          borderRadius: "10px", 
-                          backgroundColor: isMe ? "var(--primary-color)" : "var(--bg-primary)",
-                          color: isMe ? "#ffffff" : "var(--text-primary)",
-                          boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                          border: isMe ? "none" : "1px solid var(--border-primary)"
-                        }}>
-                          {!isMe && (
-                            <div style={{ fontSize: "0.725rem", fontWeight: 700, color: "var(--primary-color)", marginBottom: "0.15rem" }}>
-                              {m.senderName}
-                            </div>
-                          )}
-                          <div style={{ fontSize: "0.8125rem", wordBreak: "break-word" }}>{m.content}</div>
-
-                          {/* Attachments rendering */}
-                          {m.attachments && m.attachments.length > 0 && (
-                            <div style={{ marginTop: "0.35rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                              {m.attachments.map((att: any) => {
-                                const isImage = att.fileType.startsWith("image/");
-                                return (
-                                  <div key={att.id}>
-                                    {isImage ? (
-                                      <a href={`/api/chat/attachments/${att.id}`} target="_blank" rel="noopener noreferrer">
-                                        <img 
-                                          src={`/api/chat/attachments/${att.id}`} 
-                                          alt={att.fileName} 
-                                          style={{ maxWidth: "140px", maxHeight: "100px", borderRadius: "6px", marginTop: "0.25rem" }} 
-                                        />
-                                      </a>
-                                    ) : (
-                                      <a 
-                                        href={`/api/chat/attachments/${att.id}`} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        style={{
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: "0.25rem",
-                                          fontSize: "0.725rem",
-                                          color: isMe ? "#ffffff" : "var(--primary-color)"
-                                        }}
-                                      >
-                                        <FileText size={13} />
-                                        <span style={{ textDecoration: "underline" }}>{att.fileName}</span>
-                                      </a>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.35rem", fontSize: "0.65rem", opacity: 0.8, marginTop: "0.2rem" }}>
-                            <span>
-                              {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                            {isMe && !m.isDeleted && (
-                              <button 
-                                onClick={() => handleDeleteChatMessage(m.id)}
-                                style={{ border: "none", background: "none", color: "var(--danger-color)", cursor: "pointer", padding: 0 }}
-                                title="Delete message"
-                              >
-                                <Trash2 size={11} />
-                              </button>
-                            )}
+                gap: "0.75rem",
+                backgroundColor: "var(--bg-secondary)",
+                overscrollBehavior: "contain"
+              }}
+            >
+              {chatMessages.length === 0 ? (
+                <div style={{ margin: "auto", color: "var(--text-tertiary)", fontSize: "0.875rem", textAlign: "center", padding: "1.5rem" }}>
+                  <MessageSquare size={32} style={{ margin: "0 auto 0.5rem auto", opacity: 0.4 }} />
+                  <div>No team messages yet.</div>
+                  <div style={{ fontSize: "0.75rem", marginTop: "4px" }}>Start the conversation with your team below!</div>
+                </div>
+              ) : (
+                chatMessages.map((m) => {
+                  const isMe = m.senderId === currentUser?.id;
+                  return (
+                    <div 
+                      key={m.id} 
+                      style={{ 
+                        display: "flex", 
+                        justifyContent: isMe ? "flex-end" : "flex-start",
+                        width: "100%"
+                      }}
+                    >
+                      <div style={{ 
+                        maxWidth: "85%", 
+                        padding: "0.6rem 0.85rem", 
+                        borderRadius: "12px", 
+                        backgroundColor: isMe ? "var(--primary-color)" : "var(--bg-primary)",
+                        color: isMe ? "#ffffff" : "var(--text-primary)",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                        border: isMe ? "none" : "1px solid var(--border-primary)"
+                      }}>
+                        {!isMe && (
+                          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary-color)", marginBottom: "0.2rem" }}>
+                            {m.senderName}
                           </div>
+                        )}
+                        <div style={{ fontSize: "0.875rem", wordBreak: "break-word", lineHeight: 1.4 }}>{m.content}</div>
+
+                        {/* Attachments rendering */}
+                        {m.attachments && m.attachments.length > 0 && (
+                          <div style={{ marginTop: "0.45rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                            {m.attachments.map((att: any) => {
+                              const isImage = att.fileType.startsWith("image/");
+                              return (
+                                <div key={att.id}>
+                                  {isImage ? (
+                                    <a href={`/api/chat/attachments/${att.id}`} target="_blank" rel="noopener noreferrer">
+                                      <img 
+                                        src={`/api/chat/attachments/${att.id}`} 
+                                        alt={att.fileName} 
+                                        style={{ maxWidth: "180px", maxHeight: "120px", borderRadius: "6px", marginTop: "0.25rem", border: "1px solid var(--border-primary)" }} 
+                                      />
+                                    </a>
+                                  ) : (
+                                    <a 
+                                      href={`/api/chat/attachments/${att.id}`} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "0.35rem",
+                                        fontSize: "0.75rem",
+                                        color: isMe ? "#ffffff" : "var(--primary-color)",
+                                        textDecoration: "underline"
+                                      }}
+                                    >
+                                      <FileText size={14} />
+                                      <span>{att.fileName}</span>
+                                    </a>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.4rem", fontSize: "0.675rem", opacity: 0.8, marginTop: "0.3rem" }}>
+                          <span>
+                            {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          {isMe && !m.isDeleted && (
+                            <button 
+                              onClick={() => handleDeleteChatMessage(m.id)}
+                              style={{ border: "none", background: "none", color: "var(--danger-color)", cursor: "pointer", padding: 0 }}
+                              title="Delete message"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
                         </div>
                       </div>
-                    );
-                  })
-                )}
-                <div ref={chatMessagesEndRef} />
-              </div>
-
-              {/* Composer Panel */}
-              <form onSubmit={handleSendChatMessage} style={{ 
-                borderTop: "1px solid var(--border-primary)", 
-                padding: "0.6rem 0.75rem", 
-                backgroundColor: "var(--bg-primary)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.35rem"
-              }}>
-                {chatStagedAttachments.length > 0 && (
-                  <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-                    {chatStagedAttachments.map((att, idx) => (
-                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.25rem", backgroundColor: "var(--bg-secondary)", borderRadius: "4px", padding: "0.15rem 0.35rem", fontSize: "0.7rem" }}>
-                        <FileText size={11} />
-                        <span style={{ maxWidth: "80px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.name}</span>
-                        <button 
-                          type="button" 
-                          onClick={() => setChatStagedAttachments(prev => prev.filter((_, i) => i !== idx))}
-                          style={{ border: "none", background: "none", color: "var(--danger-color)", cursor: "pointer", padding: 0 }}
-                        >
-                          <X size={10} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  <button 
-                    type="button" 
-                    onClick={() => chatFileInputRef.current?.click()}
-                    style={{ border: "none", background: "none", color: "var(--text-secondary)", cursor: "pointer", padding: "0.25rem" }}
-                    title="Attach file/image"
-                  >
-                    <Paperclip size={16} />
-                  </button>
-                  <input 
-                    type="file" 
-                    multiple 
-                    ref={chatFileInputRef}
-                    onChange={handleChatFileChange}
-                    style={{ display: "none" }}
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Message team..." 
-                    value={chatText}
-                    onChange={(e) => setChatText(e.target.value)}
-                    style={{ 
-                      flex: 1, 
-                      padding: "0.45rem 0.75rem", 
-                      borderRadius: "8px", 
-                      border: "1px solid var(--border-primary)", 
-                      backgroundColor: "var(--bg-secondary)", 
-                      color: "var(--text-primary)",
-                      fontSize: "0.8125rem",
-                      outline: "none"
-                    }}
-                  />
-                  <button type="submit" style={{ 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "center", 
-                    width: "32px", 
-                    height: "32px", 
-                    borderRadius: "8px", 
-                    border: "none", 
-                    backgroundColor: "var(--primary-color)", 
-                    color: "#ffffff", 
-                    cursor: "pointer",
-                    flexShrink: 0
-                  }}>
-                    <Send size={13} />
-                  </button>
-                </div>
-              </form>
+                    </div>
+                  );
+                })
+              )}
             </div>
-          )}
-        </div>
-      )}
 
-      {/* Floating Toggle button if chat is closed */}
-      {project?.conversationId && !isChatOpen && (
-        <button
-          onClick={() => {
-            setIsChatOpen(true);
-            setIsChatMinimized(false);
-          }}
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            right: "24px",
-            zIndex: 999,
-            width: "56px",
-            height: "56px",
-            borderRadius: "50%",
-            backgroundColor: "var(--primary-color)",
-            color: "#ffffff",
-            border: "none",
-            boxShadow: "0 8px 24px rgba(99, 102, 241, 0.5)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}
-          title="Open Project Team Chat"
-        >
-          <MessageSquare size={24} />
-        </button>
-      )}
+            {/* Composer Panel */}
+            <form onSubmit={handleSendChatMessage} style={{ 
+              borderTop: "1px solid var(--border-primary)", 
+              padding: "0.75rem 1rem", 
+              backgroundColor: "var(--bg-primary)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.45rem",
+              flexShrink: 0
+            }}>
+              {chatStagedAttachments.length > 0 && (
+                <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                  {chatStagedAttachments.map((att, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.35rem", backgroundColor: "var(--bg-secondary)", borderRadius: "6px", padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}>
+                      <FileText size={13} />
+                      <span style={{ maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.name}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setChatStagedAttachments(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ border: "none", background: "none", color: "var(--danger-color)", cursor: "pointer", padding: 0 }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <button 
+                  type="button" 
+                  onClick={() => chatFileInputRef.current?.click()}
+                  style={{ border: "none", background: "none", color: "var(--text-secondary)", cursor: "pointer", padding: "0.35rem" }}
+                  title="Attach file/image"
+                >
+                  <Paperclip size={18} />
+                </button>
+                <input 
+                  type="file" 
+                  multiple 
+                  ref={chatFileInputRef}
+                  onChange={handleChatFileChange}
+                  style={{ display: "none" }}
+                />
+                <input 
+                  type="text" 
+                  placeholder="Type a message to project team..." 
+                  value={chatText}
+                  onChange={(e) => setChatText(e.target.value)}
+                  style={{ 
+                    flex: 1, 
+                    padding: "0.6rem 0.85rem", 
+                    borderRadius: "8px", 
+                    border: "1px solid var(--border-primary)", 
+                    backgroundColor: "var(--bg-secondary)", 
+                    color: "var(--text-primary)",
+                    fontSize: "0.875rem",
+                    outline: "none"
+                  }}
+                />
+                <button type="submit" style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  width: "38px", 
+                  height: "38px", 
+                  borderRadius: "8px", 
+                  border: "none", 
+                  backgroundColor: "var(--primary-color)", 
+                  color: "#ffffff", 
+                  cursor: "pointer",
+                  flexShrink: 0
+                }}>
+                  <Send size={15} />
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+      </div>
 
       {/* Toast Alert */}
       {toastMessage && (

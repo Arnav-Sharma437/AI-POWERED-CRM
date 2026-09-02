@@ -554,6 +554,10 @@ body {
   }
 
   /* Two column grids collapse to 1 column on phone */
+  .crm-project-layout-grid {
+    grid-template-columns: 1fr !important;
+  }
+
   div[style*="grid-template-columns: 1fr 1fr"],
   div[style*="gridTemplateColumns: \"1fr 1fr\""],
   div[style*="gridTemplateColumns: '1fr 1fr'"],
