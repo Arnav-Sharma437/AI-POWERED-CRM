@@ -567,30 +567,47 @@ export default function LandingPage() {
           
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <div style={{
-              height: "32px",
+              height: "34px",
               display: "flex",
               alignItems: "center",
-              padding: "2px 8px",
+              padding: "3px 10px",
               backgroundColor: "#ffffff",
-              borderRadius: "6px",
-              border: "1px solid rgba(255, 255, 255, 0.2)"
+              borderRadius: "8px",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)"
             }}>
               <img 
                 src="/logo.png" 
                 alt="Pixxelu Logo" 
-                style={{ height: "20px", width: "auto", objectFit: "contain" }} 
+                style={{ height: "22px", width: "auto", objectFit: "contain" }} 
               />
             </div>
-            <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#f8fafc" }}>PIXXELU CRM</span>
           </div>
 
-          {/* DEVELOPER CREDIT HIGHLIGHT */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", backgroundColor: "rgba(255, 255, 255, 0.04)", padding: "0.55rem 1.25rem", borderRadius: "30px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+          {/* DEVELOPER CREDIT HIGHLIGHT WITH PORTFOLIO LINK */}
+          <a 
+            href="https://arnav-sharma437.github.io/Arnav-Portfolio/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ 
+              display: "inline-flex", 
+              alignItems: "center", 
+              gap: "0.75rem", 
+              backgroundColor: "rgba(224, 86, 36, 0.12)", 
+              padding: "0.6rem 1.35rem", 
+              borderRadius: "30px", 
+              border: "1px solid rgba(224, 86, 36, 0.35)",
+              textDecoration: "none",
+              transition: "transform 0.15s ease, background-color 0.15s ease"
+            }}
+            className="hover:scale-105 hover:bg-orange-500/20"
+          >
             <Award size={18} color="#f97316" />
-            <span style={{ fontSize: "0.875rem", color: "#94a3b8" }}>
-              Developed by <strong style={{ color: "#ffffff", fontSize: "0.95rem" }}>Arnav Sharma</strong>
+            <span style={{ fontSize: "0.875rem", color: "#e2e8f0" }}>
+              Developed by <strong style={{ color: "#ffffff", fontSize: "0.95rem", textDecoration: "underline", textUnderlineOffset: "3px" }}>Arnav Sharma</strong>
             </span>
-          </div>
+            <ArrowUpRight size={15} color="#f97316" />
+          </a>
 
           <div style={{ color: "#64748b", fontSize: "0.8125rem" }}>
             © {new Date().getFullYear()} Pixxelu Digital Technology. All Rights Reserved.

@@ -9,8 +9,13 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "AI Powered CRM - Agency & BDA Operations",
-  description: "Next-generation multi-tenant AI CRM developed by Arnav Sharma",
+  title: "Pixxelu CRM - Agency Operations & BDA Hub",
+  description: "High-performance agency operations and lead management CRM developed by Arnav Sharma",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

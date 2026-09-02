@@ -58,45 +58,56 @@ export default function AiLoader({
           justifyContent: "center"
         }}
       >
-        {/* Outer Orbit Track 1 (Cyan/Indigo) */}
+        {/* Outer Orbit Track 1 (Pixxelu Orange Dashed Track) */}
         <div
           style={{
             position: "absolute",
             inset: -8,
             borderRadius: "50%",
-            border: "2px dashed rgba(99, 102, 241, 0.55)",
-            animation: "ai-spin 6s linear infinite"
+            border: "2px dashed rgba(224, 86, 36, 0.55)",
+            animation: "ai-spin 5s linear infinite"
           }}
         />
 
-        {/* Orbit Track 2 (Fuchsia/Pink Gradient Arc) */}
+        {/* Orbit Track 2 (Orange/Amber Arc) */}
         <div
           style={{
             position: "absolute",
             inset: -4,
             borderRadius: "50%",
             border: "2px solid transparent",
-            borderTopColor: "#ec4899",
-            borderRightColor: "#a855f7",
-            animation: "ai-spin-reverse 3s linear infinite"
+            borderTopColor: "#f97316",
+            borderRightColor: "#fbbf24",
+            animation: "ai-spin-reverse 2.5s linear infinite"
           }}
         />
 
-        {/* Core Glowing Orb */}
+        {/* Core Glowing Pixxelu Emblem */}
         <div
           style={{
             width: "100%",
             height: "100%",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)",
+            backgroundColor: "#ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#ffffff",
-            animation: "ai-pulse-glow 2.2s ease-in-out infinite"
+            padding: "8px",
+            boxShadow: "0 0 25px rgba(224, 86, 36, 0.4)",
+            border: "2px solid rgba(224, 86, 36, 0.3)",
+            animation: "ai-pulse-glow 2s ease-in-out infinite"
           }}
         >
-          <Sparkles size={isSmall ? 22 : isFullscreen ? 38 : 28} />
+          <img 
+            src="/logo.png" 
+            alt="Pixxelu" 
+            style={{ 
+              width: "80%", 
+              height: "auto", 
+              objectFit: "contain",
+              filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))"
+            }} 
+          />
         </div>
 
         {/* Floating Quantum Particle 1 */}
@@ -108,8 +119,8 @@ export default function AiLoader({
             width: "8px",
             height: "8px",
             borderRadius: "50%",
-            backgroundColor: "#22d3ee",
-            boxShadow: "0 0 10px #22d3ee",
+            backgroundColor: "#f97316",
+            boxShadow: "0 0 10px #f97316",
             animation: "ai-particle-float 2s ease-in-out infinite"
           }}
         />
@@ -123,8 +134,8 @@ export default function AiLoader({
             width: "6px",
             height: "6px",
             borderRadius: "50%",
-            backgroundColor: "#ec4899",
-            boxShadow: "0 0 8px #ec4899",
+            backgroundColor: "#fbbf24",
+            boxShadow: "0 0 8px #fbbf24",
             animation: "ai-particle-float 2.5s ease-in-out infinite reverse"
           }}
         />

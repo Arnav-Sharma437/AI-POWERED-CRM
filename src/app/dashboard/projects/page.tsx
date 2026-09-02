@@ -166,6 +166,41 @@ export default function ProjectsPage() {
             <option value="Cancelled">Cancelled</option>
           </select>
         </div>
+
+        {/* Top Quick Stage Jumps & Horizontal Scroll Bar */}
+        {viewMode === "kanban" && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", overflowX: "auto", paddingBottom: "0.25rem", borderTop: "1px solid var(--border-primary)", paddingTop: "0.85rem" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.5px", marginRight: "0.25rem", flexShrink: 0 }}>
+              Board Columns:
+            </span>
+            {KANBAN_STAGES.map((s) => {
+              const count = filteredProjects.filter(p => p.status === s.id).length;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    const el = document.getElementById(`kanban-stage-${s.id}`);
+                    el?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                  }}
+                  className="crm-btn crm-btn-secondary"
+                  style={{
+                    fontSize: "0.75rem",
+                    padding: "0.3rem 0.65rem",
+                    borderRadius: "8px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    flexShrink: 0
+                  }}
+                >
+                  <span style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: s.color }} />
+                  <span>{s.label}</span>
+                  <span style={{ opacity: 0.65, fontSize: "0.7rem", fontWeight: 700 }}>({count})</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Projects Display */}
@@ -176,19 +211,25 @@ export default function ProjectsPage() {
           <h3>No projects match your filter query</h3>
         </div>
       ) : viewMode === "kanban" ? (
-        /* Kanban Board View - Horizontal Scroll Single Line */
-        <div style={{
-          display: "flex",
-          gap: "1.25rem",
-          alignItems: "stretch",
-          overflowX: "auto",
-          paddingBottom: "1.5rem",
-          WebkitOverflowScrolling: "touch"
-        }}>
+        /* Kanban Board View - Clean Single Line with Top & Bottom Scroll Support */
+        <div 
+          id="kanban-scroll-wrapper"
+          style={{
+            display: "flex",
+            gap: "1.25rem",
+            alignItems: "stretch",
+            overflowX: "auto",
+            overflowY: "hidden",
+            paddingBottom: "1.25rem",
+            paddingTop: "0.25rem",
+            WebkitOverflowScrolling: "touch"
+          }}
+        >
           {KANBAN_STAGES.map((stage) => {
             const stageProjects = filteredProjects.filter(p => p.status === stage.id);
             return (
               <div 
+                id={`kanban-stage-${stage.id}`}
                 key={stage.id}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
@@ -199,30 +240,31 @@ export default function ProjectsPage() {
                 }}
                 style={{
                   backgroundColor: "var(--bg-secondary)",
-                  borderRadius: "10px",
+                  borderRadius: "12px",
                   border: "1px solid var(--border-primary)",
                   padding: "1rem",
-                  minHeight: "450px",
-                  width: "310px",
-                  minWidth: "310px",
+                  width: "320px",
+                  minWidth: "320px",
+                  maxHeight: "720px",
                   flexShrink: 0,
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.875rem"
+                  gap: "0.875rem",
+                  boxShadow: "var(--shadow-sm)"
                 }}
               >
                 {/* Stage Header */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-primary)", paddingBottom: "0.75rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: stage.color }} />
-                    <span style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--text-primary)" }}>{stage.label}</span>
+                    <span style={{ width: "9px", height: "9px", borderRadius: "50%", backgroundColor: stage.color }} />
+                    <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--text-primary)" }}>{stage.label}</span>
                   </div>
                   <span style={{
                     fontSize: "0.75rem",
-                    fontWeight: 600,
+                    fontWeight: 700,
                     backgroundColor: "var(--bg-primary)",
-                    padding: "0.15rem 0.5rem",
-                    borderRadius: "12px",
+                    padding: "0.2rem 0.55rem",
+                    borderRadius: "10px",
                     color: "var(--text-secondary)",
                     border: "1px solid var(--border-primary)"
                   }}>
@@ -230,10 +272,18 @@ export default function ProjectsPage() {
                   </span>
                 </div>
 
-                {/* Cards Container */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", flexGrow: 1 }}>
+                {/* Cards Container with Internal Vertical Scrolling for heavy columns */}
+                <div style={{ 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  gap: "0.75rem", 
+                  flexGrow: 1, 
+                  overflowY: "auto",
+                  paddingRight: "4px",
+                  maxHeight: "620px"
+                }}>
                   {stageProjects.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "2rem 1rem", color: "var(--text-tertiary)", fontSize: "0.8125rem", border: "1px dashed var(--border-primary)", borderRadius: "8px" }}>
+                    <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-tertiary)", fontSize: "0.8125rem", border: "1px dashed var(--border-primary)", borderRadius: "10px" }}>
                       {!isDeveloper ? "Drop project here" : "No deliverables in this stage"}
                     </div>
                   ) : (
