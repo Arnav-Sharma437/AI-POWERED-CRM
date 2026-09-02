@@ -170,8 +170,11 @@ export interface InvoiceItem {
 export interface Invoice {
   id: string;
   invoiceNumber: string;
-  clientId: string;
+  clientId?: string;
   client?: Client;
+  customerName?: string;
+  customerEmail?: string;
+  customerCompany?: string;
   placeOfSupply: string;
   gstTreatment?: string;
   gstin?: string;

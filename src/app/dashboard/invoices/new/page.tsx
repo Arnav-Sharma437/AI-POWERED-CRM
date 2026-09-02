@@ -52,7 +52,11 @@ export default function CreateInvoicePage() {
   const [simplifiedView, setSimplifiedView] = useState(false);
 
   // Form State
+  const [customerMode, setCustomerMode] = useState<"existing" | "custom">("existing");
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [customCustomerName, setCustomCustomerName] = useState("");
+  const [customCustomerEmail, setCustomCustomerEmail] = useState("");
+  const [customCustomerCompany, setCustomCustomerCompany] = useState("");
   const [placeOfSupply, setPlaceOfSupply] = useState("[HR] - Haryana");
   const [gstTreatment, setGstTreatment] = useState("Registered Business - Regular");
   const [gstin, setGstin] = useState("06AAKCT4257D1ZC");
@@ -188,8 +192,12 @@ export default function CreateInvoicePage() {
 
   const handleSubmit = async (e: React.FormEvent, sendEmail = false) => {
     e.preventDefault();
-    if (!selectedClientId) {
-      alert("Please select a customer / client");
+    if (customerMode === "existing" && !selectedClientId) {
+      alert("Please select a customer or switch to 'Enter New / Custom Customer'");
+      return;
+    }
+    if (customerMode === "custom" && !customCustomerName.trim()) {
+      alert("Please enter Customer / Company Name");
       return;
     }
 
@@ -197,7 +205,10 @@ export default function CreateInvoicePage() {
     try {
       const payload = {
         invoiceNumber,
-        clientId: selectedClientId,
+        clientId: customerMode === "existing" ? selectedClientId : undefined,
+        customerName: customerMode === "custom" ? customCustomerName : (selectedClient?.company || selectedClient?.name),
+        customerEmail: customerMode === "custom" ? customCustomerEmail : selectedClient?.email,
+        customerCompany: customerMode === "custom" ? customCustomerCompany : selectedClient?.company,
         placeOfSupply,
         gstTreatment,
         gstin,
@@ -219,6 +230,20 @@ export default function CreateInvoicePage() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create invoice");
+
+      if (sendEmail) {
+        const targetEmail = payload.customerEmail;
+        if (targetEmail) {
+          await fetch(`/api/invoices/${data.invoice.id}/send`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              targetEmail,
+              targetName: payload.customerName
+            })
+          }).catch(err => console.error("Email dispatch failed:", err));
+        }
+      }
 
       setTriggerRefresh(prev => prev + 1);
       router.push(`/dashboard/invoices/${data.invoice.id}`);
@@ -296,40 +321,106 @@ export default function CreateInvoicePage() {
               Customer Name*
             </label>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", maxWidth: "500px" }}>
-                <select 
-                  className="crm-select"
-                  value={selectedClientId}
-                  onChange={(e) => setSelectedClientId(e.target.value)}
-                  style={{ flexGrow: 1, fontWeight: 600 }}
-                  required
+              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setCustomerMode("existing")}
+                  style={{
+                    padding: "0.3rem 0.75rem",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    border: customerMode === "existing" ? "1px solid var(--primary-color)" : "1px solid var(--border-primary)",
+                    backgroundColor: customerMode === "existing" ? "var(--primary-light)" : "var(--bg-primary)",
+                    color: customerMode === "existing" ? "var(--primary-color)" : "var(--text-secondary)",
+                    cursor: "pointer"
+                  }}
                 >
-                  <option value="">Select Customer / Client</option>
-                  {clientsList.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.company ? `${c.company} (${c.name})` : c.name}
-                    </option>
-                  ))}
-                </select>
-
-                <div style={{ 
-                  display: "inline-flex", 
-                  alignItems: "center", 
-                  gap: "0.25rem", 
-                  padding: "0.45rem 0.65rem", 
-                  backgroundColor: "rgba(16, 185, 129, 0.12)", 
-                  color: "#10b981", 
-                  borderRadius: "6px",
-                  fontSize: "0.75rem",
-                  fontWeight: 700
-                }}>
-                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10b981" }} />
-                  INR
-                </div>
+                  Select Existing Client
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomerMode("custom")}
+                  style={{
+                    padding: "0.3rem 0.75rem",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    border: customerMode === "custom" ? "1px solid var(--primary-color)" : "1px solid var(--border-primary)",
+                    backgroundColor: customerMode === "custom" ? "var(--primary-light)" : "var(--bg-primary)",
+                    color: customerMode === "custom" ? "var(--primary-color)" : "var(--text-secondary)",
+                    cursor: "pointer"
+                  }}
+                >
+                  + Enter New / Custom Customer
+                </button>
               </div>
 
+              {customerMode === "existing" ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", maxWidth: "500px" }}>
+                  <select 
+                    className="crm-select"
+                    value={selectedClientId}
+                    onChange={(e) => setSelectedClientId(e.target.value)}
+                    style={{ flexGrow: 1, fontWeight: 600 }}
+                  >
+                    <option value="">Select Customer / Client</option>
+                    {clientsList.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.company ? `${c.company} (${c.name})` : c.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div style={{ 
+                    display: "inline-flex", 
+                    alignItems: "center", 
+                    gap: "0.25rem", 
+                    padding: "0.45rem 0.65rem", 
+                    backgroundColor: "rgba(16, 185, 129, 0.12)", 
+                    color: "#10b981", 
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: 700
+                  }}>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10b981" }} />
+                    INR
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxWidth: "500px" }}>
+                  <input 
+                    type="text" 
+                    className="crm-input" 
+                    placeholder="Customer / Company Name (e.g. Techphosis Pvt Ltd)"
+                    value={customCustomerName}
+                    onChange={(e) => setCustomCustomerName(e.target.value)}
+                    required
+                    style={{ fontWeight: 600 }}
+                  />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                    <input 
+                      type="email" 
+                      className="crm-input" 
+                      placeholder="Recipient Email (client@company.com)"
+                      value={customCustomerEmail}
+                      onChange={(e) => setCustomCustomerEmail(e.target.value)}
+                      style={{ fontSize: "0.8125rem" }}
+                    />
+                    <input 
+                      type="text" 
+                      className="crm-input" 
+                      placeholder="Legal Entity / Brand Name"
+                      value={customCustomerCompany}
+                      onChange={(e) => setCustomCustomerCompany(e.target.value)}
+                      style={{ fontSize: "0.8125rem" }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Billing / Shipping GST Details Preview (from Reference Image) */}
-              {selectedClient && (
+              {(selectedClient || customerMode === "custom") && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginTop: "0.75rem", maxWidth: "600px", padding: "0.75rem 1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)", fontSize: "0.75rem" }}>
                   <div>
                     <div style={{ color: "var(--text-tertiary)", fontWeight: 700, textTransform: "uppercase", marginBottom: "4px" }}>
@@ -351,7 +442,7 @@ export default function CreateInvoicePage() {
                       Shipping Recipient GST Details
                     </div>
                     <div>GSTIN: <span style={{ color: "var(--text-secondary)" }}>{gstin || "Same as Billing"}</span></div>
-                    <div>Business Legal Name: <strong style={{ color: "var(--text-primary)" }}>{selectedClient.company || selectedClient.name}</strong></div>
+                    <div>Business Legal Name: <strong style={{ color: "var(--text-primary)" }}>{customerMode === "custom" ? (customCustomerCompany || customCustomerName || "Direct Billing") : (selectedClient?.company || selectedClient?.name)}</strong></div>
                   </div>
                 </div>
               )}

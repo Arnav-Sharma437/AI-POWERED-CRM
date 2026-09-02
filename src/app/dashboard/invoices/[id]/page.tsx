@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, Printer, Edit, Send, Download, 
   ReceiptText, CheckCircle2, AlertCircle, Clock, 
-  Building2, ShieldAlert, Sparkles, Check
+  Building2, ShieldAlert, Sparkles, Check, Mail, Loader2
 } from "lucide-react";
 import { useDashboard } from "../../layout";
 import AiLoader from "@/components/AiLoader";
@@ -18,6 +18,14 @@ export default function InvoiceViewPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState<any>(null);
   const [markingPaid, setMarkingPaid] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  // Email dispatch modal
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+  const [nameTo, setNameTo] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSuccessMessage, setEmailSuccessMessage] = useState("");
 
   useEffect(() => {
     async function loadInvoice() {
@@ -32,6 +40,8 @@ export default function InvoiceViewPage({ params }: { params: Promise<{ id: stri
         if (res.ok) {
           const data = await res.json();
           setInvoice(data.invoice);
+          setEmailTo(data.invoice?.customerEmail || data.invoice?.client?.email || "");
+          setNameTo(data.invoice?.customerName || data.invoice?.client?.name || data.invoice?.client?.company || "");
         }
       } catch (err) {
         console.error("Failed to load invoice:", err);
@@ -65,8 +75,69 @@ export default function InvoiceViewPage({ params }: { params: Promise<{ id: stri
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      const element = document.getElementById("printable-invoice");
+      if (!element) return;
+
+      // Dynamic import to support SSR
+      const html2pdf = (await import("html2pdf.js")).default;
+      const opt: any = {
+        margin: [10, 10, 10, 10],
+        filename: `Invoice-${invoice.invoiceNumber || "NEXUS"}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      // Fallback to print dialog
+      window.print();
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailTo) {
+      alert("Please enter a valid recipient email address.");
+      return;
+    }
+
+    setSendingEmail(true);
+    setEmailSuccessMessage("");
+    try {
+      const res = await fetch(`/api/invoices/${id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetEmail: emailTo,
+          targetName: nameTo
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to dispatch email");
+
+      setEmailSuccessMessage(`Invoice successfully dispatched to ${emailTo}!`);
+      setTimeout(() => {
+        setShowEmailModal(false);
+        setEmailSuccessMessage("");
+      }, 2500);
+
+      // Auto mark as Sent if Draft
+      if (invoice.status === "Draft") {
+        handleStatusChange("Sent");
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to send invoice email");
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   if (!loading && currentUser?.roleName !== "Super Admin") {
@@ -98,6 +169,8 @@ export default function InvoiceViewPage({ params }: { params: Promise<{ id: stri
     }).format(val || 0);
   };
 
+  const clientDisplayName = invoice.customerName || invoice.client?.company || invoice.client?.name || "Valued Client";
+
   return (
     <div className="crm-container animate-fade-in" style={{ maxWidth: "1000px", margin: "0 auto", paddingBottom: "5rem" }}>
       
@@ -110,7 +183,7 @@ export default function InvoiceViewPage({ params }: { params: Promise<{ id: stri
           <ArrowLeft size={16} /> Back to Invoices
         </button>
 
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
           {invoice.status !== "Paid" && (
             <button 
               onClick={() => handleStatusChange("Paid")}
@@ -123,6 +196,14 @@ export default function InvoiceViewPage({ params }: { params: Promise<{ id: stri
           )}
 
           <button 
+            onClick={() => setShowEmailModal(true)}
+            className="crm-btn"
+            style={{ backgroundColor: "rgba(99, 102, 241, 0.15)", color: "var(--primary-color)", border: "1px solid var(--primary-color)", fontSize: "0.8125rem", padding: "0.45rem 0.85rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+          >
+            <Mail size={14} /> Send Email
+          </button>
+
+          <button 
             onClick={() => router.push(`/dashboard/invoices/${id}/edit`)}
             className="crm-btn crm-btn-secondary"
             style={{ fontSize: "0.8125rem", padding: "0.45rem 0.85rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
@@ -131,11 +212,28 @@ export default function InvoiceViewPage({ params }: { params: Promise<{ id: stri
           </button>
 
           <button 
-            onClick={handlePrint}
+            onClick={handleDownloadPdf}
+            disabled={downloadingPdf}
             className="crm-btn crm-btn-primary"
             style={{ fontSize: "0.8125rem", padding: "0.45rem 0.85rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
           >
-            <Printer size={14} /> Print / Save PDF
+            {downloadingPdf ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> Generating PDF...
+              </>
+            ) : (
+              <>
+                <Download size={14} /> Download PDF
+              </>
+            )}
+          </button>
+
+          <button 
+            onClick={() => window.print()}
+            className="crm-btn crm-btn-secondary"
+            style={{ fontSize: "0.8125rem", padding: "0.45rem 0.85rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+          >
+            <Printer size={14} /> Print
           </button>
         </div>
       </div>
@@ -176,7 +274,7 @@ export default function InvoiceViewPage({ params }: { params: Promise<{ id: stri
             <div style={{ fontSize: "0.8125rem", color: "#6b7280", marginTop: "0.5rem", lineHeight: 1.5 }}>
               Plot 45, Cyber Hub, Phase II<br />
               Gurugram, Haryana - 122002<br />
-              GSTIN: <strong>06AAKCT4257D1ZC</strong> | info@nexusai.agency
+              GSTIN: <strong>06AAKCT4257D1ZC</strong> | billing@nexusai.agency
             </div>
           </div>
 
@@ -211,13 +309,17 @@ export default function InvoiceViewPage({ params }: { params: Promise<{ id: stri
               BILLED TO:
             </div>
             <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111827" }}>
-              {invoice.client?.company || invoice.client?.name}
+              {clientDisplayName}
             </div>
-            {invoice.client?.company && (
-              <div style={{ fontSize: "0.875rem", color: "#4b5563" }}>Attn: {invoice.client.name}</div>
+            {(invoice.customerCompany || invoice.client?.company) && (
+              <div style={{ fontSize: "0.875rem", color: "#4b5563" }}>
+                Legal Entity: {invoice.customerCompany || invoice.client?.company}
+              </div>
             )}
-            {invoice.client?.email && (
-              <div style={{ fontSize: "0.8125rem", color: "#4b5563" }}>Email: {invoice.client.email}</div>
+            {(invoice.customerEmail || invoice.client?.email) && (
+              <div style={{ fontSize: "0.8125rem", color: "#4b5563" }}>
+                Email: {invoice.customerEmail || invoice.client?.email}
+              </div>
             )}
             <div style={{ fontSize: "0.8125rem", color: "#4b5563", marginTop: "4px" }}>
               GSTIN: <strong>{invoice.gstin || "N/A"}</strong>
@@ -338,6 +440,100 @@ export default function InvoiceViewPage({ params }: { params: Promise<{ id: stri
         </div>
 
       </div>
+
+      {/* Dispatch Email Modal */}
+      {showEmailModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.65)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "1rem"
+        }}>
+          <div className="crm-card animate-scale-up" style={{ maxWidth: "500px", width: "100%", padding: "1.75rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Mail size={20} color="var(--primary-color)" />
+                <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
+                  Send Invoice via Email
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowEmailModal(false)}
+                style={{ border: "none", background: "none", fontSize: "1.25rem", cursor: "pointer", color: "var(--text-tertiary)" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSendEmail} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div>
+                <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Recipient Email Address*
+                </label>
+                <input 
+                  type="email" 
+                  className="crm-input" 
+                  value={emailTo}
+                  onChange={(e) => setEmailTo(e.target.value)}
+                  placeholder="e.g. client@company.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Recipient / Company Name
+                </label>
+                <input 
+                  type="text" 
+                  className="crm-input" 
+                  value={nameTo}
+                  onChange={(e) => setNameTo(e.target.value)}
+                  placeholder="e.g. Acme Corp / John Doe"
+                />
+              </div>
+
+              <div style={{ padding: "0.75rem", backgroundColor: "var(--bg-secondary)", borderRadius: "8px", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                This will dispatch a branded HTML Tax Invoice email with deliverable breakdown, totals, and direct online view link to the specified email address.
+              </div>
+
+              {emailSuccessMessage && (
+                <div style={{ padding: "0.75rem", backgroundColor: "rgba(16, 185, 129, 0.15)", color: "#10b981", borderRadius: "8px", fontSize: "0.8125rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <CheckCircle2 size={16} /> {emailSuccessMessage}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+                <button 
+                  type="button" 
+                  onClick={() => setShowEmailModal(false)}
+                  className="crm-btn crm-btn-secondary"
+                  disabled={sendingEmail}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="crm-btn crm-btn-primary"
+                  disabled={sendingEmail}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+                >
+                  {sendingEmail ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  {sendingEmail ? "Dispatching..." : "Send Invoice"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

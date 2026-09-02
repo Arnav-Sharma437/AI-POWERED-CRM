@@ -176,14 +176,14 @@ export default function ProjectsPage() {
           <h3>No projects match your filter query</h3>
         </div>
       ) : viewMode === "kanban" ? (
-        /* Kanban Board View */
+        /* Kanban Board View - Horizontal Scroll Single Line */
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          display: "flex",
           gap: "1.25rem",
-          alignItems: "start",
+          alignItems: "stretch",
           overflowX: "auto",
-          paddingBottom: "1.5rem"
+          paddingBottom: "1.5rem",
+          WebkitOverflowScrolling: "touch"
         }}>
           {KANBAN_STAGES.map((stage) => {
             const stageProjects = filteredProjects.filter(p => p.status === stage.id);
@@ -203,6 +203,9 @@ export default function ProjectsPage() {
                   border: "1px solid var(--border-primary)",
                   padding: "1rem",
                   minHeight: "450px",
+                  width: "310px",
+                  minWidth: "310px",
+                  flexShrink: 0,
                   display: "flex",
                   flexDirection: "column",
                   gap: "0.875rem"

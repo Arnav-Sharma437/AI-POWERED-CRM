@@ -351,8 +351,11 @@ model MessageAttachment {
 model Invoice {
   id                 String        @id @default(uuid())
   invoiceNumber      String        @unique // e.g. "PI-000088"
-  clientId           String
-  client             Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId           String?
+  client             Client?       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  customerName       String?       // For ad-hoc or unlisted clients
+  customerEmail      String?
+  customerCompany    String?
   placeOfSupply      String        // e.g. "[HR] - Haryana"
   gstTreatment       String?       @default("Registered Business - Regular")
   gstin              String?       // Customer GSTIN

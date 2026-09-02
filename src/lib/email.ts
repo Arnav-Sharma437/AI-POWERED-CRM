@@ -728,3 +728,188 @@ Automated Notification from AI POWERED BDA CRM.
   }
 }
 
+export interface SendInvoiceEmailParams {
+  recipientEmail: string;
+  recipientName: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  currency: string;
+  dueDate: Date | string;
+  items: Array<{
+    itemDetails: string;
+    description?: string;
+    quantity: number;
+    rate: number;
+    amount: number;
+  }>;
+  invoiceUrl: string;
+  notes?: string;
+}
+
+export async function sendInvoiceEmail(params: SendInvoiceEmailParams): Promise<boolean> {
+  const { recipientEmail, recipientName, invoiceNumber, totalAmount, currency, dueDate, items, invoiceUrl, notes } = params;
+  const smtpFrom = process.env.SMTP_FROM || "no-reply@bda-crm.com";
+
+  const formattedTotal = new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: currency || "INR",
+    minimumFractionDigits: 2
+  }).format(totalAmount);
+
+  const formattedDueDate = new Date(dueDate).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  });
+
+  const messageText = `
+TAX INVOICE: ${invoiceNumber}
+Hello ${recipientName || "Valued Client"},
+
+Please find attached your invoice details from Nexus AI Digital.
+
+Invoice Number: ${invoiceNumber}
+Total Due: ${formattedTotal}
+Due Date: ${formattedDueDate}
+
+View / Download Invoice: ${invoiceUrl}
+
+${notes ? `Customer Note: ${notes}\n` : ""}
+
+Thank you for your business!
+Nexus AI Digital
+`;
+
+  const itemsRowsHtml = items.map(item => `
+    <tr style="border-bottom: 1px solid #e2e8f0;">
+      <td style="padding: 12px 10px; font-size: 14px; color: #1e293b;">
+        <strong>${item.itemDetails}</strong>
+        ${item.description ? `<div style="font-size: 12px; color: #64748b; margin-top: 2px;">${item.description}</div>` : ""}
+      </td>
+      <td style="padding: 12px 10px; font-size: 14px; text-align: center; color: #475569;">${item.quantity}</td>
+      <td style="padding: 12px 10px; font-size: 14px; text-align: right; color: #475569; font-family: monospace;">₹${item.rate.toLocaleString()}</td>
+      <td style="padding: 12px 10px; font-size: 14px; text-align: right; font-weight: 700; color: #0f172a; font-family: monospace;">₹${item.amount.toLocaleString()}</td>
+    </tr>
+  `).join("");
+
+  const messageHtml = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+      
+      <!-- Header Banner -->
+      <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 30px 32px; color: #ffffff;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td>
+              <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">NEXUS AI DIGITAL</h1>
+              <p style="margin: 4px 0 0; font-size: 13px; color: #e0e7ff;">Official Tax Invoice & Billing Statement</p>
+            </td>
+            <td style="text-align: right;">
+              <span style="background-color: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">
+                ${invoiceNumber}
+              </span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Main Body -->
+      <div style="padding: 32px;">
+        <p style="font-size: 16px; color: #1e293b; margin-top: 0; margin-bottom: 8px;">
+          Hello <strong>${recipientName || "Valued Client"}</strong>,
+        </p>
+        <p style="font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 24px;">
+          We appreciate your business! Here is your invoice statement for the deliverables provided. Please find the itemized breakdown below:
+        </p>
+
+        <!-- Summary Highlights Box -->
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 24px; margin-bottom: 24px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 4px 0; color: #64748b; font-size: 13px;">Invoice Number:</td>
+              <td style="padding: 4px 0; text-align: right; font-weight: 700; color: #1e293b; font-family: monospace;">${invoiceNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; color: #64748b; font-size: 13px;">Due Date:</td>
+              <td style="padding: 4px 0; text-align: right; font-weight: 700; color: #1e293b;">${formattedDueDate}</td>
+            </tr>
+            <tr style="border-top: 1px dashed #cbd5e1;">
+              <td style="padding: 10px 0 0; color: #0f172a; font-size: 15px; font-weight: 700;">Total Amount Due:</td>
+              <td style="padding: 10px 0 0; text-align: right; font-size: 20px; font-weight: 800; color: #4f46e5; font-family: monospace;">${formattedTotal}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Deliverables Table -->
+        <div style="margin-bottom: 28px;">
+          <h3 style="font-size: 14px; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; margin-bottom: 10px;">Itemized Deliverables</h3>
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+            <thead>
+              <tr style="background-color: #f1f5f9; color: #475569; font-size: 12px; font-weight: 700; text-align: left;">
+                <th style="padding: 10px;">ITEM DETAILS</th>
+                <th style="padding: 10px; text-align: center;">QTY</th>
+                <th style="padding: 10px; text-align: right;">RATE</th>
+                <th style="padding: 10px; text-align: right;">AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsRowsHtml}
+            </tbody>
+          </table>
+        </div>
+
+        ${notes ? `
+          <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 14px; margin-bottom: 24px; font-size: 13px; color: #713f12;">
+            <strong>Customer Note:</strong> ${notes}
+          </div>
+        ` : ""}
+
+        <!-- Call to Action Button -->
+        <div style="text-align: center; margin: 32px 0 20px;">
+          <a href="${invoiceUrl}" target="_blank" style="background-color: #4f46e5; color: #ffffff; padding: 14px 36px; text-decoration: none; font-weight: 700; font-size: 15px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+            📄 View & Download Official Invoice PDF
+          </a>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 32px; text-align: center; font-size: 12px; color: #94a3b8;">
+        <p style="margin: 0 0 6px;">Nexus AI Digital • Plot 45, Cyber Hub, Gurugram, Haryana</p>
+        <p style="margin: 0;">If you have any questions regarding this invoice, please reach out to billing@nexusai.agency</p>
+      </div>
+
+    </div>
+  `;
+
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.log("\n==================================================");
+    console.log(`[INVOICE EMAIL DISPATCH MOCK]`);
+    console.log(`To: ${recipientEmail} (${recipientName})`);
+    console.log(`Invoice#: ${invoiceNumber}`);
+    console.log(`Total: ${formattedTotal}`);
+    console.log(`Link: ${invoiceUrl}`);
+    console.log("==================================================\n");
+    return true;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: recipientEmail,
+      subject: `🧾 Tax Invoice ${invoiceNumber} from Nexus AI Digital - ${formattedTotal}`,
+      text: messageText,
+      html: messageHtml
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send Invoice Email via SMTP:", error);
+    console.log("\n==================================================");
+    console.log(`[INVOICE EMAIL DISPATCH FALLBACK]`);
+    console.log(`To: ${recipientEmail}`);
+    console.log(`Invoice: ${invoiceNumber} (${formattedTotal})`);
+    console.log("==================================================\n");
+    return true;
+  }
+}
+
+

@@ -33,7 +33,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("crm_user");
+        return cached ? JSON.parse(cached) : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
   const [bdas, setBdas] = useState<any[]>([]);
   const [devs, setDevs] = useState<any[]>([]);
   const [clientsList, setClientsList] = useState<any[]>([]);
@@ -272,6 +282,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
         const meData = await meRes.json();
         setCurrentUser(meData.user);
+        if (typeof window !== "undefined" && meData.user) {
+          localStorage.setItem("crm_user", JSON.stringify(meData.user));
+        }
 
         // Load lists
         const uRes = await fetch("/api/users");

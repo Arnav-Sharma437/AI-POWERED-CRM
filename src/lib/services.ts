@@ -1914,7 +1914,10 @@ export async function createInvoice(data: any, userId: string): Promise<any> {
     const newInvoice: any = {
       id: `inv-${Date.now()}`,
       invoiceNumber,
-      clientId: data.clientId,
+      clientId: data.clientId || null,
+      customerName: data.customerName || "",
+      customerEmail: data.customerEmail || "",
+      customerCompany: data.customerCompany || "",
       placeOfSupply: data.placeOfSupply || "[HR] - Haryana",
       gstTreatment: data.gstTreatment || "Registered Business - Regular",
       gstin: data.gstin || "",
@@ -1944,7 +1947,10 @@ export async function createInvoice(data: any, userId: string): Promise<any> {
     const created = await prisma.invoice.create({
       data: {
         invoiceNumber,
-        clientId: data.clientId,
+        clientId: data.clientId || null,
+        customerName: data.customerName || "",
+        customerEmail: data.customerEmail || "",
+        customerCompany: data.customerCompany || "",
         placeOfSupply: data.placeOfSupply || "[HR] - Haryana",
         gstTreatment: data.gstTreatment || "Registered Business - Regular",
         gstin: data.gstin || "",
@@ -2046,6 +2052,10 @@ export async function updateInvoice(id: string, data: any): Promise<any> {
     const updated = await prisma.invoice.update({
       where: { id },
       data: {
+        clientId: data.clientId !== undefined ? (data.clientId || null) : undefined,
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        customerCompany: data.customerCompany,
         placeOfSupply: data.placeOfSupply,
         gstTreatment: data.gstTreatment,
         gstin: data.gstin,
