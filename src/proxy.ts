@@ -28,14 +28,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Redirect logged in users away from login page
-  if (pathname === "/login" || pathname === "/") {
+  // Redirect logged in users away from login page only
+  if (pathname === "/login") {
     if (hasSession) {
       const dashUrl = new URL("/dashboard", request.url);
       return NextResponse.redirect(dashUrl);
-    }
-    if (pathname === "/") {
-      return NextResponse.redirect(new URL("/login", request.url));
     }
     return NextResponse.next();
   }
