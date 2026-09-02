@@ -628,56 +628,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Left Sidebar */}
         <aside className={`crm-sidebar ${mobileSidebarOpen ? "mobile-open" : ""}`}>
           <div style={{ ...sidebarStyles.logoArea, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", cursor: "pointer" }} onClick={() => { router.push("/dashboard"); setMobileSidebarOpen(false); }}>
+            <div style={{ display: "flex", alignItems: "center", textDecoration: "none", cursor: "pointer", width: "100%" }} onClick={() => { router.push("/dashboard"); setMobileSidebarOpen(false); }}>
               <div style={{
-                height: "36px",
+                height: "44px",
                 display: "flex",
                 alignItems: "center",
-                padding: "2px 6px",
+                justifyContent: "center",
+                padding: "4px 12px",
                 backgroundColor: "#ffffff",
-                borderRadius: "8px",
+                borderRadius: "10px",
                 border: "1px solid var(--border-primary)",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
+                boxShadow: "0 2px 10px rgba(0, 0, 0, 0.06)",
+                width: "100%"
               }}>
                 <img 
                   src="/logo.png" 
-                  alt="Pixxelu Logo" 
-                  style={{ height: "24px", width: "auto", objectFit: "contain" }} 
+                  alt="Pixxelu" 
+                  style={{ height: "26px", width: "auto", objectFit: "contain" }} 
                 />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <span style={{
-                    fontSize: "0.95rem",
-                    fontWeight: 900,
-                    letterSpacing: "-0.3px",
-                    color: "var(--text-primary)"
-                  }}>
-                    PIXXELU
-                  </span>
-                  <span style={{
-                    fontSize: "0.6rem",
-                    fontWeight: 700,
-                    backgroundColor: "rgba(224, 86, 36, 0.12)",
-                    color: "#e05624",
-                    padding: "1px 5px",
-                    borderRadius: "4px",
-                    border: "1px solid rgba(224, 86, 36, 0.3)",
-                    letterSpacing: "0.5px"
-                  }}>
-                    CRM
-                  </span>
-                </div>
-                <span style={{
-                  fontSize: "0.65rem",
-                  fontWeight: 600,
-                  color: "var(--text-tertiary)",
-                  letterSpacing: "0.2px",
-                  lineHeight: 1.2,
-                  marginTop: "1px"
-                }}>
-                  Digital Operations & BDA Hub
-                </span>
               </div>
             </div>
 

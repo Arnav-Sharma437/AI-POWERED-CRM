@@ -44,35 +44,22 @@ export default function LandingPage() {
         <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "0.85rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           
           {/* Brand Logo with Pixxelu Emblem */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", cursor: "pointer" }} onClick={() => router.push("/")}>
+          <div style={{ display: "flex", alignItems: "center", cursor: "pointer" }} onClick={() => router.push("/")}>
             <div style={{
-              height: "38px",
+              height: "40px",
               display: "flex",
               alignItems: "center",
-              padding: "4px 10px",
+              padding: "4px 12px",
               backgroundColor: "#ffffff",
               borderRadius: "8px",
-              boxShadow: "0 0 20px rgba(224, 86, 36, 0.35)",
+              boxShadow: "0 0 20px rgba(224, 86, 36, 0.3)",
               border: "1px solid rgba(255, 255, 255, 0.2)"
             }}>
               <img 
                 src="/logo.png" 
-                alt="Pixxelu Logo" 
+                alt="Pixxelu" 
                 style={{ height: "24px", width: "auto", objectFit: "contain" }} 
               />
-            </div>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                <span style={{ fontSize: "1.1rem", fontWeight: 900, letterSpacing: "-0.4px", color: "#ffffff" }}>
-                  PIXXELU
-                </span>
-                <span style={{ fontSize: "0.65rem", backgroundColor: "rgba(224, 86, 36, 0.2)", color: "#f97316", padding: "2px 7px", borderRadius: "12px", fontWeight: 800, border: "1px solid rgba(224, 86, 36, 0.4)" }}>
-                  CRM
-                </span>
-              </div>
-              <p style={{ fontSize: "0.68rem", color: "#94a3b8", fontWeight: 500, margin: 0 }}>
-                High-Speed Agency & Team Engine
-              </p>
             </div>
           </div>
 
