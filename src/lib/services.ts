@@ -751,10 +751,30 @@ export async function getProjectById(id: string, userContext?: { userId: string;
       if (!isMember) return null; // Developer unauthorized to view unassigned project
     }
 
+    let closeOutcome = undefined;
+    let clientRating = undefined;
+    let clientFeedback = undefined;
+    let cleanNotes = project.notes;
+    try {
+      if (project.notes && project.notes.startsWith("{") && project.notes.endsWith("}")) {
+        const parsed = JSON.parse(project.notes);
+        closeOutcome = parsed.closeOutcome;
+        clientRating = parsed.clientRating;
+        clientFeedback = parsed.clientFeedback;
+        cleanNotes = parsed.generalNotes || "";
+      }
+    } catch {
+      // Keep cleanNotes
+    }
+
     const payments = (project as any).payments || [];
     const totalReceived = isDeveloper ? 0 : payments.reduce((sum: number, pay: any) => sum + pay.amount, 0);
     return {
       ...project,
+      notes: cleanNotes,
+      closeOutcome,
+      clientRating,
+      clientFeedback,
       finalBudget: isDeveloper ? 0 : project.finalBudget,
       bonus: isDeveloper ? 0 : project.bonus,
       totalReceived,
@@ -845,6 +865,9 @@ export async function updateProject(id: string, data: any, userId: string): Prom
       deadline: data.deadline ? new Date(data.deadline) : old.deadline,
       finalBudget: data.finalBudget ? parseFloat(data.finalBudget) : old.finalBudget,
       bonus: data.bonus !== undefined ? parseFloat(data.bonus) : old.bonus,
+      closeOutcome: data.closeOutcome !== undefined ? data.closeOutcome : old.closeOutcome,
+      clientRating: data.clientRating !== undefined ? (Number(data.clientRating) || 5) : old.clientRating,
+      clientFeedback: data.clientFeedback !== undefined ? data.clientFeedback : old.clientFeedback,
     };
     mockDb.projects[idx] = updated;
 
@@ -865,6 +888,23 @@ export async function updateProject(id: string, data: any, userId: string): Prom
       notes = `Project status flagged as Issue: ${data.issueDescription}`;
     }
 
+    // Preserve and merge JSON review metadata in notes
+    let projectNotesObj: any = {};
+    try {
+      if (old?.notes && old.notes.startsWith("{") && old.notes.endsWith("}")) {
+        projectNotesObj = JSON.parse(old.notes);
+      }
+    } catch {
+      projectNotesObj = { generalNotes: old?.notes || "" };
+    }
+
+    if (data.closeOutcome !== undefined) projectNotesObj.closeOutcome = data.closeOutcome;
+    if (data.clientRating !== undefined) projectNotesObj.clientRating = Number(data.clientRating) || 5;
+    if (data.clientFeedback !== undefined) projectNotesObj.clientFeedback = data.clientFeedback;
+    if (data.notes !== undefined) projectNotesObj.generalNotes = data.notes;
+
+    const savedNotes = Object.keys(projectNotesObj).length > 0 ? JSON.stringify(projectNotesObj) : data.notes;
+
     return await prisma.project.update({
       where: { id },
       data: {
@@ -876,7 +916,7 @@ export async function updateProject(id: string, data: any, userId: string): Prom
         bonus: data.bonus !== undefined ? parseFloat(data.bonus) : undefined,
         status: data.status,
         issueDescription: data.issueDescription,
-        notes: data.notes,
+        notes: savedNotes,
         activities: {
           create: {
             userId,

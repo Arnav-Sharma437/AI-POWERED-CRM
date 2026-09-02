@@ -6,7 +6,8 @@ import {
   ArrowLeft, CreditCard, UserPlus, RefreshCw, AlertOctagon, 
   Plus, Calendar, Mail, FileText, CheckCircle2, DollarSign,
   Send, Paperclip, MessageSquare, Trash2, X, Clock, Hourglass, 
-  AlertTriangle, Flame, Minimize2, Maximize2, ChevronDown, ChevronUp
+  AlertTriangle, Flame, Minimize2, Maximize2, ChevronDown, ChevronUp,
+  Star, ThumbsUp, ThumbsDown, Award, MessageCircle
 } from "lucide-react";
 import { useDashboard } from "../../layout";
 import AiLoader from "@/components/AiLoader";
@@ -53,7 +54,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [paymentForm, setPaymentForm] = useState({ amount: "", note: "" });
   const [takeoverForm, setTakeoverForm] = useState({ newBdaId: "", note: "" });
   const [assignForm, setAssignForm] = useState({ devId: "", workDetails: "" });
-  const [statusForm, setStatusForm] = useState({ status: "Work in Progress", issueDescription: "" });
+  const [statusForm, setStatusForm] = useState({ 
+    status: "Work in Progress", 
+    issueDescription: "",
+    closeOutcome: "Good", // "Good" | "Bad" | "Neutral"
+    clientRating: "5", // "1" - "5"
+    clientFeedback: "" 
+  });
 
   const [actionLoading, setActionLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -80,7 +87,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
         setStatusForm({
           status: data.project.status,
-          issueDescription: data.project.issueDescription || ""
+          issueDescription: data.project.issueDescription || "",
+          closeOutcome: data.project.closeOutcome || "Good",
+          clientRating: String(data.project.clientRating || "5"),
+          clientFeedback: data.project.clientFeedback || ""
         });
 
         if (data.project.deadline) {
@@ -533,9 +543,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-          <button onClick={() => setActiveModal("status")} className="crm-btn crm-btn-secondary"><RefreshCw size={14} /> Update Status ({project.status})</button>
-          {!isDeveloper && (
+          {!isDeveloper ? (
             <>
+              <button onClick={() => setActiveModal("status")} className="crm-btn crm-btn-secondary"><RefreshCw size={14} /> Update Project Status</button>
               <button onClick={() => {
                 setTimelineForm({ type: "Note", notes: "" });
                 setActiveModal("timeline");
@@ -544,6 +554,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <button onClick={() => setActiveModal("takeover")} className="crm-btn crm-btn-secondary"><UserPlus size={14} /> BDA Takeover</button>
               <button onClick={() => setActiveModal("assign")} className="crm-btn crm-btn-primary"><Mail size={14} /> Assign Developer</button>
             </>
+          ) : (
+            <div style={{ 
+              padding: "0.45rem 0.85rem", 
+              borderRadius: "8px", 
+              backgroundColor: "var(--bg-secondary)", 
+              border: "1px solid var(--border-primary)", 
+              fontSize: "0.8125rem", 
+              color: "var(--text-secondary)",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem"
+            }}>
+              <span style={{ color: "var(--text-tertiary)" }}>Assignment Status:</span>
+              <strong style={{ color: "var(--text-primary)" }}>Active Deliverable</strong>
+            </div>
           )}
           {currentUser?.roleName === "Super Admin" && (
             <button
@@ -608,7 +633,98 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {project.status === "Issue" && project.issueDescription && (
+      {/* Project Closure Review & Client Outcome Card (Visible to Developers, BDAs & Admins) */}
+      {(project.clientFeedback || project.closeOutcome || project.status === "Completed" || project.status === "Cancelled") && (
+        <div 
+          className="crm-card" 
+          style={{ 
+            marginBottom: "1.5rem", 
+            border: project.closeOutcome === "Good" 
+              ? "1px solid rgba(16, 185, 129, 0.4)" 
+              : project.closeOutcome === "Bad" 
+                ? "1px solid rgba(239, 68, 68, 0.4)" 
+                : "1px solid var(--border-primary)",
+            background: project.closeOutcome === "Good"
+              ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-secondary) 100%)"
+              : project.closeOutcome === "Bad"
+                ? "linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bg-secondary) 100%)"
+                : "var(--bg-secondary)"
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Award size={20} color={project.closeOutcome === "Good" ? "#10b981" : project.closeOutcome === "Bad" ? "#ef4444" : "var(--primary-color)"} />
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+                Project Closure Review & Client Feedback
+              </h3>
+            </div>
+            
+            {/* Outcome Badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                padding: "0.35rem 0.75rem",
+                borderRadius: "8px",
+                fontWeight: 700,
+                fontSize: "0.8125rem",
+                backgroundColor: project.closeOutcome === "Good" 
+                  ? "rgba(16, 185, 129, 0.15)" 
+                  : project.closeOutcome === "Bad" 
+                    ? "rgba(239, 68, 68, 0.15)" 
+                    : "rgba(99, 102, 241, 0.15)",
+                color: project.closeOutcome === "Good" 
+                  ? "#10b981" 
+                  : project.closeOutcome === "Bad" 
+                    ? "var(--danger-color)" 
+                    : "var(--primary-color)",
+                border: "1px solid currentColor"
+              }}>
+                {project.closeOutcome === "Good" ? <ThumbsUp size={14} /> : project.closeOutcome === "Bad" ? <ThumbsDown size={14} /> : <Award size={14} />}
+                Closure Outcome: {project.closeOutcome ? `${project.closeOutcome} Project Closure` : "Standard Closure"}
+              </span>
+
+              {/* Star Rating */}
+              <div style={{ display: "flex", gap: "2px", alignItems: "center", backgroundColor: "var(--bg-primary)", padding: "0.3rem 0.6rem", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star 
+                    key={star} 
+                    size={14} 
+                    fill={star <= (Number(project.clientRating) || 5) ? "#f59e0b" : "none"} 
+                    color={star <= (Number(project.clientRating) || 5) ? "#f59e0b" : "var(--text-tertiary)"} 
+                  />
+                ))}
+                <span style={{ fontSize: "0.75rem", fontWeight: 700, marginLeft: "4px", color: "var(--text-secondary)" }}>
+                  {project.clientRating || 5}/5
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Client Feedback Comment */}
+          <div style={{ 
+            backgroundColor: "var(--bg-primary)", 
+            padding: "1rem 1.25rem", 
+            borderRadius: "8px", 
+            border: "1px solid var(--border-primary)",
+            fontSize: "0.875rem",
+            lineHeight: 1.6,
+            color: "var(--text-primary)"
+          }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", marginBottom: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+              <MessageCircle size={13} />
+              Client Feedback & Performance Review
+            </div>
+            <div style={{ fontStyle: project.clientFeedback ? "normal" : "italic", color: project.clientFeedback ? "var(--text-primary)" : "var(--text-tertiary)" }}>
+              {project.clientFeedback ? `"${project.clientFeedback}"` : "Client review recorded. Deliverables accepted."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flagged Issue Box */}
+      {!isDeveloper && project.status === "Issue" && project.issueDescription && (
         <div style={{ 
           backgroundColor: "var(--danger-light)", 
           color: "var(--danger-text)", 
@@ -1326,6 +1442,120 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         onChange={(e) => setStatusForm(prev => ({ ...prev, issueDescription: e.target.value }))}
                         required
                       />
+                    </div>
+                  )}
+
+                  {/* Closure Review & Client Feedback for Team/Developer Visibility */}
+                  {(statusForm.status === "Completed" || statusForm.status === "Cancelled" || statusForm.status === "Review") && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "1rem", backgroundColor: "var(--bg-secondary)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--primary-color)", textTransform: "uppercase" }}>
+                        Project Closure & Client Review Details
+                      </div>
+                      
+                      <div>
+                        <label style={modalStyles.label}>Close Outcome (Acha / Bura / Normal)</label>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+                          <button
+                            type="button"
+                            onClick={() => setStatusForm(prev => ({ ...prev, closeOutcome: "Good" }))}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "0.35rem",
+                              padding: "0.5rem",
+                              borderRadius: "6px",
+                              border: statusForm.closeOutcome === "Good" ? "2px solid #10b981" : "1px solid var(--border-primary)",
+                              backgroundColor: statusForm.closeOutcome === "Good" ? "rgba(16, 185, 129, 0.15)" : "var(--bg-primary)",
+                              color: statusForm.closeOutcome === "Good" ? "#10b981" : "var(--text-secondary)",
+                              fontWeight: 700,
+                              fontSize: "0.8125rem",
+                              cursor: "pointer"
+                            }}
+                          >
+                            <ThumbsUp size={14} /> Good (Acha)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setStatusForm(prev => ({ ...prev, closeOutcome: "Bad" }))}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "0.35rem",
+                              padding: "0.5rem",
+                              borderRadius: "6px",
+                              border: statusForm.closeOutcome === "Bad" ? "2px solid #ef4444" : "1px solid var(--border-primary)",
+                              backgroundColor: statusForm.closeOutcome === "Bad" ? "rgba(239, 68, 68, 0.15)" : "var(--bg-primary)",
+                              color: statusForm.closeOutcome === "Bad" ? "#ef4444" : "var(--text-secondary)",
+                              fontWeight: 700,
+                              fontSize: "0.8125rem",
+                              cursor: "pointer"
+                            }}
+                          >
+                            <ThumbsDown size={14} /> Bad (Bura)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setStatusForm(prev => ({ ...prev, closeOutcome: "Neutral" }))}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "0.35rem",
+                              padding: "0.5rem",
+                              borderRadius: "6px",
+                              border: statusForm.closeOutcome === "Neutral" ? "2px solid var(--primary-color)" : "1px solid var(--border-primary)",
+                              backgroundColor: statusForm.closeOutcome === "Neutral" ? "rgba(99, 102, 241, 0.15)" : "var(--bg-primary)",
+                              color: statusForm.closeOutcome === "Neutral" ? "var(--primary-color)" : "var(--text-secondary)",
+                              fontWeight: 700,
+                              fontSize: "0.8125rem",
+                              cursor: "pointer"
+                            }}
+                          >
+                            <Award size={14} /> Average
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={modalStyles.label}>Client Star Rating (1 to 5 Stars)</label>
+                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setStatusForm(prev => ({ ...prev, clientRating: String(star) }))}
+                              style={{
+                                border: "none",
+                                background: "none",
+                                cursor: "pointer",
+                                padding: "4px"
+                              }}
+                            >
+                              <Star 
+                                size={22} 
+                                fill={star <= Number(statusForm.clientRating) ? "#f59e0b" : "none"} 
+                                color={star <= Number(statusForm.clientRating) ? "#f59e0b" : "var(--text-tertiary)"} 
+                              />
+                            </button>
+                          ))}
+                          <span style={{ fontSize: "0.875rem", fontWeight: 700, marginLeft: "0.5rem", color: "var(--text-primary)" }}>
+                            {statusForm.clientRating} / 5 Stars
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={modalStyles.label}>Client Feedback / Review Comment</label>
+                        <textarea 
+                          className="crm-textarea" 
+                          rows={3} 
+                          placeholder="Client review comment, e.g. 'Project was delivered on time with high code quality. Client is happy with the frontend design.'..."
+                          value={statusForm.clientFeedback}
+                          onChange={(e) => setStatusForm(prev => ({ ...prev, clientFeedback: e.target.value }))}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

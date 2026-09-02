@@ -64,9 +64,9 @@ export async function PUT(
 
     const body = await request.json();
 
-    // If body contains deadline or other admin fields, ensure user is not Developer
-    if (session.roleName === "Developer" && body.deadline) {
-      return NextResponse.json({ error: "Forbidden: Developers cannot change project deadlines." }, { status: 403 });
+    // If developer attempts to change project status, deadline, budget, or other fields
+    if (session.roleName === "Developer") {
+      return NextResponse.json({ error: "Forbidden: Developers do not have permission to modify project status or settings." }, { status: 403 });
     }
 
     const project = await updateProject(id, body, session.userId);

@@ -192,7 +192,7 @@ export default function ProjectsPage() {
                 key={stage.id}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
-                  if (draggedProjectId) {
+                  if (draggedProjectId && !isDeveloper) {
                     handleStatusChange(draggedProjectId, stage.id);
                     setDraggedProjectId(null);
                   }
@@ -231,7 +231,7 @@ export default function ProjectsPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", flexGrow: 1 }}>
                   {stageProjects.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "2rem 1rem", color: "var(--text-tertiary)", fontSize: "0.8125rem", border: "1px dashed var(--border-primary)", borderRadius: "8px" }}>
-                      Drop project here
+                      {!isDeveloper ? "Drop project here" : "No deliverables in this stage"}
                     </div>
                   ) : (
                     stageProjects.map((p) => {
@@ -239,15 +239,15 @@ export default function ProjectsPage() {
                       return (
                         <div
                           key={p.id}
-                          draggable
-                          onDragStart={() => setDraggedProjectId(p.id)}
+                          draggable={!isDeveloper}
+                          onDragStart={() => !isDeveloper && setDraggedProjectId(p.id)}
                           onClick={() => router.push(`/dashboard/projects/${p.id}`)}
                           style={{
                             backgroundColor: "var(--bg-primary)",
                             borderRadius: "8px",
                             border: "1px solid var(--border-primary)",
                             padding: "1rem",
-                            cursor: "grab",
+                            cursor: isDeveloper ? "pointer" : "grab",
                             boxShadow: "0 2px 4px rgba(0, 0, 0, 0.04)",
                             transition: "transform 0.15s ease, box-shadow 0.15s ease",
                             display: "flex",
@@ -259,9 +259,18 @@ export default function ProjectsPage() {
                             <span className="badge badge-primary" style={{ fontSize: "0.7rem", padding: "0.15rem 0.4rem" }}>
                               {p.serviceType}
                             </span>
-                            {p.status === "Issue" && (
+                            {!isDeveloper && p.status === "Issue" && (
                               <span style={{ color: "var(--danger-color)", display: "flex", alignItems: "center", gap: "2px", fontSize: "0.7rem", fontWeight: 600 }}>
                                 <AlertCircle size={12} /> Issue
+                              </span>
+                            )}
+                            {p.closeOutcome && (
+                              <span style={{ 
+                                color: p.closeOutcome === "Good" ? "#10b981" : p.closeOutcome === "Bad" ? "#ef4444" : "var(--primary-color)", 
+                                fontSize: "0.7rem", 
+                                fontWeight: 700 
+                              }}>
+                                {p.closeOutcome === "Good" ? "★ Good Close" : p.closeOutcome === "Bad" ? "✕ Bad Close" : "• Closed"}
                               </span>
                             )}
                           </div>

@@ -75,6 +75,9 @@ export interface Project {
   status: string;
   issueDescription?: string;
   notes?: string;
+  closeOutcome?: string; // "Good" | "Bad" | "Neutral"
+  clientRating?: number; // 1 to 5
+  clientFeedback?: string;
   isTrashed: boolean;
   createdAt: Date;
 }
