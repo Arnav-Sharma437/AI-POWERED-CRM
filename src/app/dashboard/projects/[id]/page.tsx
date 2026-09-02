@@ -591,15 +591,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </button>
             </>
           ) : (
-            <div style={{ 
-              padding: "0.35rem 0.75rem", 
-              borderRadius: "6px", 
-              backgroundColor: "var(--bg-secondary)", 
-              border: "1px solid var(--border-primary)", 
-              fontSize: "0.75rem", 
-              color: "var(--text-secondary)"
-            }}>
-              Assignment: <strong style={{ color: "var(--text-primary)" }}>Active Deliverable</strong>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <div style={{ 
+                padding: "0.35rem 0.75rem", 
+                borderRadius: "6px", 
+                backgroundColor: "var(--bg-secondary)", 
+                border: "1px solid var(--border-primary)", 
+                fontSize: "0.75rem", 
+                color: "var(--text-secondary)"
+              }}>
+                Assignment: <strong style={{ color: "var(--text-primary)" }}>Active Deliverable</strong>
+              </div>
+              <button 
+                onClick={() => {
+                  setTimelineForm({ type: "Note", notes: "" });
+                  setActiveModal("timeline");
+                }} 
+                className="crm-btn crm-btn-primary" 
+                style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}
+                title="Add a note or progress update to this project"
+              >
+                <Plus size={13} /> Add Note / Update
+              </button>
             </div>
           )}
 
@@ -685,8 +698,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
           )}
 
-          {/* Project Closure Review & Client Outcome Card */}
-          {(project.clientFeedback || project.closeOutcome || project.status === "Completed" || project.status === "Cancelled") && (
+          {/* Project Closure Review & Client Outcome Card - ONLY visible when project is Completed or Cancelled */}
+          {(project.status === "Completed" || project.status === "Cancelled") && (
             <div 
               className="crm-card" 
               style={{ 
@@ -877,18 +890,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <div className="crm-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
               <h3 style={{ fontSize: "0.875rem", fontWeight: 700, textTransform: "uppercase", marginBottom: 0 }}>Project timeline & logs</h3>
-              {!isDeveloper && (
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setTimelineForm({ type: "Note", notes: "" });
-                    setActiveModal("timeline");
-                  }}
-                  style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.775rem", fontWeight: 600, cursor: "pointer" }}
-                >
-                  + Add Update
-                </button>
-              )}
+              <button 
+                type="button"
+                onClick={() => {
+                  setTimelineForm({ type: "Note", notes: "" });
+                  setActiveModal("timeline");
+                }}
+                style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.775rem", fontWeight: 600, cursor: "pointer" }}
+              >
+                + Add Note / Update
+              </button>
             </div>
 
             {(!project.activities || project.activities.length === 0) ? (
