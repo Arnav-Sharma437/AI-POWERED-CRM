@@ -73,6 +73,10 @@ export interface Project {
   primaryBdaId: string;
   serviceType: string;
   status: string;
+  currency?: string; // "INR" | "USD" | "EUR" | "GBP" | "AED" | "CAD" | "AUD"
+  pricingModel?: string; // "Fixed" | "Hourly"
+  hourlyRate?: number;
+  estimatedHours?: number;
   issueDescription?: string;
   notes?: string;
   closeOutcome?: string; // "Good" | "Bad" | "Neutral"

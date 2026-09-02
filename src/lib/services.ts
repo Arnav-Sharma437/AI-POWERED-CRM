@@ -754,6 +754,10 @@ export async function getProjectById(id: string, userContext?: { userId: string;
     let closeOutcome = undefined;
     let clientRating = undefined;
     let clientFeedback = undefined;
+    let currency = "INR";
+    let pricingModel = "Fixed";
+    let hourlyRate = undefined;
+    let estimatedHours = undefined;
     let cleanNotes = project.notes;
     try {
       if (project.notes && project.notes.startsWith("{") && project.notes.endsWith("}")) {
@@ -761,6 +765,10 @@ export async function getProjectById(id: string, userContext?: { userId: string;
         closeOutcome = parsed.closeOutcome;
         clientRating = parsed.clientRating;
         clientFeedback = parsed.clientFeedback;
+        currency = parsed.currency || "INR";
+        pricingModel = parsed.pricingModel || "Fixed";
+        hourlyRate = parsed.hourlyRate;
+        estimatedHours = parsed.estimatedHours;
         cleanNotes = parsed.generalNotes || "";
       }
     } catch {
@@ -775,6 +783,10 @@ export async function getProjectById(id: string, userContext?: { userId: string;
       closeOutcome,
       clientRating,
       clientFeedback,
+      currency: (project as any).currency || currency,
+      pricingModel: (project as any).pricingModel || pricingModel,
+      hourlyRate: (project as any).hourlyRate || hourlyRate,
+      estimatedHours: (project as any).estimatedHours || estimatedHours,
       finalBudget: isDeveloper ? 0 : project.finalBudget,
       bonus: isDeveloper ? 0 : project.bonus,
       totalReceived,
@@ -787,6 +799,11 @@ export async function getProjectById(id: string, userContext?: { userId: string;
 
 export async function createProject(data: any, userId: string): Promise<any> {
   await checkDbConnection();
+  const currency = data.currency || "INR";
+  const pricingModel = data.pricingModel || "Fixed";
+  const hourlyRate = data.hourlyRate ? parseFloat(data.hourlyRate) : undefined;
+  const estimatedHours = data.estimatedHours ? parseFloat(data.estimatedHours) : undefined;
+
   if (isMockMode) {
     const newProj: Project = {
       id: `p-${Date.now()}`,
@@ -797,11 +814,13 @@ export async function createProject(data: any, userId: string): Promise<any> {
       deadline: new Date(data.deadline),
       finalBudget: parseFloat(data.finalBudget),
       bonus: data.bonus ? parseFloat(data.bonus) : 0,
+      currency,
+      pricingModel,
+      hourlyRate,
+      estimatedHours,
       primaryBdaId: data.primaryBdaId,
       serviceType: data.serviceType,
-      status: data.status || "Not Started",
-      issueDescription: data.issueDescription,
-      notes: data.notes,
+      status: "Work in Progress",
       isTrashed: false,
       createdAt: new Date()
     };
@@ -812,13 +831,21 @@ export async function createProject(data: any, userId: string): Promise<any> {
       timestamp: new Date(),
       userId,
       type: "System",
-      notes: `Project created: ${newProj.name}`,
-      projectId: newProj.id,
-      clientId: data.clientId
+      notes: `Created project ${data.name} (${currency} ${pricingModel})`,
+      projectId: newProj.id
     });
 
     return newProj;
   } else {
+    // Pack extra config into JSON notes
+    const projectNotesObj = {
+      currency,
+      pricingModel,
+      hourlyRate,
+      estimatedHours,
+      generalNotes: data.notes || ""
+    };
+
     return await prisma.project.create({
       data: {
         name: data.name,
@@ -828,16 +855,15 @@ export async function createProject(data: any, userId: string): Promise<any> {
         deadline: new Date(data.deadline),
         finalBudget: parseFloat(data.finalBudget),
         bonus: data.bonus ? parseFloat(data.bonus) : 0,
-        primaryBdaId: data.primaryBdaId || null,
+        primaryBdaId: data.primaryBdaId,
         serviceType: data.serviceType,
-        status: data.status || "Not Started",
-        issueDescription: data.issueDescription,
-        notes: data.notes,
+        status: "Work in Progress",
+        notes: JSON.stringify(projectNotesObj),
         activities: {
           create: {
             userId,
             type: "System",
-            notes: "Project created."
+            notes: `Project created (${currency} ${pricingModel}).`
           }
         }
       }
@@ -865,6 +891,10 @@ export async function updateProject(id: string, data: any, userId: string): Prom
       deadline: data.deadline ? new Date(data.deadline) : old.deadline,
       finalBudget: data.finalBudget ? parseFloat(data.finalBudget) : old.finalBudget,
       bonus: data.bonus !== undefined ? parseFloat(data.bonus) : old.bonus,
+      currency: data.currency !== undefined ? data.currency : old.currency,
+      pricingModel: data.pricingModel !== undefined ? data.pricingModel : old.pricingModel,
+      hourlyRate: data.hourlyRate !== undefined ? parseFloat(data.hourlyRate) : old.hourlyRate,
+      estimatedHours: data.estimatedHours !== undefined ? parseFloat(data.estimatedHours) : old.estimatedHours,
       closeOutcome: data.closeOutcome !== undefined ? data.closeOutcome : old.closeOutcome,
       clientRating: data.clientRating !== undefined ? (Number(data.clientRating) || 5) : old.clientRating,
       clientFeedback: data.clientFeedback !== undefined ? data.clientFeedback : old.clientFeedback,
@@ -888,7 +918,7 @@ export async function updateProject(id: string, data: any, userId: string): Prom
       notes = `Project status flagged as Issue: ${data.issueDescription}`;
     }
 
-    // Preserve and merge JSON review metadata in notes
+    // Preserve and merge JSON review & pricing metadata in notes
     let projectNotesObj: any = {};
     try {
       if (old?.notes && old.notes.startsWith("{") && old.notes.endsWith("}")) {
@@ -898,6 +928,10 @@ export async function updateProject(id: string, data: any, userId: string): Prom
       projectNotesObj = { generalNotes: old?.notes || "" };
     }
 
+    if (data.currency !== undefined) projectNotesObj.currency = data.currency;
+    if (data.pricingModel !== undefined) projectNotesObj.pricingModel = data.pricingModel;
+    if (data.hourlyRate !== undefined) projectNotesObj.hourlyRate = parseFloat(data.hourlyRate);
+    if (data.estimatedHours !== undefined) projectNotesObj.estimatedHours = parseFloat(data.estimatedHours);
     if (data.closeOutcome !== undefined) projectNotesObj.closeOutcome = data.closeOutcome;
     if (data.clientRating !== undefined) projectNotesObj.clientRating = Number(data.clientRating) || 5;
     if (data.clientFeedback !== undefined) projectNotesObj.clientFeedback = data.clientFeedback;

@@ -287,9 +287,9 @@ export default function ProjectsPage() {
                           {/* Redacted for Developer */}
                           {!isDeveloper && (
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", color: "var(--text-secondary)", backgroundColor: "var(--bg-secondary)", padding: "0.375rem 0.5rem", borderRadius: "6px" }}>
-                              <span>Budget:</span>
+                              <span>Budget ({p.pricingModel || "Fixed"}):</span>
                               <strong style={{ color: "var(--text-primary)" }}>
-                                {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p.finalBudget)}
+                                {new Intl.NumberFormat("en-US", { style: "currency", currency: p.currency || "INR", maximumFractionDigits: 0 }).format(p.finalBudget)}
                               </strong>
                             </div>
                           )}
@@ -354,12 +354,17 @@ export default function ProjectsPage() {
                     <td>{p.primaryBda?.name}</td>
                     {!isDeveloper && (
                       <td>
-                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p.finalBudget)}
+                        <div style={{ fontWeight: 600 }}>
+                          {new Intl.NumberFormat("en-US", { style: "currency", currency: p.currency || "INR", maximumFractionDigits: 0 }).format(p.finalBudget)}
+                        </div>
+                        <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
+                          {p.pricingModel === "Hourly" ? `Hourly (${p.hourlyRate ? `${p.currency || "INR"} ${p.hourlyRate}/hr` : ""})` : "Fixed Price"}
+                        </div>
                       </td>
                     )}
                     {!isDeveloper && (
                       <td style={{ color: "var(--success-color)", fontWeight: 500 }}>
-                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p.totalReceived)}
+                        {new Intl.NumberFormat("en-US", { style: "currency", currency: p.currency || "INR", maximumFractionDigits: 0 }).format(p.totalReceived)}
                       </td>
                     )}
                     {!isDeveloper && (

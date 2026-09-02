@@ -87,7 +87,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [leadForm, setLeadForm] = useState({ name: "", linkedinUrl: "", company: "", jobTitle: "", country: "", city: "", industry: "", profilePhoto: "", source: "LinkedIn", customSource: "", priority: "Warm", status: "New", notes: "", tags: "", primaryBdaId: "", assignedBdaIds: [] as string[] });
   const [enriching, setEnriching] = useState(false);
   const [clientForm, setClientForm] = useState({ name: "", email: "", company: "", phone: "", website: "" });
-  const [projectForm, setProjectForm] = useState({ name: "", clientId: "", source: "LinkedIn", startDate: "", deadline: "", deadlineTime: "18:00", finalBudget: "", bonus: "0", primaryBdaId: "", serviceType: "Web Design" });
+  const [projectForm, setProjectForm] = useState({ 
+    name: "", 
+    clientId: "", 
+    source: "LinkedIn", 
+    startDate: "", 
+    deadline: "", 
+    deadlineTime: "18:00", 
+    currency: "INR", 
+    pricingModel: "Fixed", 
+    hourlyRate: "", 
+    estimatedHours: "", 
+    finalBudget: "", 
+    bonus: "0", 
+    primaryBdaId: "", 
+    serviceType: "Web Design" 
+  });
   const [meetingForm, setMeetingForm] = useState({ title: "", type: "Meeting", startTime: "", notes: "", leadId: "", projectId: "", assignedUserIds: [] as string[] });
   const [paymentForm, setPaymentForm] = useState({ projectId: "", amount: "", note: "" });
   const [noteForm, setNoteForm] = useState({ leadId: "", projectId: "", content: "" });
@@ -438,7 +453,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       // Reset forms
       setLeadForm({ name: "", linkedinUrl: "", company: "", jobTitle: "", country: "", city: "", industry: "", profilePhoto: "", source: "LinkedIn", customSource: "", priority: "Warm", status: "New", notes: "", tags: "", primaryBdaId: currentUser?.id || "", assignedBdaIds: [] });
       setClientForm({ name: "", email: "", company: "", phone: "", website: "" });
-      setProjectForm({ name: "", clientId: "", source: "LinkedIn", startDate: "", deadline: "", deadlineTime: "18:00", finalBudget: "", bonus: "0", primaryBdaId: currentUser?.id || "", serviceType: "Web Design" });
+      setProjectForm({ 
+        name: "", 
+        clientId: "", 
+        source: "LinkedIn", 
+        startDate: "", 
+        deadline: "", 
+        deadlineTime: "18:00", 
+        currency: "INR", 
+        pricingModel: "Fixed", 
+        hourlyRate: "", 
+        estimatedHours: "", 
+        finalBudget: "", 
+        bonus: "0", 
+        primaryBdaId: currentUser?.id || "", 
+        serviceType: "Web Design" 
+      });
       setCustomServiceType("");
       setMeetingForm({ title: "", type: "Meeting", startTime: "", notes: "", leadId: "", projectId: "", assignedUserIds: [currentUser?.id || ""] });
       setPaymentForm({ projectId: "", amount: "", note: "" });
@@ -1303,28 +1333,109 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    {/* Currency & Pricing Model Section */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", backgroundColor: "var(--bg-secondary)", padding: "0.85rem", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
                       <div>
-                        <label style={modalStyles.label}>Final Budget (INR)</label>
-                        <input 
-                          type="number" 
-                          className="crm-input"
-                          placeholder="50000"
-                          value={projectForm.finalBudget}
-                          onChange={(e) => setProjectForm(prev => ({ ...prev, finalBudget: e.target.value }))}
-                          required
-                        />
+                        <label style={modalStyles.label}>Contract Currency</label>
+                        <select
+                          className="crm-select"
+                          value={projectForm.currency}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, currency: e.target.value }))}
+                        >
+                          <option value="INR">INR (₹) - Indian Rupee</option>
+                          <option value="USD">USD ($) - US Dollar</option>
+                          <option value="EUR">EUR (€) - Euro</option>
+                          <option value="GBP">GBP (£) - British Pound</option>
+                          <option value="AED">AED (د.إ) - UAE Dirham</option>
+                          <option value="CAD">CAD ($) - Canadian Dollar</option>
+                          <option value="AUD">AUD ($) - Australian Dollar</option>
+                        </select>
                       </div>
                       <div>
-                        <label style={modalStyles.label}>Bonus Budget (INR)</label>
-                        <input 
-                          type="number" 
-                          className="crm-input"
-                          value={projectForm.bonus}
-                          onChange={(e) => setProjectForm(prev => ({ ...prev, bonus: e.target.value }))}
-                        />
+                        <label style={modalStyles.label}>Pricing Model</label>
+                        <select
+                          className="crm-select"
+                          value={projectForm.pricingModel}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, pricingModel: e.target.value }))}
+                        >
+                          <option value="Fixed">Fixed Price Project</option>
+                          <option value="Hourly">Hourly Rate Contract</option>
+                        </select>
                       </div>
                     </div>
+
+                    {/* Hourly Inputs if Hourly selected */}
+                    {projectForm.pricingModel === "Hourly" ? (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", backgroundColor: "var(--bg-primary)", padding: "0.75rem", borderRadius: "8px", border: "1px dashed var(--border-primary)" }}>
+                        <div>
+                          <label style={modalStyles.label}>Hourly Rate ({projectForm.currency})</label>
+                          <input 
+                            type="number" 
+                            className="crm-input"
+                            placeholder="e.g. 25"
+                            value={projectForm.hourlyRate}
+                            onChange={(e) => {
+                              const rate = e.target.value;
+                              const hrs = projectForm.estimatedHours;
+                              const calcTotal = rate && hrs ? String(parseFloat(rate) * parseFloat(hrs)) : projectForm.finalBudget;
+                              setProjectForm(prev => ({ ...prev, hourlyRate: rate, finalBudget: calcTotal }));
+                            }}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label style={modalStyles.label}>Est. Hours</label>
+                          <input 
+                            type="number" 
+                            className="crm-input"
+                            placeholder="e.g. 40"
+                            value={projectForm.estimatedHours}
+                            onChange={(e) => {
+                              const hrs = e.target.value;
+                              const rate = projectForm.hourlyRate;
+                              const calcTotal = rate && hrs ? String(parseFloat(rate) * parseFloat(hrs)) : projectForm.finalBudget;
+                              setProjectForm(prev => ({ ...prev, estimatedHours: hrs, finalBudget: calcTotal }));
+                            }}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label style={modalStyles.label}>Est. Total Budget ({projectForm.currency})</label>
+                          <input 
+                            type="number" 
+                            className="crm-input"
+                            placeholder="Auto-calculated"
+                            value={projectForm.finalBudget}
+                            onChange={(e) => setProjectForm(prev => ({ ...prev, finalBudget: e.target.value }))}
+                            required
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                        <div>
+                          <label style={modalStyles.label}>Final Fixed Budget ({projectForm.currency})</label>
+                          <input 
+                            type="number" 
+                            className="crm-input"
+                            placeholder="e.g. 50000"
+                            value={projectForm.finalBudget}
+                            onChange={(e) => setProjectForm(prev => ({ ...prev, finalBudget: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label style={modalStyles.label}>Bonus Budget ({projectForm.currency})</label>
+                          <input 
+                            type="number" 
+                            className="crm-input"
+                            placeholder="0"
+                            value={projectForm.bonus}
+                            onChange={(e) => setProjectForm(prev => ({ ...prev, bonus: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <label style={modalStyles.label}>Assigned Primary BDA</label>

@@ -535,7 +535,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       {/* Header Info */}
       <div className="crm-card" style={{ padding: "2rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.5rem", marginBottom: "1.5rem" }}>
         <div>
-          <span className="badge badge-primary" style={{ marginBottom: "0.5rem" }}>{project.serviceType}</span>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem", flexWrap: "wrap" }}>
+            <span className="badge badge-primary">{project.serviceType}</span>
+            <span className="badge" style={{ backgroundColor: "rgba(99, 102, 241, 0.15)", color: "var(--primary-color)", fontWeight: 700 }}>
+              {project.currency || "INR"} ({project.pricingModel || "Fixed"})
+            </span>
+            {project.pricingModel === "Hourly" && project.hourlyRate && (
+              <span className="badge" style={{ backgroundColor: "rgba(16, 185, 129, 0.15)", color: "#10b981", fontWeight: 600 }}>
+                {project.currency || "INR"} {project.hourlyRate}/hr {project.estimatedHours ? `• ${project.estimatedHours} hrs est.` : ""}
+              </span>
+            )}
+          </div>
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)" }}>{project.name}</h2>
           <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "4px" }}>
             Client: <strong>{project.client?.name} ({project.client?.company})</strong>
@@ -603,24 +613,30 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       {!isDeveloper && (
         <div className="crm-card" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem", marginBottom: "1.5rem", backgroundColor: "var(--bg-secondary)" }}>
           <div style={{ padding: "0.5rem" }}>
-            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Contract Budget</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
-              {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(project.finalBudget)}
+            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>
+              {project.pricingModel === "Hourly" ? "Est. Hourly Budget" : "Contract Fixed Budget"} ({project.currency || "INR"})
             </div>
-            {project.bonus > 0 && <span style={{ fontSize: "0.75rem", color: "var(--success-color)", fontWeight: 500 }}>+ {project.bonus} Bonus</span>}
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
+              {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 2 }).format(project.finalBudget)}
+            </div>
+            {project.bonus > 0 && (
+              <span style={{ fontSize: "0.75rem", color: "var(--success-color)", fontWeight: 500 }}>
+                + {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(project.bonus)} Bonus
+              </span>
+            )}
           </div>
 
           <div style={{ padding: "0.5rem" }}>
             <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Total Collected</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--success-color)", marginTop: "4px" }}>
-              {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(project.totalReceived)}
+              {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 2 }).format(project.totalReceived)}
             </div>
           </div>
 
           <div style={{ padding: "0.5rem" }}>
             <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Outstanding Balance</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", marginTop: "4px" }}>
-              {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(project.pendingAmount)}
+              {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 2 }).format(project.pendingAmount)}
             </div>
           </div>
 
