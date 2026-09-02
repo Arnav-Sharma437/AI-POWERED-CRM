@@ -58,13 +58,18 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const cookiesHeader = request.headers.get("cookie") || "";
-    const token = cookiesHeader.split(";").find(c => c.trim().startsWith("token="))?.split("=")[1];
-    const user = token ? await verifyJWT(token) : null;
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { verifySession } = await import("@/lib/auth");
+    const session = await verifySession(request);
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
-    const project = await updateProject(id, body, user.userId);
+
+    // If body contains deadline or other admin fields, ensure user is not Developer
+    if (session.roleName === "Developer" && body.deadline) {
+      return NextResponse.json({ error: "Forbidden: Developers cannot change project deadlines." }, { status: 403 });
+    }
+
+    const project = await updateProject(id, body, session.userId);
     return NextResponse.json({ success: true, project });
   } catch (error) {
     console.error("Project PUT error:", error);
