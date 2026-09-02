@@ -306,6 +306,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setProjectsList(prData.projects || []);
         }
 
+        // Fetch user's live attendance status
+        const attRes = await fetch("/api/auth/attendance");
+        if (attRes.ok) {
+          const attData = await attRes.json();
+          const mySummary = attData.userSummaries?.find((u: any) => u.userId === meData.user.id);
+          if (mySummary) {
+            setIsWorking(mySummary.isCurrentlyWorking);
+            if (mySummary.currentLocation) {
+              setShiftLocation(mySummary.currentLocation as "Office" | "Home");
+            }
+          }
+        }
+
         // Default primary BDA in forms to current user
         setLeadForm(prev => ({ ...prev, primaryBdaId: meData.user.id }));
         setProjectForm(prev => ({ ...prev, primaryBdaId: meData.user.id }));

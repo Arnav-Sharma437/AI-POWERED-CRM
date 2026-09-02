@@ -2,7 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Briefcase, DollarSign, ArrowUpRight, Phone, Globe, Mail } from "lucide-react";
+import { 
+  Search, Briefcase, DollarSign, ArrowUpRight, 
+  Phone, Globe, Mail, LayoutGrid, List, ChevronRight 
+} from "lucide-react";
 import { useDashboard } from "../layout";
 import AiLoader from "@/components/AiLoader";
 
@@ -13,6 +16,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   useEffect(() => {
     async function loadClients() {
@@ -39,12 +43,58 @@ export default function ClientsPage() {
 
   return (
     <div className="crm-container animate-fade-in">
-      {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Client Accounts</h1>
-        <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-          Monitor client portfolios, active contracts, outstanding balances, and total collections.
-        </p>
+      {/* Header with View Toggle */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
+        <div>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Client Accounts</h1>
+          <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
+            Monitor client portfolios, active contracts, outstanding balances, and total collections.
+          </p>
+        </div>
+
+        {/* View Mode Toggle Switch */}
+        <div style={{ display: "flex", alignItems: "center", backgroundColor: "var(--bg-secondary)", border: "1px solid var(--border-primary)", borderRadius: "8px", padding: "3px" }}>
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              padding: "0.4rem 0.75rem",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              backgroundColor: viewMode === "list" ? "var(--primary-color)" : "transparent",
+              color: viewMode === "list" ? "#ffffff" : "var(--text-secondary)",
+              cursor: "pointer",
+              transition: "all 0.15s ease"
+            }}
+          >
+            <List size={16} /> List View
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("grid")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              padding: "0.4rem 0.75rem",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              backgroundColor: viewMode === "grid" ? "var(--primary-color)" : "transparent",
+              color: viewMode === "grid" ? "#ffffff" : "var(--text-secondary)",
+              cursor: "pointer",
+              transition: "all 0.15s ease"
+            }}
+          >
+            <LayoutGrid size={16} /> Grid Cards
+          </button>
+        </div>
       </div>
 
       {/* Search Row */}
@@ -62,14 +112,122 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* Grid of Clients */}
+      {/* Clients Display */}
       {loading ? (
         <AiLoader label="Querying Client Portfolios..." sublabel="Calculating contracts, collections, and outstanding ledgers" />
       ) : filteredClients.length === 0 ? (
         <div className="crm-card" style={{ padding: "4rem 2rem", textAlign: "center" }}>
           <h3>No client accounts found</h3>
         </div>
+      ) : viewMode === "list" ? (
+        /* Professional Table / List View */
+        <div className="crm-card" style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+              <thead>
+                <tr style={{ backgroundColor: "var(--bg-secondary)", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)", textAlign: "left" }}>
+                  <th style={{ padding: "1rem 1.25rem" }}>Client & Company</th>
+                  <th style={{ padding: "1rem 1rem" }}>Contact Details</th>
+                  <th style={{ padding: "1rem 1rem", textAlign: "center" }}>Projects</th>
+                  <th style={{ padding: "1rem 1rem", textAlign: "right" }}>Portfolio Value</th>
+                  <th style={{ padding: "1rem 1rem", textAlign: "right" }}>Collected</th>
+                  <th style={{ padding: "1rem 1rem", textAlign: "right" }}>Pending Balance</th>
+                  <th style={{ padding: "1rem 1.25rem", textAlign: "right" }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredClients.map((client) => {
+                  const hasOutstanding = client.totalOutstanding > 0;
+                  return (
+                    <tr 
+                      key={client.id} 
+                      onClick={() => router.push(`/dashboard/clients/${client.id}`)}
+                      style={{ borderBottom: "1px solid var(--border-primary)", cursor: "pointer", transition: "background 0.15s ease" }}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                    >
+                      <td style={{ padding: "1rem 1.25rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          <div style={{ 
+                            width: "36px", 
+                            height: "36px", 
+                            borderRadius: "8px", 
+                            backgroundColor: "var(--primary-light)", 
+                            color: "var(--primary-color)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "1rem",
+                            fontWeight: "bold",
+                            flexShrink: 0
+                          }}>
+                            {client.name.charAt(0)}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{client.name}</div>
+                            <div style={{ fontSize: "0.775rem", color: "var(--text-secondary)" }}>{client.company || "Individual Account"}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: "1rem 1rem", color: "var(--text-secondary)", fontSize: "0.8125rem" }}>
+                        {client.email && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginBottom: "2px" }}>
+                            <Mail size={12} /> {client.email}
+                          </div>
+                        )}
+                        {client.phone && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                            <Phone size={12} /> {client.phone}
+                          </div>
+                        )}
+                      </td>
+
+                      <td style={{ padding: "1rem 1rem", textAlign: "center" }}>
+                        <span style={{ 
+                          backgroundColor: client.activeProjects > 0 ? "rgba(99, 102, 241, 0.12)" : "var(--bg-secondary)", 
+                          color: client.activeProjects > 0 ? "var(--primary-color)" : "var(--text-tertiary)",
+                          padding: "3px 8px", 
+                          borderRadius: "12px", 
+                          fontSize: "0.775rem", 
+                          fontWeight: 700 
+                        }}>
+                          {client.activeProjects} Active / {client.totalProjects}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 700, color: "var(--text-primary)", fontFamily: "monospace" }}>
+                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(client.totalProjectValue)}
+                      </td>
+
+                      <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 700, color: "var(--success-color)", fontFamily: "monospace" }}>
+                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(client.totalReceived)}
+                      </td>
+
+                      <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 800, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", fontFamily: "monospace" }}>
+                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(client.totalOutstanding)}
+                      </td>
+
+                      <td style={{ padding: "1rem 1.25rem", textAlign: "right" }}>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/dashboard/clients/${client.id}`);
+                          }}
+                          className="crm-btn crm-btn-secondary"
+                          style={{ padding: "0.35rem 0.75rem", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+                        >
+                          View <ChevronRight size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
+        /* Grid Cards View */
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "1.5rem" }}>
           {filteredClients.map((client) => {
             const hasOutstanding = client.totalOutstanding > 0;

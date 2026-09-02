@@ -211,7 +211,7 @@ export default function DashboardPage() {
       {/* Super Admin & BDA Team Attendance Monitoring Card */}
       {isSuperAdmin && (
         <div className="crm-card" style={{ padding: "1.5rem", marginBottom: "2rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "1rem" }}>
             <div>
               <h3 style={{ ...styles.sectionTitle, borderBottom: "none", marginBottom: "2px" }}>
                 Team Workday & Attendance Tracker (Super Admin Hub)
@@ -220,8 +220,42 @@ export default function DashboardPage() {
                 Live visibility into when Developers & BDAs arrive, where they work from (Office vs Home), and total active work hours.
               </div>
             </div>
-            <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--primary-color)", backgroundColor: "rgba(99, 102, 241, 0.12)", padding: "0.35rem 0.75rem", borderRadius: "8px" }}>
-              {attendanceData.userSummaries.filter(u => u.isCurrentlyWorking).length} / {attendanceData.userSummaries.length} Active Now
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!confirm("Send weekly attendance summary reports via email to all Developers (individual breakdown) and Super Admin (master team summary)?")) return;
+                  try {
+                    const res = await fetch("/api/auth/attendance", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "send_weekly_reports" })
+                    });
+                    const resData = await res.json();
+                    if (!res.ok) throw new Error(resData.error || "Failed to dispatch weekly reports");
+                    alert(resData.message || "Weekly attendance reports emailed successfully!");
+                  } catch (e: any) {
+                    alert(e.message || "Failed to send weekly reports");
+                  }
+                }}
+                className="crm-btn"
+                style={{
+                  backgroundColor: "rgba(99, 102, 241, 0.15)",
+                  color: "var(--primary-color)",
+                  border: "1px solid var(--primary-color)",
+                  fontSize: "0.8125rem",
+                  padding: "0.4rem 0.85rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  fontWeight: 700
+                }}
+              >
+                📧 Mail Weekly Reports to Team & Admin
+              </button>
+              <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--primary-color)", backgroundColor: "rgba(99, 102, 241, 0.12)", padding: "0.4rem 0.75rem", borderRadius: "8px" }}>
+                {attendanceData.userSummaries.filter(u => u.isCurrentlyWorking).length} / {attendanceData.userSummaries.length} Active Now
+              </div>
             </div>
           </div>
 

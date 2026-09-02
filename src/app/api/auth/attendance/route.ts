@@ -233,6 +233,161 @@ export async function POST(request: Request) {
         message: `Clocked out successfully at ${actionTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}!`,
         workEndedAt: actionTime.toISOString()
       });
+    } else if (action === "send_weekly_reports") {
+      if (session.roleName !== "Super Admin") {
+        return NextResponse.json({ error: "Only Super Admin can trigger weekly attendance reports dispatch." }, { status: 403 });
+      }
+
+      const { sendDeveloperWeeklyAttendanceEmail, sendSuperAdminWeeklyTeamAttendanceEmail } = await import("@/lib/email");
+
+      // Calculate last 7 days window
+      const now = new Date();
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+
+      const weekStartFormatted = sevenDaysAgo.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+      const weekEndFormatted = now.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+      // Fetch all attendance activity logs from last 7 days
+      let weekActivities: any[] = [];
+      if (isDemoMode()) {
+        weekActivities = mockDb.activities.filter(a => 
+          new Date(a.timestamp) >= sevenDaysAgo &&
+          a.notes && (a.notes.includes("workday session") || a.notes.includes("clocked out") || a.notes.includes("finished workday"))
+        );
+      } else {
+        weekActivities = await prisma.activity.findMany({
+          where: {
+            timestamp: { gte: sevenDaysAgo },
+            OR: [
+              { notes: { contains: "workday session" } },
+              { notes: { contains: "clocked out" } },
+              { notes: { contains: "finished workday" } }
+            ]
+          },
+          include: { user: true },
+          orderBy: { timestamp: "asc" }
+        });
+      }
+
+      const allActiveUsers = allUsers.filter(u => !u.isTrashed && u.isActive);
+      const superAdminList = allActiveUsers.filter(u => u.roleName === "Super Admin");
+      const developersAndStaff = allActiveUsers.filter(u => u.roleName !== "Super Admin");
+
+      const masterTeamSummary: Array<{
+        name: string;
+        email: string;
+        role: string;
+        totalHours: string;
+        daysPresent: number;
+        officeVsHome: string;
+      }> = [];
+
+      // Process each user's weekly attendance breakdown
+      for (const u of allActiveUsers) {
+        const uLogs = weekActivities.filter(a => a.userId === u.id);
+        const dayMap: Record<string, { dateStr: string; dayName: string; firstIn: string; lastOut: string; location: string; minutes: number }> = {};
+
+        let currentOpenClockIn: Date | null = null;
+        let currentLoc = "Office";
+
+        uLogs.forEach(act => {
+          const actDate = new Date(act.timestamp);
+          const dateKey = actDate.toISOString().split("T")[0];
+          const dayName = actDate.toLocaleDateString("en-IN", { weekday: "short" });
+          const dateFormatted = actDate.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+          const timeFormatted = actDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+          if (!dayMap[dateKey]) {
+            let loc = "Office";
+            if (act.notes?.includes("from Home")) loc = "Home";
+            dayMap[dateKey] = {
+              dateStr: dateFormatted,
+              dayName,
+              firstIn: "",
+              lastOut: "",
+              location: loc,
+              minutes: 0
+            };
+          }
+
+          if (act.notes?.includes("started workday session")) {
+            currentOpenClockIn = actDate;
+            if (!dayMap[dateKey].firstIn) dayMap[dateKey].firstIn = timeFormatted;
+            if (act.notes?.includes("from Home")) {
+              dayMap[dateKey].location = "Home";
+              currentLoc = "Home";
+            } else {
+              dayMap[dateKey].location = "Office";
+              currentLoc = "Office";
+            }
+          } else if (act.notes?.includes("clocked out") || act.notes?.includes("finished workday")) {
+            dayMap[dateKey].lastOut = timeFormatted;
+            if (currentOpenClockIn) {
+              const durationMs = actDate.getTime() - currentOpenClockIn.getTime();
+              dayMap[dateKey].minutes += Math.max(0, Math.round(durationMs / 60000));
+              currentOpenClockIn = null;
+            }
+          }
+        });
+
+        const dailyList = Object.values(dayMap).map(d => {
+          const hrs = Math.floor(d.minutes / 60);
+          const mins = d.minutes % 60;
+          return {
+            ...d,
+            durationFormatted: hrs > 0 ? `${hrs}h ${mins}m` : `${mins} mins`
+          };
+        });
+
+        const totalMins = Object.values(dayMap).reduce((sum, d) => sum + d.minutes, 0);
+        const totalHrs = Math.floor(totalMins / 60);
+        const remMins = totalMins % 60;
+        const totalWorkedHours = totalHrs > 0 ? `${totalHrs}h ${remMins}m` : `${remMins} mins`;
+        const daysPresent = Object.keys(dayMap).length;
+
+        const officeDays = Object.values(dayMap).filter(d => d.location === "Office").length;
+        const homeDays = Object.values(dayMap).filter(d => d.location === "Home").length;
+        const officeVsHome = daysPresent === 0 ? "No Logs" : `${officeDays} Office / ${homeDays} Home`;
+
+        masterTeamSummary.push({
+          name: u.name,
+          email: u.email,
+          role: u.roleName || "Member",
+          totalHours: totalWorkedHours,
+          daysPresent,
+          officeVsHome
+        });
+
+        // If Developer, send individual detailed breakdown email
+        if (u.roleName === "Developer") {
+          await sendDeveloperWeeklyAttendanceEmail({
+            developerEmail: u.email,
+            developerName: u.name,
+            weekStartDate: weekStartFormatted,
+            weekEndDate: weekEndFormatted,
+            totalWorkedHours,
+            daysPresent,
+            dailyBreakdown: dailyList
+          }).catch(e => console.error(`Error sending weekly email to dev ${u.email}:`, e));
+        }
+      }
+
+      // Send Consolidated Master Report to Super Admins
+      for (const admin of superAdminList) {
+        await sendSuperAdminWeeklyTeamAttendanceEmail({
+          adminEmail: admin.email,
+          adminName: admin.name,
+          weekStartDate: weekStartFormatted,
+          weekEndDate: weekEndFormatted,
+          teamMembers: masterTeamSummary
+        }).catch(e => console.error(`Error sending weekly master email to admin ${admin.email}:`, e));
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Weekly attendance reports dispatched successfully to ${developersAndStaff.length} team members and ${superAdminList.length} Super Admin(s)!`
+      });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

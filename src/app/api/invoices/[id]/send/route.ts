@@ -47,6 +47,8 @@ export async function POST(
       dueDate: invoice.dueDate,
       items: invoice.items || [],
       invoiceUrl,
+      companyName: invoice.companyName || "Pixxelu Digital Technology",
+      companyEmail: invoice.companyEmail || "rakeshrinku16@gmail.com",
       notes: invoice.customerNotes
     });
 

@@ -79,7 +79,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       const res = await fetch(`/api/chat/conversations/${convId}/messages`);
       if (res.ok) {
         const data = await res.json();
-        setChatMessages(data.messages || []);
+        if (data.messages) {
+          setChatMessages((prev) => {
+            const tempMessages = prev.filter(m => m.id.startsWith("temp-"));
+            const missingTemps = tempMessages.filter(
+              t => !data.messages.some((m: any) => m.content === t.content && Math.abs(new Date(m.createdAt).getTime() - new Date(t.createdAt).getTime()) < 15000)
+            );
+            return [...data.messages, ...missingTemps];
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to load project chat messages:", err);
@@ -194,7 +202,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             const newMsg = payload.data;
             setChatMessages((prev) => {
               if (prev.some((m) => m.id === newMsg.id)) return prev;
-              return [...prev.filter((m) => !m.pending || m.id !== newMsg.id), newMsg];
+              const filtered = prev.filter(
+                (m) => !(m.id.startsWith("temp-") && m.content === newMsg.content && m.senderId === newMsg.senderId)
+              );
+              return [...filtered, newMsg];
             });
           } else if (payload.type === "delete" && payload.data.conversationId === project.conversationId) {
             const deleteData = payload.data;

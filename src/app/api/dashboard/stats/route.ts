@@ -43,7 +43,22 @@ export async function GET() {
       return date >= startOfToday && date <= next7Days && p.status !== "Completed" && p.status !== "Cancelled";
     }).length;
 
-    const pendingPaymentsSum = projects.reduce((sum, p) => sum + (p.pendingAmount || 0), 0);
+    const CURRENCY_TO_INR_RATES: Record<string, number> = {
+      INR: 1,
+      USD: 87.5,
+      EUR: 94.0,
+      GBP: 110.0,
+      AED: 23.8,
+      CAD: 63.5,
+      AUD: 56.5
+    };
+
+    const pendingPaymentsSum = projects.reduce((sum, p) => {
+      const pending = p.pendingAmount || 0;
+      const curr = (p.currency || "INR").toUpperCase();
+      const rate = CURRENCY_TO_INR_RATES[curr] || 1;
+      return sum + (pending * rate);
+    }, 0);
 
     // 2. Distributions
     // Lead distribution by status (funnel)
