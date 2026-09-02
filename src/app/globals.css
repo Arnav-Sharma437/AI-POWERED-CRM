@@ -387,4 +387,196 @@ body {
   animation: deadline-badge-pulse 1.2s ease-in-out infinite !important;
 }
 
+/* =========================================================
+   RESPONSIVE DESIGN SYSTEM (MOBILE, TABLET & DESKTOP)
+   ========================================================= */
+
+/* Mobile Hamburger & Sidebar Close defaults */
+.crm-mobile-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.crm-mobile-hamburger:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--primary-color);
+}
+
+.crm-mobile-sidebar-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.crm-mobile-sidebar-close:hover {
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.crm-sidebar-overlay {
+  display: none;
+}
+
+/* Tablet Breakpoint (<= 1024px) */
+@media (max-width: 1024px) {
+  .crm-topbar-search {
+    width: 240px !important;
+  }
+  
+  .crm-container {
+    padding: 1.5rem !important;
+  }
+
+  .crm-topbar {
+    padding: 0 1.25rem !important;
+  }
+}
+
+/* Mobile & Small Tablet Breakpoint (<= 768px) */
+@media (max-width: 768px) {
+  .crm-mobile-hamburger {
+    display: flex !important;
+  }
+
+  .crm-mobile-sidebar-close {
+    display: flex !important;
+  }
+
+  /* Off-canvas mobile drawer sidebar */
+  .crm-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    width: 280px !important;
+    z-index: 9999 !important;
+    transform: translateX(-100%) !important;
+    box-shadow: none;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease !important;
+  }
+
+  .crm-sidebar.mobile-open {
+    transform: translateX(0) !important;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.6) !important;
+  }
+
+  .crm-sidebar-overlay {
+    display: block !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background-color: rgba(0, 0, 0, 0.65) !important;
+    backdrop-filter: blur(4px) !important;
+    z-index: 9998 !important;
+    animation: fadeIn 0.2s ease forwards;
+  }
+
+  .crm-topbar {
+    height: 62px !important;
+    padding: 0 0.875rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .crm-topbar-search {
+    display: none !important; /* Hide search input on small screens to fit actions */
+  }
+
+  .crm-topbar-actions {
+    gap: 0.4rem !important;
+  }
+
+  .crm-topbar-clock {
+    padding: 0.35rem 0.6rem !important;
+  }
+
+  .crm-topbar-clock > div:nth-child(2) > div:nth-child(1) {
+    font-size: 0.775rem !important;
+  }
+
+  .crm-topbar-clock > div:nth-child(2) > div:nth-child(2) {
+    display: none !important; /* Hide date on phone */
+  }
+
+  .crm-container {
+    padding: 1rem 0.75rem !important;
+  }
+
+  /* Card padding reduction */
+  .crm-card {
+    padding: 1rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* Chat responsiveness */
+  .crm-chat-container {
+    height: calc(100vh - 85px) !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+
+  .crm-chat-sidebar.hide-on-mobile {
+    display: none !important;
+  }
+
+  .crm-chat-sidebar.show-on-mobile {
+    width: 100% !important;
+    display: flex !important;
+  }
+
+  .crm-chat-area {
+    display: none !important;
+  }
+
+  .crm-chat-area.active-open {
+    display: flex !important;
+    width: 100% !important;
+  }
+
+  /* Two column grids collapse to 1 column on phone */
+  div[style*="grid-template-columns: 1fr 1fr"],
+  div[style*="gridTemplateColumns: \"1fr 1fr\""],
+  div[style*="gridTemplateColumns: '1fr 1fr'"],
+  div[style*="grid-template-columns: 2fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Extra Small Phones (<= 480px) */
+@media (max-width: 480px) {
+  .crm-topbar {
+    padding: 0 0.5rem !important;
+  }
+
+  .crm-topbar-clock {
+    display: none !important; /* Keep only icons and profile on tiny phones */
+  }
+
+  .crm-btn {
+    padding: 0.5rem 0.85rem !important;
+    font-size: 0.8125rem !important;
+  }
+}
+
+
 

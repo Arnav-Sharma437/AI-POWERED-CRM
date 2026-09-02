@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, UserSquare2, Briefcase, Calendar, 
   Activity, Bell, Trash2, Settings, Plus, Search, LogOut, 
   User, CheckCircle2, AlertCircle, FileText, CalendarRange, Clock, CreditCard, MessageSquare,
-  Sparkles, Zap, Cpu, Bot, Sun, Moon, Building2, Home, MapPin
+  Sparkles, Zap, Cpu, Bot, Sun, Moon, Building2, Home, MapPin, Menu, X
 } from "lucide-react";
 
 // Context for global state sharing (Quick Add triggers, etc.)
@@ -42,6 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [triggerRefresh, setTriggerRefresh] = useState(0);
   
   // UI states
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any>(null);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -486,10 +487,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       projectsList
     }}>
       <div className="crm-layout">
+        {/* Mobile Backdrop Overlay */}
+        {mobileSidebarOpen && (
+          <div 
+            onClick={() => setMobileSidebarOpen(false)}
+            className="crm-sidebar-overlay"
+          />
+        )}
+
         {/* Left Sidebar */}
-        <aside className="crm-sidebar">
-          <div style={sidebarStyles.logoArea}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", cursor: "pointer" }} onClick={() => router.push("/dashboard")}>
+        <aside className={`crm-sidebar ${mobileSidebarOpen ? "mobile-open" : ""}`}>
+          <div style={{ ...sidebarStyles.logoArea, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", cursor: "pointer" }} onClick={() => { router.push("/dashboard"); setMobileSidebarOpen(false); }}>
               <div style={{
                 width: "40px",
                 height: "40px",
@@ -551,6 +560,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </span>
               </div>
             </div>
+
+            {/* Mobile Close Button */}
+            <button 
+              onClick={() => setMobileSidebarOpen(false)}
+              className="crm-mobile-sidebar-close"
+              title="Close Menu"
+            >
+              <X size={20} />
+            </button>
           </div>
 
           <nav style={sidebarStyles.nav}>
@@ -559,7 +577,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               return (
                 <button
                   key={item.name}
-                  onClick={() => router.push(item.path)}
+                  onClick={() => {
+                    router.push(item.path);
+                    setMobileSidebarOpen(false);
+                  }}
                   style={{
                     ...sidebarStyles.navItem,
                     backgroundColor: active ? "var(--primary-light)" : "transparent",
@@ -616,8 +637,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="crm-main-content">
           {/* Top Bar */}
           <header className="crm-topbar">
+            {/* Mobile Hamburger Toggle */}
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="crm-mobile-hamburger"
+              title="Open Navigation Menu"
+            >
+              <Menu size={22} />
+            </button>
+
             {/* Global Search */}
-            <div style={topbarStyles.searchArea}>
+            <div style={topbarStyles.searchArea} className="crm-topbar-search">
               <Search size={18} style={topbarStyles.searchIcon} />
               <input
                 type="text"
@@ -678,9 +708,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             {/* Topbar Actions */}
-            <div style={topbarStyles.actions}>
+            <div style={topbarStyles.actions} className="crm-topbar-actions">
               {/* Live Global Clock Display - Visible to all roles */}
               <div 
+                className="crm-topbar-clock"
                 style={{
                   display: "flex",
                   alignItems: "center",

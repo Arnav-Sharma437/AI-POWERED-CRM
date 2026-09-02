@@ -408,9 +408,12 @@ function ChatContent() {
     : [];
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="crm-chat-container">
       {/* Sidebar - LEFT PANEL */}
-      <div style={styles.sidebar}>
+      <div 
+        style={styles.sidebar} 
+        className={`crm-chat-sidebar ${activeConvId ? "hide-on-mobile" : "show-on-mobile"}`}
+      >
         <div style={styles.searchContainer}>
           <div style={styles.searchWrapper}>
             <Search size={16} style={styles.searchIcon} />
@@ -527,7 +530,10 @@ function ChatContent() {
       </div>
 
       {/* Main Right panel */}
-      <div style={styles.chatArea}>
+      <div 
+        style={styles.chatArea}
+        className={`crm-chat-area ${activeConvId ? "active-open" : ""}`}
+      >
         {activeConvId && activeConversation ? (
           <>
             {/* Chat header */}
