@@ -1883,7 +1883,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       {showShiftModal === "start" ? "Start Workday / Clock In" : "End Workday / Clock Out"}
                     </h3>
                     <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                      Super Admin will receive an attendance alert email with your time & location.
+                      Logged automatically to your dashboard attendance & time tracker.
                     </div>
                   </div>
                 </div>

@@ -51,7 +51,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [activeModal, setActiveModal] = useState<string | null>(null); // 'payment' | 'takeover' | 'assign' | 'status' | 'timeline' | 'deadline' | 'editProject'
   const [paymentForm, setPaymentForm] = useState({ amount: "", note: "" });
   const [takeoverForm, setTakeoverForm] = useState({ newBdaId: "", note: "" });
-  const [assignForm, setAssignForm] = useState({ devId: "", workDetails: "" });
+  const [assignForm, setAssignForm] = useState<{ devId: string; devIds: string[]; workDetails: string }>({ devId: "", devIds: [], workDetails: "" });
   const [editProjectForm, setEditProjectForm] = useState({
     name: "",
     serviceType: "Web Design",
@@ -362,7 +362,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       case "assign":
         url = `/api/projects/${id}/assign`;
         method = "POST";
-        body = assignForm;
+        body = {
+          devIds: assignForm.devIds.length > 0 ? assignForm.devIds : [assignForm.devId],
+          workDetails: assignForm.workDetails
+        };
         break;
       case "timeline":
         url = `/api/activities`;
@@ -417,7 +420,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       // Reset forms
       setPaymentForm({ amount: "", note: "" });
       setTakeoverForm({ newBdaId: "", note: "" });
-      setAssignForm({ devId: "", workDetails: "" });
+      setAssignForm({ devId: "", devIds: [], workDetails: "" });
 
       setTriggerRefresh(prev => prev + 1);
     } catch (err) {
@@ -1357,20 +1360,81 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                   <div style={modalStyles.infoBanner}>
                     <Mail size={16} />
-                    <span>Developer will receive task details and documents email without any financial budget info.</span>
+                    <span>Selected developers will receive task requirements email, in-app notification, and be added to project group chat automatically.</span>
                   </div>
                   <div>
-                    <label style={modalStyles.label}>Select developer / Team member</label>
-                    <select 
-                      className="crm-select"
-                      value={assignForm.devId}
-                      onChange={(e) => setAssignForm(prev => ({ ...prev, devId: e.target.value }))}
-                      required
-                    >
-                      <option value="">Select Developer</option>
-                      {devs.map(d => <option key={d.id} value={d.id}>{d.name} ({d.email})</option>)}
-                    </select>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                      <label style={modalStyles.label}>Select Developers / Team Members (Multiple Allowed)</label>
+                      <span style={{ fontSize: "0.75rem", color: "var(--primary-color)", fontWeight: 700 }}>
+                        {assignForm.devIds.length} Selected
+                      </span>
+                    </div>
+                    
+                    <div style={{ 
+                      display: "flex", 
+                      flexWrap: "wrap", 
+                      gap: "0.5rem", 
+                      padding: "0.75rem", 
+                      border: "1px solid var(--border-primary)", 
+                      borderRadius: "8px", 
+                      backgroundColor: "var(--bg-secondary)",
+                      maxHeight: "150px",
+                      overflowY: "auto"
+                    }}>
+                      {devs.map((d) => {
+                        const isSelected = assignForm.devIds.includes(d.id);
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => {
+                              setAssignForm(prev => ({
+                                ...prev,
+                                devIds: isSelected 
+                                  ? prev.devIds.filter(id => id !== d.id)
+                                  : [...prev.devIds, d.id],
+                                devId: isSelected 
+                                  ? (prev.devIds.filter(id => id !== d.id)[0] || "")
+                                  : d.id
+                              }));
+                            }}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.35rem",
+                              padding: "0.4rem 0.75rem",
+                              borderRadius: "8px",
+                              border: isSelected ? "2px solid var(--primary-color)" : "1px solid var(--border-primary)",
+                              backgroundColor: isSelected ? "rgba(99, 102, 241, 0.15)" : "var(--bg-primary)",
+                              color: isSelected ? "var(--primary-color)" : "var(--text-primary)",
+                              fontWeight: isSelected ? 700 : 500,
+                              fontSize: "0.8125rem",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease"
+                            }}
+                          >
+                            <span style={{
+                              width: "14px",
+                              height: "14px",
+                              borderRadius: "4px",
+                              border: isSelected ? "2px solid var(--primary-color)" : "1px solid var(--text-tertiary)",
+                              backgroundColor: isSelected ? "var(--primary-color)" : "transparent",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#ffffff",
+                              fontSize: "10px"
+                            }}>
+                              {isSelected ? "✓" : ""}
+                            </span>
+                            <span>{d.name}</span>
+                            <span style={{ fontSize: "0.7rem", opacity: 0.75 }}>({d.email})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+
                   <div>
                     <label style={modalStyles.label}>Task Requirements & Important Notes</label>
                     <textarea 

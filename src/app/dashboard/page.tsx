@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { 
   Users, Flame, Calendar, BellRing, Briefcase, 
   AlertTriangle, DollarSign, ArrowUpRight, Plus, 
-  MapPin, ClipboardList, CheckCircle, Clock
+  MapPin, ClipboardList, CheckCircle, Clock, Building2, Home, Activity
 } from "lucide-react";
 import { useDashboard } from "./layout";
 import AiLoader from "@/components/AiLoader";
@@ -14,17 +14,25 @@ export default function DashboardPage() {
   const router = useRouter();
   const { openQuickAdd, triggerRefresh, currentUser } = useDashboard();
   const isDeveloper = currentUser?.roleName === "Developer";
+  const isSuperAdmin = currentUser?.roleName === "Super Admin";
   
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [devProjects, setDevProjects] = useState<any[]>([]);
 
+  // Attendance Tracker States
+  const [attendanceData, setAttendanceData] = useState<{
+    logs: any[];
+    userSummaries: any[];
+  }>({ logs: [], userSummaries: [] });
+
   useEffect(() => {
-    async function fetchStats() {
+    async function fetchDashboardData() {
       try {
-        const [statsRes, projRes] = await Promise.all([
+        const [statsRes, projRes, attRes] = await Promise.all([
           fetch("/api/dashboard/stats"),
-          fetch("/api/projects")
+          fetch("/api/projects"),
+          fetch("/api/auth/attendance")
         ]);
         if (statsRes.ok) {
           const statsData = await statsRes.json();
@@ -34,13 +42,20 @@ export default function DashboardPage() {
           const projData = await projRes.json();
           setDevProjects(projData.projects || []);
         }
+        if (attRes.ok) {
+          const attJson = await attRes.json();
+          setAttendanceData({
+            logs: attJson.logs || [],
+            userSummaries: attJson.userSummaries || []
+          });
+        }
       } catch (err) {
-        console.error("Error loading dashboard stats", err);
+        console.error("Error loading dashboard data", err);
       } finally {
         setLoading(false);
       }
     }
-    fetchStats();
+    fetchDashboardData();
   }, [triggerRefresh]);
 
   if (loading) {
@@ -53,12 +68,25 @@ export default function DashboardPage() {
 
   if (!data) return <div style={{ padding: "2rem" }}>Error loading dashboard data.</div>;
 
+  // Format minutes into clean "Xh Ym" string
+  const formatMinutes = (mins: number) => {
+    if (!mins || mins <= 0) return "0 mins";
+    const hrs = Math.floor(mins / 60);
+    const remainder = mins % 60;
+    if (hrs === 0) return `${remainder} mins`;
+    if (remainder === 0) return `${hrs} hrs`;
+    return `${hrs}h ${remainder}m`;
+  };
+
+  // Current logged in user's attendance summary
+  const myAttendanceSummary = attendanceData.userSummaries.find(u => u.userId === currentUser?.id);
+
   // Developer Specific KPIs
   const devKpiList = [
     { name: "Assigned Projects", val: devProjects.length, icon: Briefcase, color: "var(--primary-color)", bg: "var(--primary-light)", link: "/dashboard/projects" },
     { name: "In Progress", val: devProjects.filter(p => p.status === "Work in Progress").length, icon: Clock, color: "var(--info-color)", bg: "var(--info-light)", link: "/dashboard/projects" },
     { name: "In Review / QA", val: devProjects.filter(p => p.status === "Review").length, icon: CheckCircle, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", link: "/dashboard/projects" },
-    { name: "Flagged Issues", val: devProjects.filter(p => p.status === "Issue").length, icon: AlertTriangle, color: "var(--danger-color)", bg: "var(--danger-light)", link: "/dashboard/projects" },
+    { name: "Today's Work Time", val: formatMinutes(myAttendanceSummary?.totalWorkedMinutes || 0), icon: Clock, color: "#6366f1", bg: "rgba(99, 102, 241, 0.12)", link: "/dashboard" },
     { name: "Deadlines This Week", val: devProjects.filter(p => {
       const d = new Date(p.deadline).getTime();
       return d >= Date.now() && d <= Date.now() + 7 * 24 * 60 * 60 * 1000;
@@ -70,8 +98,8 @@ export default function DashboardPage() {
     { name: "Total Leads", val: data.kpis.totalLeads, icon: Users, color: "var(--primary-color)", bg: "var(--primary-light)", link: "/dashboard/leads" },
     { name: "Hot Leads", val: data.kpis.hotLeads, icon: Flame, color: "var(--danger-color)", bg: "var(--danger-light)", link: "/dashboard/leads?priority=Hot" },
     { name: "Meetings Today", val: data.kpis.meetingsToday, icon: Calendar, color: "var(--info-color)", bg: "var(--info-light)", link: "/dashboard/calendar" },
-    { name: "Followups Today", val: data.kpis.followupsToday, icon: BellRing, color: "var(--warning-color)", bg: "var(--warning-light)", link: "/dashboard/leads" },
     { name: "Active Projects", val: data.kpis.activeProjects, icon: Briefcase, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", link: "/dashboard/projects" },
+    { name: "Today's Work Time", val: formatMinutes(myAttendanceSummary?.totalWorkedMinutes || 0), icon: Clock, color: "#6366f1", bg: "rgba(99, 102, 241, 0.12)", link: "/dashboard" },
     { name: "Deadlines (7d)", val: data.kpis.upcomingDeadlines, icon: AlertTriangle, color: "var(--danger-color)", bg: "var(--danger-light)", link: "/dashboard/projects" },
     { name: "Pending Bills", val: new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(data.kpis.pendingPaymentsSum), icon: DollarSign, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", link: "/dashboard/projects" },
   ];
@@ -86,8 +114,8 @@ export default function DashboardPage() {
           </h1>
           <p style={styles.subtitle}>
             {isDeveloper 
-              ? "Your active development tasks, milestone deliverables, and schedule."
-              : "Real-time metrics, pipeline distribution, and team schedules"}
+              ? "Your active development tasks, milestone deliverables, work time tracking, and schedule."
+              : "Real-time pipeline metrics, team attendance, office work duration, and live schedules."}
           </p>
         </div>
         {!isDeveloper && (
@@ -101,6 +129,67 @@ export default function DashboardPage() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Attendance & Shift Status Overview Card for the Logged-in User */}
+      <div className="crm-card" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.5rem", background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)", border: "1px solid rgba(99, 102, 241, 0.25)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div style={{
+              width: "44px",
+              height: "44px",
+              borderRadius: "10px",
+              backgroundColor: myAttendanceSummary?.isCurrentlyWorking ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+              color: myAttendanceSummary?.isCurrentlyWorking ? "#10b981" : "#ef4444",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0
+            }}>
+              <Clock size={22} />
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+                  My Shift & Attendance Status
+                </h3>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  padding: "0.2rem 0.55rem",
+                  borderRadius: "12px",
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  backgroundColor: myAttendanceSummary?.isCurrentlyWorking ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.12)",
+                  color: myAttendanceSummary?.isCurrentlyWorking ? "#10b981" : "var(--danger-color)",
+                  border: `1px solid ${myAttendanceSummary?.isCurrentlyWorking ? "rgba(16, 185, 129, 0.35)" : "rgba(239, 68, 68, 0.35)"}`
+                }}>
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: myAttendanceSummary?.isCurrentlyWorking ? "#10b981" : "#ef4444" }} />
+                  {myAttendanceSummary?.isCurrentlyWorking ? `Clocked In (${myAttendanceSummary?.currentLocation || "Office"})` : "Clocked Out"}
+                </span>
+              </div>
+              <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                {myAttendanceSummary?.firstClockIn ? (
+                  <>First login today at <strong>{new Date(myAttendanceSummary.firstClockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong> from {myAttendanceSummary.currentLocation || "Office"}</>
+                ) : (
+                  <>You haven't clocked in today yet. Click the clock button on topbar to start your session.</>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600 }}>
+                Total Office / Work Time Today
+              </div>
+              <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--primary-color)", fontFamily: "monospace", marginTop: "2px" }}>
+                {formatMinutes(myAttendanceSummary?.totalWorkedMinutes || 0)}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* KPI Grid */}
@@ -118,6 +207,90 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Super Admin & BDA Team Attendance Monitoring Card */}
+      {isSuperAdmin && (
+        <div className="crm-card" style={{ padding: "1.5rem", marginBottom: "2rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <div>
+              <h3 style={{ ...styles.sectionTitle, borderBottom: "none", marginBottom: "2px" }}>
+                Team Workday & Attendance Tracker (Super Admin Hub)
+              </h3>
+              <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+                Live visibility into when Developers & BDAs arrive, where they work from (Office vs Home), and total active work hours.
+              </div>
+            </div>
+            <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--primary-color)", backgroundColor: "rgba(99, 102, 241, 0.12)", padding: "0.35rem 0.75rem", borderRadius: "8px" }}>
+              {attendanceData.userSummaries.filter(u => u.isCurrentlyWorking).length} / {attendanceData.userSummaries.length} Active Now
+            </div>
+          </div>
+
+          {attendanceData.userSummaries.length === 0 ? (
+            <div style={styles.emptyState}>No team members found</div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)", textAlign: "left" }}>
+                    <th style={{ padding: "0.75rem 0.5rem" }}>Team Member</th>
+                    <th style={{ padding: "0.75rem 0.5rem" }}>Role</th>
+                    <th style={{ padding: "0.75rem 0.5rem" }}>Live Shift Status</th>
+                    <th style={{ padding: "0.75rem 0.5rem" }}>Work Location</th>
+                    <th style={{ padding: "0.75rem 0.5rem" }}>First Clock-In (Aaya)</th>
+                    <th style={{ padding: "0.75rem 0.5rem" }}>Last Clock-Out (Gya)</th>
+                    <th style={{ padding: "0.75rem 0.5rem", textAlign: "right" }}>Total Time in Office</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendanceData.userSummaries.map((u) => (
+                    <tr key={u.userId} style={{ borderBottom: "1px solid var(--border-primary)", transition: "background 0.15s" }}>
+                      <td style={{ padding: "0.85rem 0.5rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                        {u.userName}
+                      </td>
+                      <td style={{ padding: "0.85rem 0.5rem" }}>
+                        <span className={`badge ${u.roleName === "Super Admin" ? "badge-primary" : u.roleName === "Developer" ? "badge-info" : "badge-success"}`}>
+                          {u.roleName}
+                        </span>
+                      </td>
+                      <td style={{ padding: "0.85rem 0.5rem" }}>
+                        <span style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.3rem",
+                          padding: "0.2rem 0.5rem",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          backgroundColor: u.isCurrentlyWorking ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.1)",
+                          color: u.isCurrentlyWorking ? "#10b981" : "var(--text-tertiary)"
+                        }}>
+                          <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: u.isCurrentlyWorking ? "#10b981" : "#ef4444" }} />
+                          {u.isCurrentlyWorking ? "Working Now" : "Clocked Out / Off"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "0.85rem 0.5rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-secondary)", fontSize: "0.8125rem" }}>
+                          {u.currentLocation === "Home" ? <Home size={14} color="#10b981" /> : <Building2 size={14} color="var(--primary-color)" />}
+                          <span>{u.currentLocation || "Office"}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "0.85rem 0.5rem", color: "var(--text-primary)", fontFamily: "monospace" }}>
+                        {u.firstClockIn ? new Date(u.firstClockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
+                      </td>
+                      <td style={{ padding: "0.85rem 0.5rem", color: "var(--text-secondary)", fontFamily: "monospace" }}>
+                        {u.isCurrentlyWorking ? <span style={{ color: "#10b981", fontWeight: 600 }}>Active (In Office)</span> : u.lastClockOut ? new Date(u.lastClockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
+                      </td>
+                      <td style={{ padding: "0.85rem 0.5rem", textAlign: "right", fontWeight: 800, color: "var(--primary-color)", fontFamily: "monospace" }}>
+                        {formatMinutes(u.totalWorkedMinutes)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Developer View: Project Milestones & Calendar Schedule */}
       {isDeveloper ? (
@@ -254,159 +427,144 @@ export default function DashboardPage() {
             </div>
           </div>
 
-      {/* Grid of lists */}
-      <div style={styles.listsGrid}>
-        {/* Today's Schedule */}
-        <div className="crm-card">
-          <h3 style={styles.sectionTitle}>Today's Schedule & Meetings</h3>
-          <div style={styles.listContainer}>
-            {data.lists.todayMeetingsList.length === 0 && data.lists.todayFollowupsList.length === 0 ? (
-              <div style={styles.emptyState}>No calls or meetings scheduled for today</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {data.lists.todayMeetingsList.map((m: any) => (
-                  <div key={m.id} style={styles.scheduleItem}>
-                    <div style={styles.scheduleTime}>
-                      {new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                    <div style={{ flexGrow: 1 }}>
-                      <div style={{ fontWeight: 600 }}>{m.title}</div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                        Type: {m.type} • {m.lead?.name || "No linked lead"}
-                      </div>
-                    </div>
-                    <span className="badge badge-info">{m.status}</span>
-                  </div>
-                ))}
-                {data.lists.todayFollowupsList.map((l: any) => (
-                  <div key={l.id} style={{ ...styles.scheduleItem, borderLeftColor: "var(--warning-color)" }}>
-                    <div style={styles.scheduleTime}>Follow-up</div>
-                    <div style={{ flexGrow: 1 }}>
-                      <div style={{ fontWeight: 600 }}>Call {l.name}</div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                        {l.company} • {l.followupNotes || "No notes"}
-                      </div>
-                    </div>
-                    <span className="badge badge-warning">Next Follow-up</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Hot Leads */}
-        <div className="crm-card">
-          <h3 style={styles.sectionTitle}>Active Hot Pipelines</h3>
-          <div style={styles.listContainer}>
-            {data.lists.hotLeadsList.length === 0 ? (
-              <div style={styles.emptyState}>No hot pipelines right now</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {data.lists.hotLeadsList.map((l: any) => (
-                  <div key={l.id} onClick={() => router.push(`/dashboard/leads/${l.id}`)} style={styles.listItemClickable}>
-                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                      <div style={styles.initialsBox}>{l.name.charAt(0)}</div>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{l.name}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{l.company} • {l.jobTitle}</div>
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <span className="badge badge-danger" style={{ marginBottom: "4px" }}>Hot</span>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>{l.status}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Project Deadlines */}
-        <div className="crm-card">
-          <h3 style={styles.sectionTitle}>Project Target Milestones</h3>
-          <div style={styles.listContainer}>
-            {data.lists.deadlinesList.length === 0 ? (
-              <div style={styles.emptyState}>No upcoming project deadlines</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {data.lists.deadlinesList.map((p: any) => {
-                  const deadline = new Date(p.deadline);
-                  const isClose = (deadline.getTime() - Date.now()) < 3 * 24 * 60 * 60 * 1000;
-                  return (
-                    <div key={p.id} onClick={() => router.push(`/dashboard/projects/${p.id}`)} style={styles.listItemClickable}>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{p.name}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{p.client?.name}</div>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: isClose ? "var(--danger-color)" : "var(--text-primary)" }}>
-                          {deadline.toLocaleDateString()}
+          {/* Grid of lists */}
+          <div style={styles.listsGrid}>
+            {/* Today's Schedule */}
+            <div className="crm-card">
+              <h3 style={styles.sectionTitle}>Today's Schedule & Meetings</h3>
+              <div style={styles.listContainer}>
+                {data.lists.todayMeetingsList.length === 0 && data.lists.todayFollowupsList.length === 0 ? (
+                  <div style={styles.emptyState}>No calls or meetings scheduled for today</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    {data.lists.todayMeetingsList.map((m: any) => (
+                      <div key={m.id} style={styles.scheduleItem}>
+                        <div style={styles.scheduleTime}>
+                          {new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                        <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>{p.status}</div>
+                        <div style={{ flexGrow: 1 }}>
+                          <div style={{ fontWeight: 600 }}>{m.title}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                            Type: {m.type} • {m.lead?.name || "No linked lead"}
+                          </div>
+                        </div>
+                        <span className="badge badge-info">{m.status}</span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Recent timeline actions */}
-        <div className="crm-card">
-          <h3 style={styles.sectionTitle}>Recent Activity Timeline</h3>
-          <div style={styles.listContainer}>
-            {data.lists.recentActivityList.length === 0 ? (
-              <div style={styles.emptyState}>No activity log yet</div>
-            ) : (
-              <div style={styles.timeline}>
-                {data.lists.recentActivityList.map((act: any) => (
-                  <div key={act.id} style={styles.timelineItem}>
-                    <div style={styles.timelineDot} />
-                    <div style={styles.timelineContent}>
-                      <div style={{ fontSize: "0.8125rem", color: "var(--text-primary)" }}>
-                        <strong>{act.user?.name}</strong>: {act.notes}
+                    ))}
+                    {data.lists.todayFollowupsList.map((l: any) => (
+                      <div key={l.id} style={{ ...styles.scheduleItem, borderLeftColor: "var(--warning-color)" }}>
+                        <div style={styles.scheduleTime}>Follow-up</div>
+                        <div style={{ flexGrow: 1 }}>
+                          <div style={{ fontWeight: 600 }}>Call {l.name}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                            {l.company} • {l.followupNotes || "No notes"}
+                          </div>
+                        </div>
+                        <span className="badge badge-warning">Next Follow-up</span>
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
-                        {new Date(act.timestamp).toLocaleString()} • {act.type}
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Hot Leads */}
+            <div className="crm-card">
+              <h3 style={styles.sectionTitle}>Active Hot Pipelines</h3>
+              <div style={styles.listContainer}>
+                {data.lists.hotLeadsList.length === 0 ? (
+                  <div style={styles.emptyState}>No hot pipelines right now</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    {data.lists.hotLeadsList.map((l: any) => (
+                      <div key={l.id} onClick={() => router.push(`/dashboard/leads/${l.id}`)} style={styles.listItemClickable}>
+                        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                          <div style={styles.initialsBox}>{l.name.charAt(0)}</div>
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{l.name}</div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{l.company} • {l.jobTitle}</div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <span className="badge badge-danger" style={{ marginBottom: "4px" }}>Hot</span>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>{l.status}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Project Deadlines */}
+            <div className="crm-card">
+              <h3 style={styles.sectionTitle}>Project Target Milestones</h3>
+              <div style={styles.listContainer}>
+                {data.lists.deadlinesList.length === 0 ? (
+                  <div style={styles.emptyState}>No upcoming project deadlines</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    {data.lists.deadlinesList.map((p: any) => {
+                      const deadline = new Date(p.deadline);
+                      const isClose = (deadline.getTime() - Date.now()) < 3 * 24 * 60 * 60 * 1000;
+                      return (
+                        <div key={p.id} onClick={() => router.push(`/dashboard/projects/${p.id}`)} style={styles.listItemClickable}>
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{p.name}</div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{p.client?.name}</div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: isClose ? "var(--danger-color)" : "var(--text-primary)" }}>
+                              {deadline.toLocaleDateString()}
+                            </div>
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>{p.status}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Recent timeline actions */}
+            <div className="crm-card">
+              <h3 style={styles.sectionTitle}>Recent Activity Timeline</h3>
+              <div style={styles.listContainer}>
+                {data.lists.recentActivityList.length === 0 ? (
+                  <div style={styles.emptyState}>No activity log yet</div>
+                ) : (
+                  <div style={styles.timeline}>
+                    {data.lists.recentActivityList.map((act: any) => (
+                      <div key={act.id} style={styles.timelineItem}>
+                        <div style={styles.timelineDot} />
+                        <div style={styles.timelineContent}>
+                          <div style={{ fontSize: "0.8125rem", color: "var(--text-primary)" }}>
+                            <strong>{act.user?.name}</strong>: {act.notes}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                            {new Date(act.timestamp).toLocaleString()} • {act.type}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      </>
+        </>
       )}
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  loadingContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "calc(100vh - 70px)",
-  },
-  spinner: {
-    width: "40px",
-    height: "40px",
-    border: "3px solid var(--border-primary)",
-    borderTopColor: "var(--primary-color)",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
-  },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "2rem",
+    marginBottom: "1.5rem",
   },
   title: {
     fontSize: "1.75rem",
@@ -427,7 +585,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
     gap: "1rem",
-    marginBottom: "2rem",
+    marginBottom: "1.5rem",
   },
   kpiCard: {
     position: "relative",

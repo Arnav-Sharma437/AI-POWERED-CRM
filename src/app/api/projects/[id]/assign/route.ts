@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyJWT } from "@/lib/auth";
+import { verifySession } from "@/lib/auth";
 import { sendDevAssignmentEmail } from "@/lib/services";
 
 export async function POST(
@@ -8,16 +8,29 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const cookiesHeader = request.headers.get("cookie") || "";
-    const token = cookiesHeader.split(";").find(c => c.trim().startsWith("token="))?.split("=")[1];
-    const user = token ? await verifyJWT(token) : null;
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const session = await verifySession(request);
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { devId, workDetails } = await request.json();
-    if (!devId) return NextResponse.json({ error: "devId is required" }, { status: 400 });
+    const body = await request.json();
+    const { devId, devIds, workDetails } = body;
+    
+    // Support single devId or multiple devIds array
+    const targetDevIds: string[] = devIds && Array.isArray(devIds) && devIds.length > 0
+      ? devIds
+      : devId
+        ? [devId]
+        : [];
 
-    const success = await sendDevAssignmentEmail(id, devId, workDetails);
-    return NextResponse.json({ success });
+    if (targetDevIds.length === 0) {
+      return NextResponse.json({ error: "At least one developer is required" }, { status: 400 });
+    }
+
+    // Assign all selected developers
+    for (const dId of targetDevIds) {
+      await sendDevAssignmentEmail(id, dId, workDetails);
+    }
+
+    return NextResponse.json({ success: true, count: targetDevIds.length });
   } catch (error) {
     console.error("Project assign dev error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
