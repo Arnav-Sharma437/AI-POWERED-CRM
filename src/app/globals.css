@@ -143,20 +143,20 @@ body {
 }
 
 .crm-topbar {
-  height: 70px;
+  height: 76px;
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-primary);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2rem;
+  padding: 0.75rem 2.25rem;
   position: sticky;
   top: 0;
   z-index: 40;
 }
 
 .crm-container {
-  padding: 2rem;
+  padding: 2rem 2.25rem;
   max-width: 1600px;
   width: 100%;
   margin: 0 auto;
@@ -231,7 +231,7 @@ body {
 .crm-input, .crm-select, .crm-textarea {
   width: 100%;
   padding: 0.75rem 1rem;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--border-primary);
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -252,9 +252,9 @@ body {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.625rem;
-  border-radius: 9999px;
+  border-radius: 8px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .badge-primary { background-color: var(--primary-light); color: var(--primary-color); }
@@ -270,9 +270,9 @@ body {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.625rem 1.25rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid transparent;
