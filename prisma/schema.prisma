@@ -42,6 +42,7 @@ model User {
   conversationMembers    ConversationMember[]
   messages               Message[]
   messageReads           MessageRead[]
+  createdInvoices        Invoice[]
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
 }
@@ -130,6 +131,7 @@ model Client {
   leadSource  Lead?    @relation("LeadToClient")
   projects    Project[]
   activities  Activity[]
+  invoices    Invoice[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -345,3 +347,51 @@ model MessageAttachment {
 
   @@index([messageId])
 }
+
+model Invoice {
+  id                 String        @id @default(uuid())
+  invoiceNumber      String        @unique // e.g. "PI-000088"
+  clientId           String
+  client             Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  placeOfSupply      String        // e.g. "[HR] - Haryana"
+  gstTreatment       String?       @default("Registered Business - Regular")
+  gstin              String?       // Customer GSTIN
+  invoiceDate        DateTime      @default(now())
+  dueDate            DateTime
+  paymentTerms       String        @default("Due on Receipt") // Due on Receipt, Net 15, Net 30, Net 60, Custom
+  currency           String        @default("INR")
+  subtotal           Float         @default(0)
+  taxTotal           Float         @default(0)
+  totalAmount        Float         @default(0)
+  customerNotes      String?
+  termsAndConditions String?
+  status             String        @default("Draft") // Draft, Sent, Paid, Overdue, Cancelled
+  createdById        String
+  createdBy          User          @relation(fields: [createdById], references: [id])
+  items              InvoiceItem[]
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([clientId])
+  @@index([invoiceNumber])
+  @@index([status])
+}
+
+model InvoiceItem {
+  id           String   @id @default(uuid())
+  invoiceId    String
+  invoice      Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  itemDetails  String   // Item Title / Name
+  description  String?  // Detailed description notes
+  sacCode      String?  @default("998314") // SAC / HSN code
+  quantity     Float    @default(1)
+  rate         Float    @default(0)
+  taxName      String?  @default("IGST18 [18%]") // IGST18 [18%], CGST9+SGST9 [18%], Non-Taxable [0%]
+  taxRate      Float    @default(18) // 18, 12, 5, 0
+  amount       Float    @default(0) // quantity * rate
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([invoiceId])
+}
+

@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, UserSquare2, Briefcase, Calendar, 
   Activity, Bell, Trash2, Settings, Plus, Search, LogOut, 
   User, CheckCircle2, AlertCircle, FileText, CalendarRange, Clock, CreditCard, MessageSquare,
-  Sparkles, Zap, Cpu, Bot, Sun, Moon, Building2, Home, MapPin, Menu, X
+  Sparkles, Zap, Cpu, Bot, Sun, Moon, Building2, Home, MapPin, Menu, X, ReceiptText
 } from "lucide-react";
 
 // Context for global state sharing (Quick Add triggers, etc.)
@@ -556,6 +556,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Leads", icon: UserSquare2, path: "/dashboard/leads" },
     { name: "Clients", icon: UserSquare2, path: "/dashboard/clients" },
     { name: "Projects", icon: Briefcase, path: "/dashboard/projects" },
+    { name: "Invoices", icon: ReceiptText, path: "/dashboard/invoices", superAdminOnly: true },
     { name: "Calendar", icon: Calendar, path: "/dashboard/calendar" },
     { name: "Activities", icon: Activity, path: "/dashboard/activities" },
     { name: "Chat", icon: MessageSquare, path: "/dashboard/chat" },
@@ -563,10 +564,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Trash", icon: Trash2, path: "/dashboard/trash" },
   ];
 
-  // Role-based navigation: Developers see Dashboard, Projects, Calendar, and Chat
+  // Role-based navigation: 
+  // Super Admin: sees all items including Invoices
+  // Developer: Dashboard, Projects, Calendar, and Chat
+  // BDA / Other: All except Invoices (Super Admin only)
   const navItems = currentUser?.roleName === "Developer"
     ? allNavItems.filter(item => ["Dashboard", "Projects", "Calendar", "Chat"].includes(item.name))
-    : allNavItems;
+    : currentUser?.roleName === "Super Admin"
+      ? allNavItems
+      : allNavItems.filter(item => !item.superAdminOnly);
 
   return (
     <DashboardContext.Provider value={{

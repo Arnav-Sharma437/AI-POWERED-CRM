@@ -1770,3 +1770,331 @@ export async function registerUser(name: string, email: string, passwordPlain: s
     return user;
   }
 }
+
+// -------------------------------------------------------------
+// INVOICE SERVICES (Super Admin Exclusive)
+// -------------------------------------------------------------
+
+export async function listInvoices(filters?: { status?: string; clientId?: string; search?: string }): Promise<any[]> {
+  await checkDbConnection();
+
+  if (isMockMode) {
+    let result = mockDb.invoices.map(inv => {
+      const client = mockDb.clients.find(c => c.id === inv.clientId);
+      const items = mockDb.invoiceItems.filter(item => item.invoiceId === inv.id);
+      return {
+        ...inv,
+        client,
+        items
+      };
+    });
+
+    if (filters?.status) {
+      result = result.filter(inv => inv.status.toLowerCase() === filters.status!.toLowerCase());
+    }
+    if (filters?.clientId) {
+      result = result.filter(inv => inv.clientId === filters.clientId);
+    }
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(inv => 
+        inv.invoiceNumber.toLowerCase().includes(q) ||
+        inv.client?.name.toLowerCase().includes(q) ||
+        inv.placeOfSupply.toLowerCase().includes(q)
+      );
+    }
+
+    return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  } else {
+    const where: any = {};
+    if (filters?.status) where.status = filters.status;
+    if (filters?.clientId) where.clientId = filters.clientId;
+    if (filters?.search) {
+      const q = filters.search;
+      where.OR = [
+        { invoiceNumber: { contains: q, mode: "insensitive" } },
+        { client: { name: { contains: q, mode: "insensitive" } } },
+        { placeOfSupply: { contains: q, mode: "insensitive" } }
+      ];
+    }
+
+    const invoices = await prisma.invoice.findMany({
+      where,
+      include: {
+        client: true,
+        items: true,
+        createdBy: { select: { id: true, name: true, email: true } }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    return invoices;
+  }
+}
+
+export async function getInvoiceById(id: string): Promise<any | null> {
+  await checkDbConnection();
+
+  if (isMockMode) {
+    const inv = mockDb.invoices.find(i => i.id === id || i.invoiceNumber === id);
+    if (!inv) return null;
+    const client = mockDb.clients.find(c => c.id === inv.clientId);
+    const items = mockDb.invoiceItems.filter(item => item.invoiceId === inv.id);
+    const createdBy = mockDb.users.find(u => u.id === inv.createdById);
+    return {
+      ...inv,
+      client,
+      items,
+      createdBy
+    };
+  } else {
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        OR: [{ id }, { invoiceNumber: id }]
+      },
+      include: {
+        client: true,
+        items: true,
+        createdBy: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    return invoice;
+  }
+}
+
+export async function getNextInvoiceNumber(): Promise<string> {
+  await checkDbConnection();
+
+  if (isMockMode) {
+    const count = mockDb.invoices.length + 88;
+    return `PI-${String(count).padStart(6, "0")}`;
+  } else {
+    const count = await prisma.invoice.count();
+    const nextNum = count + 88;
+    return `PI-${String(nextNum).padStart(6, "0")}`;
+  }
+}
+
+export async function createInvoice(data: any, userId: string): Promise<any> {
+  await checkDbConnection();
+
+  const invoiceNumber = data.invoiceNumber || await getNextInvoiceNumber();
+  const items = data.items && Array.isArray(data.items) ? data.items : [];
+
+  let subtotal = 0;
+  let taxTotal = 0;
+
+  const processedItems = items.map((item: any, idx: number) => {
+    const qty = parseFloat(item.quantity) || 1;
+    const rate = parseFloat(item.rate) || 0;
+    const lineAmount = qty * rate;
+    const taxRate = parseFloat(item.taxRate) || (item.taxName?.includes("18%") ? 18 : item.taxName?.includes("12%") ? 12 : item.taxName?.includes("5%") ? 5 : 0);
+    const lineTax = (lineAmount * taxRate) / 100;
+
+    subtotal += lineAmount;
+    taxTotal += lineTax;
+
+    return {
+      id: `item-${Date.now()}-${idx}`,
+      itemDetails: item.itemDetails || "Service Item",
+      description: item.description || "",
+      sacCode: item.sacCode || "998314",
+      quantity: qty,
+      rate,
+      taxName: item.taxName || (taxRate > 0 ? `IGST${taxRate} [${taxRate}%]` : "Non-Taxable [0%]"),
+      taxRate,
+      amount: lineAmount
+    };
+  });
+
+  const totalAmount = subtotal + taxTotal;
+
+  if (isMockMode) {
+    const newInvoice: any = {
+      id: `inv-${Date.now()}`,
+      invoiceNumber,
+      clientId: data.clientId,
+      placeOfSupply: data.placeOfSupply || "[HR] - Haryana",
+      gstTreatment: data.gstTreatment || "Registered Business - Regular",
+      gstin: data.gstin || "",
+      invoiceDate: data.invoiceDate ? new Date(data.invoiceDate) : new Date(),
+      dueDate: data.dueDate ? new Date(data.dueDate) : new Date(),
+      paymentTerms: data.paymentTerms || "Due on Receipt",
+      currency: data.currency || "INR",
+      subtotal,
+      taxTotal,
+      totalAmount,
+      customerNotes: data.customerNotes || "",
+      termsAndConditions: data.termsAndConditions || "",
+      status: data.status || "Draft",
+      createdById: userId,
+      items: processedItems,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    mockDb.invoices.push(newInvoice);
+    processedItems.forEach((pi: any) => {
+      mockDb.invoiceItems.push({ ...pi, invoiceId: newInvoice.id, createdAt: new Date() });
+    });
+
+    return newInvoice;
+  } else {
+    const created = await prisma.invoice.create({
+      data: {
+        invoiceNumber,
+        clientId: data.clientId,
+        placeOfSupply: data.placeOfSupply || "[HR] - Haryana",
+        gstTreatment: data.gstTreatment || "Registered Business - Regular",
+        gstin: data.gstin || "",
+        invoiceDate: data.invoiceDate ? new Date(data.invoiceDate) : new Date(),
+        dueDate: data.dueDate ? new Date(data.dueDate) : new Date(),
+        paymentTerms: data.paymentTerms || "Due on Receipt",
+        currency: data.currency || "INR",
+        subtotal,
+        taxTotal,
+        totalAmount,
+        customerNotes: data.customerNotes || "",
+        termsAndConditions: data.termsAndConditions || "",
+        status: data.status || "Draft",
+        createdById: userId,
+        items: {
+          create: processedItems.map((item: any) => ({
+            itemDetails: item.itemDetails,
+            description: item.description,
+            sacCode: item.sacCode,
+            quantity: item.quantity,
+            rate: item.rate,
+            taxName: item.taxName,
+            taxRate: item.taxRate,
+            amount: item.amount
+          }))
+        }
+      },
+      include: {
+        client: true,
+        items: true,
+        createdBy: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    return created;
+  }
+}
+
+export async function updateInvoice(id: string, data: any): Promise<any> {
+  await checkDbConnection();
+
+  const items = data.items && Array.isArray(data.items) ? data.items : [];
+  let subtotal = 0;
+  let taxTotal = 0;
+
+  const processedItems = items.map((item: any, idx: number) => {
+    const qty = parseFloat(item.quantity) || 1;
+    const rate = parseFloat(item.rate) || 0;
+    const lineAmount = qty * rate;
+    const taxRate = parseFloat(item.taxRate) || (item.taxName?.includes("18%") ? 18 : item.taxName?.includes("12%") ? 12 : item.taxName?.includes("5%") ? 5 : 0);
+    const lineTax = (lineAmount * taxRate) / 100;
+
+    subtotal += lineAmount;
+    taxTotal += lineTax;
+
+    return {
+      id: item.id || `item-${Date.now()}-${idx}`,
+      itemDetails: item.itemDetails || "Service Item",
+      description: item.description || "",
+      sacCode: item.sacCode || "998314",
+      quantity: qty,
+      rate,
+      taxName: item.taxName || (taxRate > 0 ? `IGST${taxRate} [${taxRate}%]` : "Non-Taxable [0%]"),
+      taxRate,
+      amount: lineAmount
+    };
+  });
+
+  const totalAmount = subtotal + taxTotal;
+
+  if (isMockMode) {
+    const index = mockDb.invoices.findIndex(i => i.id === id);
+    if (index === -1) throw new Error("Invoice not found");
+
+    const updated = {
+      ...mockDb.invoices[index],
+      ...data,
+      subtotal,
+      taxTotal,
+      totalAmount,
+      items: processedItems,
+      updatedAt: new Date()
+    };
+    mockDb.invoices[index] = updated;
+
+    // replace items in mock
+    mockDb.invoiceItems = mockDb.invoiceItems.filter(i => i.invoiceId !== id);
+    processedItems.forEach((pi: any) => {
+      mockDb.invoiceItems.push({ ...pi, invoiceId: id, createdAt: new Date() });
+    });
+
+    return updated;
+  } else {
+    // Delete old items and insert updated items in a transaction
+    await prisma.invoiceItem.deleteMany({
+      where: { invoiceId: id }
+    });
+
+    const updated = await prisma.invoice.update({
+      where: { id },
+      data: {
+        placeOfSupply: data.placeOfSupply,
+        gstTreatment: data.gstTreatment,
+        gstin: data.gstin,
+        invoiceDate: data.invoiceDate ? new Date(data.invoiceDate) : undefined,
+        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+        paymentTerms: data.paymentTerms,
+        currency: data.currency,
+        subtotal,
+        taxTotal,
+        totalAmount,
+        customerNotes: data.customerNotes,
+        termsAndConditions: data.termsAndConditions,
+        status: data.status,
+        items: {
+          create: processedItems.map((item: any) => ({
+            itemDetails: item.itemDetails,
+            description: item.description,
+            sacCode: item.sacCode,
+            quantity: item.quantity,
+            rate: item.rate,
+            taxName: item.taxName,
+            taxRate: item.taxRate,
+            amount: item.amount
+          }))
+        }
+      },
+      include: {
+        client: true,
+        items: true,
+        createdBy: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    return updated;
+  }
+}
+
+export async function deleteInvoice(id: string): Promise<boolean> {
+  await checkDbConnection();
+
+  if (isMockMode) {
+    mockDb.invoices = mockDb.invoices.filter(i => i.id !== id);
+    mockDb.invoiceItems = mockDb.invoiceItems.filter(i => i.invoiceId !== id);
+    return true;
+  } else {
+    await prisma.invoice.delete({
+      where: { id }
+    });
+    return true;
+  }
+}
+

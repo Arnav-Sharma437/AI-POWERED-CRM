@@ -153,6 +153,44 @@ export interface Notification {
   createdAt: Date;
 }
 
+export interface InvoiceItem {
+  id: string;
+  invoiceId: string;
+  itemDetails: string;
+  description?: string;
+  sacCode?: string;
+  quantity: number;
+  rate: number;
+  taxName?: string;
+  taxRate: number;
+  amount: number;
+  createdAt: Date;
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  clientId: string;
+  client?: Client;
+  placeOfSupply: string;
+  gstTreatment?: string;
+  gstin?: string;
+  invoiceDate: Date;
+  dueDate: Date;
+  paymentTerms: string;
+  currency: string;
+  subtotal: number;
+  taxTotal: number;
+  totalAmount: number;
+  customerNotes?: string;
+  termsAndConditions?: string;
+  status: string; // Draft, Sent, Paid, Overdue, Cancelled
+  createdById: string;
+  items: InvoiceItem[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Global In-Memory Store
 class MockDatabase {
   roles: Role[] = [];
@@ -166,6 +204,8 @@ class MockDatabase {
   activities: Activity[] = [];
   meetings: Meeting[] = [];
   notifications: Notification[] = [];
+  invoices: Invoice[] = [];
+  invoiceItems: InvoiceItem[] = [];
 
   constructor() {
     this.seed();
@@ -357,6 +397,49 @@ class MockDatabase {
         createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000)
       }
     ];
+
+    // Seed Initial Mock Invoice matching reference design
+    const seedInvoiceItems: InvoiceItem[] = [
+      {
+        id: "inv-item-1",
+        invoiceId: "inv-1",
+        itemDetails: "Additional Website Development Charges",
+        description: "(Including additional pages, scope expansion, UI/UX revisions, redesign iterations, responsive implementation and testing.)",
+        sacCode: "998314",
+        quantity: 1,
+        rate: 15000,
+        taxName: "IGST18 [18%]",
+        taxRate: 18,
+        amount: 15000,
+        createdAt: new Date()
+      }
+    ];
+
+    this.invoices = [
+      {
+        id: "inv-1",
+        invoiceNumber: "PI-000088",
+        clientId: "c1",
+        placeOfSupply: "[HR] - Haryana",
+        gstTreatment: "Registered Business - Regular",
+        gstin: "06AAKCT4257D1ZC",
+        invoiceDate: new Date("2026-08-07"),
+        dueDate: new Date("2026-08-07"),
+        paymentTerms: "Due on Receipt",
+        currency: "INR",
+        subtotal: 15000,
+        taxTotal: 2700,
+        totalAmount: 17700,
+        customerNotes: "Thanks for your business. Please remit payment at your earliest convenience.",
+        termsAndConditions: "1. All disputes subject to local jurisdiction.\n2. Interest @ 18% p.a. charged on overdue payments.",
+        status: "Draft",
+        createdById: "u-bda-1",
+        items: seedInvoiceItems,
+        createdAt: new Date("2026-08-07"),
+        updatedAt: new Date("2026-08-07")
+      }
+    ];
+    this.invoiceItems = seedInvoiceItems;
   }
 }
 
