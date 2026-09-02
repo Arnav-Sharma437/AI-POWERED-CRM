@@ -77,7 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [leadForm, setLeadForm] = useState({ name: "", linkedinUrl: "", company: "", jobTitle: "", country: "", city: "", industry: "", profilePhoto: "", source: "LinkedIn", customSource: "", priority: "Warm", status: "New", notes: "", tags: "", primaryBdaId: "", assignedBdaIds: [] as string[] });
   const [enriching, setEnriching] = useState(false);
   const [clientForm, setClientForm] = useState({ name: "", email: "", company: "", phone: "", website: "" });
-  const [projectForm, setProjectForm] = useState({ name: "", clientId: "", source: "LinkedIn", startDate: "", deadline: "", finalBudget: "", bonus: "0", primaryBdaId: "", serviceType: "Web Design" });
+  const [projectForm, setProjectForm] = useState({ name: "", clientId: "", source: "LinkedIn", startDate: "", deadline: "", deadlineTime: "18:00", finalBudget: "", bonus: "0", primaryBdaId: "", serviceType: "Web Design" });
   const [meetingForm, setMeetingForm] = useState({ title: "", type: "Meeting", startTime: "", notes: "", leadId: "", projectId: "", assignedUserIds: [] as string[] });
   const [paymentForm, setPaymentForm] = useState({ projectId: "", amount: "", note: "" });
   const [noteForm, setNoteForm] = useState({ leadId: "", projectId: "", content: "" });
@@ -386,8 +386,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         break;
       case "project":
         url = "/api/projects";
+        const combinedProjectDeadline = projectForm.deadline 
+          ? new Date(`${projectForm.deadline}T${projectForm.deadlineTime || "18:00"}:00`).toISOString()
+          : undefined;
         body = {
           ...projectForm,
+          deadline: combinedProjectDeadline,
           serviceType: projectForm.serviceType === "Other" ? customServiceType : projectForm.serviceType
         };
         break;
@@ -424,7 +428,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       // Reset forms
       setLeadForm({ name: "", linkedinUrl: "", company: "", jobTitle: "", country: "", city: "", industry: "", profilePhoto: "", source: "LinkedIn", customSource: "", priority: "Warm", status: "New", notes: "", tags: "", primaryBdaId: currentUser?.id || "", assignedBdaIds: [] });
       setClientForm({ name: "", email: "", company: "", phone: "", website: "" });
-      setProjectForm({ name: "", clientId: "", source: "LinkedIn", startDate: "", deadline: "", finalBudget: "", bonus: "0", primaryBdaId: currentUser?.id || "", serviceType: "Web Design" });
+      setProjectForm({ name: "", clientId: "", source: "LinkedIn", startDate: "", deadline: "", deadlineTime: "18:00", finalBudget: "", bonus: "0", primaryBdaId: currentUser?.id || "", serviceType: "Web Design" });
       setCustomServiceType("");
       setMeetingForm({ title: "", type: "Meeting", startTime: "", notes: "", leadId: "", projectId: "", assignedUserIds: [currentUser?.id || ""] });
       setPaymentForm({ projectId: "", amount: "", note: "" });
@@ -1156,7 +1160,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </div>
                     )}
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem" }}>
                       <div>
                         <label style={modalStyles.label}>Start Date</label>
                         <input 
@@ -1168,12 +1172,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         />
                       </div>
                       <div>
-                        <label style={modalStyles.label}>Deadline</label>
+                        <label style={modalStyles.label}>Deadline Date</label>
                         <input 
                           type="date" 
                           className="crm-input"
                           value={projectForm.deadline}
                           onChange={(e) => setProjectForm(prev => ({ ...prev, deadline: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Deadline Time</label>
+                        <input 
+                          type="time" 
+                          className="crm-input"
+                          value={projectForm.deadlineTime}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, deadlineTime: e.target.value }))}
                           required
                         />
                       </div>

@@ -45,8 +45,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [timelineForm, setTimelineForm] = useState({ type: "Note", notes: "" });
 
+  // Deadline Update State
+  const [deadlineForm, setDeadlineForm] = useState({ deadlineDate: "", deadlineTime: "18:00" });
+
   // Modal / Input States
-  const [activeModal, setActiveModal] = useState<string | null>(null); // 'payment' | 'takeover' | 'assign' | 'status' | 'timeline'
+  const [activeModal, setActiveModal] = useState<string | null>(null); // 'payment' | 'takeover' | 'assign' | 'status' | 'timeline' | 'deadline'
   const [paymentForm, setPaymentForm] = useState({ amount: "", note: "" });
   const [takeoverForm, setTakeoverForm] = useState({ newBdaId: "", note: "" });
   const [assignForm, setAssignForm] = useState({ devId: "", workDetails: "" });
@@ -79,6 +82,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           status: data.project.status,
           issueDescription: data.project.issueDescription || ""
         });
+
+        if (data.project.deadline) {
+          const d = new Date(data.project.deadline);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const hh = String(d.getHours()).padStart(2, "0");
+          const min = String(d.getMinutes()).padStart(2, "0");
+          setDeadlineForm({
+            deadlineDate: `${yyyy}-${mm}-${dd}`,
+            deadlineTime: `${hh}:${min}`
+          });
+        }
 
         if (data.project.conversationId) {
           loadChatMessages(data.project.conversationId);
@@ -311,6 +327,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           notes: timelineForm.notes
         };
         break;
+      case "deadline":
+        url = `/api/projects/${id}`;
+        method = "PUT";
+        const combinedDateTime = new Date(`${deadlineForm.deadlineDate}T${deadlineForm.deadlineTime || "18:00"}:00`).toISOString();
+        body = {
+          deadline: combinedDateTime
+        };
+        break;
       case "status":
         body = statusForm;
         break;
@@ -421,8 +445,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               }}>
                 {timeLeft.isExpired ? "🚨 PROJECT DEADLINE OVERDUE / EXPIRED" : timeLeft.days <= 2 ? "⚡ URGENT: DEADLINE APPROACHING" : "⏳ PROJECT TIME REMAINING"}
               </div>
-              <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                Target Completion: <strong>{new Date(project.deadline).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</strong>
+              <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                <span>
+                  Target Completion: <strong>{new Date(project.deadline).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(project.deadline).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</strong>
+                </span>
+                {!isDeveloper && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal("deadline")}
+                    style={{
+                      border: "none",
+                      backgroundColor: "rgba(99, 102, 241, 0.15)",
+                      color: "var(--primary-color)",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "3px"
+                    }}
+                  >
+                    <Clock size={12} /> Change Deadline
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -588,7 +635,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           {/* Milestone Details Card */}
           <div className="crm-card">
-            <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: "1rem" }}>Project Deadlines</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: 0 }}>Project Deadlines</h3>
+              {!isDeveloper && (
+                <button
+                  type="button"
+                  onClick={() => setActiveModal("deadline")}
+                  style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.8125rem", fontWeight: 600, cursor: "pointer" }}
+                >
+                  Edit Deadline
+                </button>
+              )}
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.875rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--text-tertiary)" }}>Start Date</span>
@@ -596,7 +654,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--text-tertiary)" }}>Target Deadline</span>
-                <strong style={{ color: "var(--danger-color)" }}>{new Date(project.deadline).toLocaleDateString()}</strong>
+                <strong style={{ color: timeLeft.isExpired ? "var(--danger-color)" : "var(--text-primary)" }}>
+                  {new Date(project.deadline).toLocaleDateString()} at {new Date(project.deadline).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--text-tertiary)" }}>Sales Source</span>
@@ -1045,6 +1105,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <div style={modalStyles.container} className="animate-fade-in">
             <div style={modalStyles.header}>
               <h3 style={modalStyles.title}>
+                {activeModal === "deadline" && "Change Project Target Deadline & Time"}
                 {activeModal === "timeline" && "Post Project Timeline & Activity Update"}
                 {activeModal === "payment" && "Record Milestone Payment"}
                 {activeModal === "takeover" && "Relinquish and Takeover Project BDA"}
@@ -1055,6 +1116,38 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             <form onSubmit={handleActionSubmit} style={modalStyles.body}>
+              
+              {/* Change Deadline Form */}
+              {activeModal === "deadline" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div style={modalStyles.infoBanner}>
+                    <Clock size={16} />
+                    <span>Set the exact date and time cutoff for deliverables. Live countdown will automatically sync and alert upon expiry.</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={modalStyles.label}>Target Deadline Date</label>
+                      <input 
+                        type="date"
+                        className="crm-input"
+                        value={deadlineForm.deadlineDate}
+                        onChange={(e) => setDeadlineForm(prev => ({ ...prev, deadlineDate: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Target Deadline Time</label>
+                      <input 
+                        type="time"
+                        className="crm-input"
+                        value={deadlineForm.deadlineTime}
+                        onChange={(e) => setDeadlineForm(prev => ({ ...prev, deadlineTime: e.target.value }))}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Timeline Update Form */}
               {activeModal === "timeline" && (
