@@ -463,11 +463,30 @@ export async function listClients(includeTrashed = false): Promise<any[]> {
     const active = mockDb.clients.filter(c => includeTrashed || !c.isTrashed);
     return active.map(c => {
       const projects = mockDb.projects.filter(p => p.clientId === c.id && !p.isTrashed);
+      const payments = mockDb.payments.filter(pay => projects.map(p => p.id).includes(pay.projectId));
+
+      // Calculate totals per project currency
+      const currencyBreakdown: Record<string, { totalBudget: number; totalReceived: number; totalOutstanding: number }> = {};
+      projects.forEach(p => {
+        const curr = p.currency || "INR";
+        if (!currencyBreakdown[curr]) {
+          currencyBreakdown[curr] = { totalBudget: 0, totalReceived: 0, totalOutstanding: 0 };
+        }
+        const pPayments = payments.filter(pay => pay.projectId === p.id).reduce((sum, pay) => sum + pay.amount, 0);
+        currencyBreakdown[curr].totalBudget += p.finalBudget;
+        currencyBreakdown[curr].totalReceived += pPayments;
+        currencyBreakdown[curr].totalOutstanding += (p.finalBudget - pPayments);
+      });
+
+      const primaryCurrency = projects[0]?.currency || "INR";
       const totalBudget = projects.reduce((sum, p) => sum + p.finalBudget, 0);
-      const totalPayments = mockDb.payments.filter(pay => projects.map(p => p.id).includes(pay.projectId)).reduce((sum, p) => sum + p.amount, 0);
+      const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0);
+      
       return {
         ...c,
         projects,
+        primaryCurrency,
+        currencyBreakdown,
         totalProjects: projects.length,
         activeProjects: projects.filter(p => p.status === "Work in Progress").length,
         completedProjects: projects.filter(p => p.status === "Completed").length,
@@ -488,8 +507,23 @@ export async function listClients(includeTrashed = false): Promise<any[]> {
     });
 
     return clients.map(c => {
+      const currencyBreakdown: Record<string, { totalBudget: number; totalReceived: number; totalOutstanding: number }> = {};
+      
+      c.projects.forEach((p: any) => {
+        const curr = p.currency || "INR";
+        if (!currencyBreakdown[curr]) {
+          currencyBreakdown[curr] = { totalBudget: 0, totalReceived: 0, totalOutstanding: 0 };
+        }
+        const pPayments = (p.payments || []).reduce((s: number, pay: any) => s + pay.amount, 0);
+        currencyBreakdown[curr].totalBudget += p.finalBudget;
+        currencyBreakdown[curr].totalReceived += pPayments;
+        currencyBreakdown[curr].totalOutstanding += (p.finalBudget - pPayments);
+      });
+
+      const primaryCurrency = (c.projects[0] as any)?.currency || "INR";
       const totalBudget = c.projects.reduce((sum, p) => sum + p.finalBudget, 0);
-      const totalReceived = c.projects.reduce((sum, p) => sum + p.payments.reduce((s, pay) => s + pay.amount, 0), 0);
+      const totalReceived = c.projects.reduce((sum, p) => sum + (p.payments || []).reduce((s: number, pay: any) => s + pay.amount, 0), 0);
+
       return {
         id: c.id,
         name: c.name,
@@ -501,6 +535,8 @@ export async function listClients(includeTrashed = false): Promise<any[]> {
         website: c.website,
         isTrashed: c.isTrashed,
         projects: c.projects,
+        primaryCurrency,
+        currencyBreakdown,
         totalProjects: c.projects.length,
         activeProjects: c.projects.filter(p => p.status === "Work in Progress").length,
         completedProjects: c.projects.filter(p => p.status === "Completed").length,

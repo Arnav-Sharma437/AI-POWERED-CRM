@@ -134,8 +134,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p.finalBudget)}
+                      <div style={{ fontWeight: 600, fontSize: "0.875rem", fontFamily: "monospace" }}>
+                        {(p.currency === "USD" ? "$" : p.currency === "EUR" ? "€" : p.currency === "GBP" ? "£" : p.currency === "AED" ? "AED " : "₹") + (p.finalBudget || 0).toLocaleString()}
                       </div>
                       <span className="badge badge-primary" style={{ marginTop: "4px" }}>{p.status}</span>
                     </div>

@@ -9,6 +9,26 @@ import {
 import { useDashboard } from "../layout";
 import AiLoader from "@/components/AiLoader";
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  INR: "₹",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  AED: "AED ",
+  CAD: "CA$",
+  AUD: "AU$"
+};
+
+function formatClientCurrency(amount: number, currency = "INR"): string {
+  const code = (currency || "INR").toUpperCase();
+  const symbol = CURRENCY_SYMBOLS[code] || "₹";
+  const formattedNumber = new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0
+  }).format(amount || 0);
+
+  return `${symbol}${formattedNumber}`;
+}
+
 export default function ClientsPage() {
   const router = useRouter();
   const { triggerRefresh } = useDashboard();
@@ -48,7 +68,7 @@ export default function ClientsPage() {
         <div>
           <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Client Accounts</h1>
           <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Monitor client portfolios, active contracts, outstanding balances, and total collections.
+            Monitor client portfolios in their assigned project currencies (USD, INR, EUR, etc.), outstanding balances, and active contracts.
           </p>
         </div>
 
@@ -114,7 +134,7 @@ export default function ClientsPage() {
 
       {/* Clients Display */}
       {loading ? (
-        <AiLoader label="Querying Client Portfolios..." sublabel="Calculating contracts, collections, and outstanding ledgers" />
+        <AiLoader label="Querying Client Portfolios..." sublabel="Calculating actual assigned currencies, collections, and contracts" />
       ) : filteredClients.length === 0 ? (
         <div className="crm-card" style={{ padding: "4rem 2rem", textAlign: "center" }}>
           <h3>No client accounts found</h3>
@@ -128,6 +148,7 @@ export default function ClientsPage() {
                 <tr style={{ backgroundColor: "var(--bg-secondary)", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)", textAlign: "left" }}>
                   <th style={{ padding: "1rem 1.25rem" }}>Client & Company</th>
                   <th style={{ padding: "1rem 1rem" }}>Contact Details</th>
+                  <th style={{ padding: "1rem 1rem", textAlign: "center" }}>Currency</th>
                   <th style={{ padding: "1rem 1rem", textAlign: "center" }}>Projects</th>
                   <th style={{ padding: "1rem 1rem", textAlign: "right" }}>Portfolio Value</th>
                   <th style={{ padding: "1rem 1rem", textAlign: "right" }}>Collected</th>
@@ -138,6 +159,7 @@ export default function ClientsPage() {
               <tbody>
                 {filteredClients.map((client) => {
                   const hasOutstanding = client.totalOutstanding > 0;
+                  const clientCurr = client.primaryCurrency || client.projects?.[0]?.currency || "INR";
                   return (
                     <tr 
                       key={client.id} 
@@ -184,8 +206,22 @@ export default function ClientsPage() {
 
                       <td style={{ padding: "1rem 1rem", textAlign: "center" }}>
                         <span style={{ 
-                          backgroundColor: client.activeProjects > 0 ? "rgba(99, 102, 241, 0.12)" : "var(--bg-secondary)", 
-                          color: client.activeProjects > 0 ? "var(--primary-color)" : "var(--text-tertiary)",
+                          backgroundColor: "rgba(99, 102, 241, 0.12)", 
+                          color: "var(--primary-color)", 
+                          padding: "2px 8px", 
+                          borderRadius: "6px", 
+                          fontSize: "0.75rem", 
+                          fontWeight: 800,
+                          fontFamily: "monospace"
+                        }}>
+                          {clientCurr}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "1rem 1rem", textAlign: "center" }}>
+                        <span style={{ 
+                          backgroundColor: client.activeProjects > 0 ? "rgba(16, 185, 129, 0.12)" : "var(--bg-secondary)", 
+                          color: client.activeProjects > 0 ? "#10b981" : "var(--text-tertiary)",
                           padding: "3px 8px", 
                           borderRadius: "12px", 
                           fontSize: "0.775rem", 
@@ -196,15 +232,15 @@ export default function ClientsPage() {
                       </td>
 
                       <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 700, color: "var(--text-primary)", fontFamily: "monospace" }}>
-                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(client.totalProjectValue)}
+                        {formatClientCurrency(client.totalProjectValue, clientCurr)}
                       </td>
 
                       <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 700, color: "var(--success-color)", fontFamily: "monospace" }}>
-                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(client.totalReceived)}
+                        {formatClientCurrency(client.totalReceived, clientCurr)}
                       </td>
 
                       <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 800, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", fontFamily: "monospace" }}>
-                        {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(client.totalOutstanding)}
+                        {formatClientCurrency(client.totalOutstanding, clientCurr)}
                       </td>
 
                       <td style={{ padding: "1rem 1.25rem", textAlign: "right" }}>
@@ -231,27 +267,41 @@ export default function ClientsPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "1.5rem" }}>
           {filteredClients.map((client) => {
             const hasOutstanding = client.totalOutstanding > 0;
+            const clientCurr = client.primaryCurrency || client.projects?.[0]?.currency || "INR";
             return (
               <div key={client.id} className="crm-card" style={{ display: "flex", flexDirection: "column", justifyContent: "between", position: "relative" }}>
-                <div style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem" }}>
-                  <div style={{ 
-                    width: "48px", 
-                    height: "48px", 
-                    borderRadius: "8px", 
-                    backgroundColor: "var(--primary-light)", 
-                    color: "var(--primary-color)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "1.25rem",
-                    fontWeight: "bold"
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
+                  <div style={{ display: "flex", gap: "1rem" }}>
+                    <div style={{ 
+                      width: "48px", 
+                      height: "48px", 
+                      borderRadius: "8px", 
+                      backgroundColor: "var(--primary-light)", 
+                      color: "var(--primary-color)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "1.25rem",
+                      fontWeight: "bold"
+                    }}>
+                      {client.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: "1.0625rem", fontWeight: 600 }}>{client.name}</h3>
+                      <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "2px" }}>{client.company || "No Company"}</div>
+                    </div>
+                  </div>
+                  <span style={{ 
+                    backgroundColor: "rgba(99, 102, 241, 0.12)", 
+                    color: "var(--primary-color)", 
+                    padding: "2px 8px", 
+                    borderRadius: "6px", 
+                    fontSize: "0.75rem", 
+                    fontWeight: 800,
+                    fontFamily: "monospace"
                   }}>
-                    {client.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: "1.0625rem", fontWeight: 600 }}>{client.name}</h3>
-                    <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "2px" }}>{client.company || "No Company"}</div>
-                  </div>
+                    {clientCurr}
+                  </span>
                 </div>
 
                 {/* Info List */}
@@ -278,20 +328,20 @@ export default function ClientsPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", fontSize: "0.8125rem", marginBottom: "1.25rem" }}>
                   <div>
                     <div style={{ color: "var(--text-tertiary)" }}>Total Portfolio</div>
-                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
-                      {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(client.totalProjectValue)}
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px", fontFamily: "monospace" }}>
+                      {formatClientCurrency(client.totalProjectValue, clientCurr)}
                     </div>
                   </div>
                   <div>
                     <div style={{ color: "var(--text-tertiary)" }}>Collected</div>
-                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--success-color)", marginTop: "2px" }}>
-                      {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(client.totalReceived)}
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--success-color)", marginTop: "2px", fontFamily: "monospace" }}>
+                      {formatClientCurrency(client.totalReceived, clientCurr)}
                     </div>
                   </div>
                   <div>
                     <div style={{ color: "var(--text-tertiary)" }}>Pending Balance</div>
-                    <div style={{ fontSize: "1rem", fontWeight: 700, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", marginTop: "2px" }}>
-                      {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(client.totalOutstanding)}
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", marginTop: "2px", fontFamily: "monospace" }}>
+                      {formatClientCurrency(client.totalOutstanding, clientCurr)}
                     </div>
                   </div>
                   <div>
