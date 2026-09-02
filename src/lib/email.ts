@@ -442,3 +442,149 @@ Please open your CRM dashboard calendar to view the schedule.
     return true;
   }
 }
+
+export interface UserLoginAlertEmailParams {
+  adminEmail: string;
+  adminName?: string;
+  userName: string;
+  userEmail: string;
+  userRole: string;
+  workLocation: string; // "Office" | "Home" | "Remote"
+  loginTime: Date;
+  ipAddress?: string;
+}
+
+export async function sendUserLoginAlertEmail(params: UserLoginAlertEmailParams): Promise<boolean> {
+  const { adminEmail, adminName, userName, userEmail, userRole, workLocation, loginTime, ipAddress } = params;
+  const smtpFrom = process.env.SMTP_FROM || "no-reply@bda-crm.com";
+  const timeFormatted = new Date(loginTime).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    dateStyle: "full",
+    timeStyle: "medium"
+  });
+
+  const locationBadge = workLocation === "Office" 
+    ? "🏢 Office" 
+    : workLocation === "Home" 
+      ? "🏠 Home (Remote)" 
+      : `📍 ${workLocation}`;
+
+  const messageText = `
+[STAFF LOGIN ALERT] Team Member Logged In
+
+Hello ${adminName || "Super Admin"},
+
+A team member has just signed in to AI POWERED BDA CRM:
+
+• Name: ${userName}
+• Email: ${userEmail}
+• Role: ${userRole}
+• Working From: ${locationBadge}
+• Login Timestamp: ${timeFormatted} IST
+${ipAddress ? `• IP Address: ${ipAddress}` : ""}
+
+Review live team sessions and logs on your dashboard:
+${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000/dashboard/team"}
+
+Best regards,
+AI POWERED BDA CRM Security & Attendance
+`;
+
+  const messageHtml = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 25px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 580px; background-color: #ffffff; color: #1f2937;">
+      <div style="border-bottom: 2px solid #6366f1; padding-bottom: 15px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <h2 style="color: #6366f1; margin: 0; font-size: 20px;">AI POWERED BDA CRM</h2>
+          <span style="background-color: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 9999px; text-transform: uppercase;">
+            Login Alert
+          </span>
+        </div>
+        <p style="color: #6b7280; font-size: 13px; margin: 4px 0 0 0;">Real-time Staff Login & Work Location Tracking</p>
+      </div>
+
+      <p style="font-size: 15px; font-weight: 600; margin-bottom: 12px;">Hello ${adminName || "Super Admin"},</p>
+      <p style="font-size: 14px; line-height: 1.5; color: #374151; margin-bottom: 18px;">
+        Team member <strong>${userName}</strong> (${userRole}) has just successfully verified and logged into their CRM account.
+      </p>
+
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 6px 0; color: #64748b; width: 140px;"><strong>Team Member:</strong></td>
+            <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${userName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;"><strong>Email:</strong></td>
+            <td style="padding: 6px 0; color: #0f172a;">${userEmail}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;"><strong>Role:</strong></td>
+            <td style="padding: 6px 0; color: #6366f1; font-weight: 600;">${userRole}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;"><strong>Working From:</strong></td>
+            <td style="padding: 6px 0;">
+              <span style="display: inline-block; background-color: ${workLocation === "Office" ? "#d1fae5" : "#fef3c7"}; color: ${workLocation === "Office" ? "#065f46" : "#92400e"}; font-weight: 700; font-size: 13px; padding: 2px 10px; border-radius: 6px;">
+                ${locationBadge}
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;"><strong>Login Time:</strong></td>
+            <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${timeFormatted} IST</td>
+          </tr>
+          ${ipAddress ? `
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;"><strong>IP / Network:</strong></td>
+            <td style="padding: 6px 0; color: #64748b; font-family: monospace;">${ipAddress}</td>
+          </tr>
+          ` : ""}
+        </table>
+      </div>
+
+      <div style="text-align: center; margin: 25px 0;">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000/dashboard/team"}" target="_blank" style="background-color: #6366f1; color: #ffffff; padding: 11px 26px; text-decoration: none; font-weight: 600; font-size: 14px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.25);">
+          View Team & Activity Monitor
+        </a>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+      <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">
+        Automated Security & Attendance Notification from AI POWERED BDA CRM.
+      </p>
+    </div>
+  `;
+
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.log("\n==================================================");
+    console.log(`[SUPER ADMIN LOGIN ALERT EMAIL MOCK]`);
+    console.log(`To Admin: ${adminEmail}`);
+    console.log(`User Logged In: ${userName} (${userEmail})`);
+    console.log(`Role: ${userRole}`);
+    console.log(`Location: ${workLocation}`);
+    console.log(`Time: ${timeFormatted}`);
+    console.log("==================================================\n");
+    return true;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: adminEmail,
+      subject: `🚨 [STAFF LOGIN] ${userName} (${userRole}) logged in from ${workLocation}`,
+      text: messageText,
+      html: messageHtml
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send Super Admin Login Alert Email via SMTP:", error);
+    console.log("\n==================================================");
+    console.log(`[SUPER ADMIN LOGIN ALERT EMAIL FALLBACK]`);
+    console.log(`To Admin: ${adminEmail}`);
+    console.log(`User: ${userName} (${workLocation})`);
+    console.log("==================================================\n");
+    return true;
+  }
+}
+

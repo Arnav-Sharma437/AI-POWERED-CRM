@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Loader2, ArrowRight, ShieldCheck, RefreshCw, Sparkles } from "lucide-react";
+import { Lock, Mail, Loader2, ArrowRight, ShieldCheck, RefreshCw, Sparkles, Building2, Home, Globe } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [workLocation, setWorkLocation] = useState<"Office" | "Home" | "Remote">("Office");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,7 +37,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, workLocation }),
       });
 
       const data = await res.json();
@@ -47,7 +48,7 @@ export default function LoginPage() {
 
       if (data.requiresVerification) {
         setRequiresOtp(true);
-        setMessage("We've sent a 6-digit verification code to your registered email.");
+        setMessage(`We've sent a 6-digit verification code to your registered email (${workLocation} session).`);
       } else {
         router.push("/dashboard");
       }
@@ -226,6 +227,57 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Login Location Selection */}
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Working From Today?</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setWorkLocation("Office")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                    padding: "0.6rem 0.75rem",
+                    borderRadius: "8px",
+                    border: workLocation === "Office" ? "2px solid var(--primary-color)" : "1px solid var(--border-primary)",
+                    backgroundColor: workLocation === "Office" ? "rgba(99, 102, 241, 0.15)" : "var(--bg-primary)",
+                    color: workLocation === "Office" ? "var(--primary-color)" : "var(--text-secondary)",
+                    fontWeight: workLocation === "Office" ? 700 : 500,
+                    fontSize: "0.8125rem",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <Building2 size={16} />
+                  Office
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWorkLocation("Home")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                    padding: "0.6rem 0.75rem",
+                    borderRadius: "8px",
+                    border: workLocation === "Home" ? "2px solid #10b981" : "1px solid var(--border-primary)",
+                    backgroundColor: workLocation === "Home" ? "rgba(16, 185, 129, 0.15)" : "var(--bg-primary)",
+                    color: workLocation === "Home" ? "#10b981" : "var(--text-secondary)",
+                    fontWeight: workLocation === "Home" ? 700 : 500,
+                    fontSize: "0.8125rem",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <Home size={16} />
+                  Home (Remote)
+                </button>
+              </div>
+            </div>
+
             <button type="submit" disabled={loading} style={styles.button}>
               {loading ? (
                 <>
@@ -234,7 +286,7 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  Access Account
+                  Access Account ({workLocation})
                   <ArrowRight size={18} />
                 </>
               )}

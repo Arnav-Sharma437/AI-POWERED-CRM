@@ -5,7 +5,7 @@ import { createVerificationSession } from "@/lib/verification";
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const { email, password, workLocation } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json(
@@ -32,10 +32,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create a temporary JWT token mapping the verification process
+    // Create a temporary JWT token mapping the verification process and selected work location
     const tempToken = await signTempJWT({
       userId: user.id,
-      verificationId: verification.verificationId
+      verificationId: verification.verificationId,
+      workLocation: workLocation || "Office"
     }, 900); // 15 minutes temp token expiry
 
     const response = NextResponse.json({

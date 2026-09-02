@@ -1539,6 +1539,42 @@ export async function listActivities(userContext?: { userId: string; roleName: s
   }
 }
 
+export async function createActivity(data: {
+  type: string;
+  notes: string;
+  userId: string;
+  leadId?: string | null;
+  projectId?: string | null;
+  clientId?: string | null;
+}): Promise<any> {
+  await checkDbConnection();
+  if (isMockMode) {
+    const act = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      timestamp: new Date(),
+      userId: data.userId,
+      type: data.type || "Note",
+      notes: data.notes,
+      leadId: data.leadId || undefined,
+      projectId: data.projectId || undefined,
+      clientId: data.clientId || undefined
+    };
+    mockDb.activities.push(act as any);
+    return act;
+  } else {
+    return await prisma.activity.create({
+      data: {
+        userId: data.userId,
+        type: data.type || "Note",
+        notes: data.notes,
+        leadId: data.leadId || null,
+        projectId: data.projectId || null,
+        clientId: data.clientId || null
+      }
+    });
+  }
+}
+
 // -------------------------------------------------------------
 // ATTACHMENTS SERVICES
 // -------------------------------------------------------------

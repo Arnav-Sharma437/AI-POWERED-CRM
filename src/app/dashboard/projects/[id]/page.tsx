@@ -784,15 +784,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <div 
           style={{
             position: "fixed",
-            bottom: "20px",
+            bottom: "24px",
             right: "24px",
-            width: isChatMinimized ? "300px" : "380px",
-            zIndex: 999,
+            width: isChatMinimized ? "300px" : "390px",
+            maxHeight: isChatMinimized ? "52px" : "520px",
+            zIndex: 1000,
             borderRadius: "14px",
-            boxShadow: "0 12px 35px -5px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-primary)",
+            boxShadow: "0 14px 40px -4px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--border-primary)",
             backgroundColor: "var(--bg-primary)",
             overflow: "hidden",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
             display: isChatOpen ? "flex" : "none",
             flexDirection: "column"
           }}
@@ -801,7 +802,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <div 
             onClick={() => setIsChatMinimized(!isChatMinimized)}
             style={{
-              padding: "0.85rem 1rem",
+              padding: "0.75rem 1rem",
               background: "linear-gradient(135deg, var(--primary-color) 0%, #7c3aed 100%)",
               color: "#ffffff",
               display: "flex",
@@ -827,13 +828,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </div>
               <div>
                 <div style={{ fontSize: "0.875rem", fontWeight: 700, lineHeight: 1.2 }}>Project Team Chat</div>
-                <div style={{ fontSize: "0.7rem", opacity: 0.9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "160px" }}>
+                <div style={{ fontSize: "0.7rem", opacity: 0.9, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "150px" }}>
                   {project.name}
                 </div>
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
               <button 
                 type="button"
                 onClick={(e) => {
@@ -845,7 +846,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   background: "rgba(255, 255, 255, 0.2)",
                   color: "#ffffff",
                   borderRadius: "6px",
-                  padding: "4px 8px",
+                  padding: "3px 7px",
                   fontSize: "0.7rem",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -866,20 +867,45 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 }}
                 style={{
                   border: "none",
-                  background: "none",
+                  background: "rgba(255, 255, 255, 0.15)",
                   color: "#ffffff",
                   cursor: "pointer",
-                  padding: "2px"
+                  padding: "3px 6px",
+                  borderRadius: "6px",
+                  display: "flex",
+                  alignItems: "center"
                 }}
+                title={isChatMinimized ? "Expand Chat" : "Minimize Chat"}
               >
-                {isChatMinimized ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {isChatMinimized ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              </button>
+
+              <button 
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsChatOpen(false);
+                }}
+                style={{
+                  border: "none",
+                  background: "rgba(255, 255, 255, 0.15)",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  padding: "3px 6px",
+                  borderRadius: "6px",
+                  display: "flex",
+                  alignItems: "center"
+                }}
+                title="Close floating chat widget"
+              >
+                <X size={15} />
               </button>
             </div>
           </div>
 
           {/* Sticky Chat Body */}
           {!isChatMinimized && (
-            <div style={{ display: "flex", flexDirection: "column", height: "380px", backgroundColor: "var(--bg-secondary)" }}>
+            <div style={{ display: "flex", flexDirection: "column", height: "420px", backgroundColor: "var(--bg-secondary)" }}>
               {/* Messages Panel */}
               <div style={{ 
                 flex: 1, 

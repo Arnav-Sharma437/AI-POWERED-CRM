@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, UserSquare2, Briefcase, Calendar, 
   Activity, Bell, Trash2, Settings, Plus, Search, LogOut, 
   User, CheckCircle2, AlertCircle, FileText, CalendarRange, Clock, CreditCard, MessageSquare,
-  Sparkles, Zap, Cpu, Bot, Sun, Moon
+  Sparkles, Zap, Cpu, Bot, Sun, Moon, Building2, Home, MapPin
 } from "lucide-react";
 
 // Context for global state sharing (Quick Add triggers, etc.)
@@ -52,6 +52,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showQuickAddMenu, setShowQuickAddMenu] = useState(false);
 
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [currentLiveTime, setCurrentLiveTime] = useState<Date>(new Date());
+
+  // Live topbar clock ticking every 1 second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentLiveTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("crm_theme") as "light" | "dark" | null;
@@ -670,6 +679,76 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Topbar Actions */}
             <div style={topbarStyles.actions}>
+              {/* Live Global Clock Display - Visible to all roles */}
+              <div 
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  backgroundColor: "var(--bg-primary)",
+                  border: "1px solid var(--border-primary)",
+                  padding: "0.45rem 0.85rem",
+                  borderRadius: "10px",
+                  boxShadow: "var(--shadow-sm)"
+                }}
+                title="Real-time Indian Standard Time (IST) Clock"
+              >
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(99, 102, 241, 0.15)",
+                  color: "var(--primary-color)"
+                }}>
+                  <Clock size={16} className="animate-pulse" />
+                </div>
+                <div>
+                  <div style={{
+                    fontSize: "0.875rem",
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    fontFamily: "monospace",
+                    letterSpacing: "0.05em",
+                    lineHeight: 1.1
+                  }}>
+                    {currentLiveTime.toLocaleTimeString("en-IN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      hour12: true
+                    })}
+                  </div>
+                  <div style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", fontWeight: 500, lineHeight: 1 }}>
+                    {currentLiveTime.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+                  </div>
+                </div>
+              </div>
+
+              {/* User Session Work Location Badge */}
+              {currentUser?.workLocation && (
+                <div 
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    backgroundColor: currentUser.workLocation === "Office" ? "rgba(99, 102, 241, 0.12)" : "rgba(16, 185, 129, 0.12)",
+                    color: currentUser.workLocation === "Office" ? "var(--primary-color)" : "#10b981",
+                    border: `1px solid ${currentUser.workLocation === "Office" ? "rgba(99, 102, 241, 0.3)" : "rgba(16, 185, 129, 0.3)"}`,
+                    padding: "0.45rem 0.75rem",
+                    borderRadius: "10px",
+                    fontSize: "0.775rem",
+                    fontWeight: 700
+                  }}
+                  title={`You are currently logged in from: ${currentUser.workLocation}`}
+                >
+                  {currentUser.workLocation === "Office" ? <Building2 size={14} /> : <Home size={14} />}
+                  <span>{currentUser.workLocation}</span>
+                </div>
+              )}
+
               {/* Quick Add Dropdown Trigger - hidden for Developer role */}
               {currentUser?.roleName !== "Developer" && (
                 <div style={{ position: "relative" }}>
