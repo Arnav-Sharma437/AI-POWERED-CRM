@@ -19,7 +19,8 @@ export async function GET(request: Request) {
         name: session.name,
         email: session.email,
         roleId: session.roleId,
-        roleName: matched?.roleName || "BDA"
+        roleName: matched?.roleName || "BDA",
+        workLocation: session.workLocation || "Office"
       }
     });
   } catch (error) {

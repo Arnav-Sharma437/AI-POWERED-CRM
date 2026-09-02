@@ -55,6 +55,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [currentLiveTime, setCurrentLiveTime] = useState<Date>(new Date());
 
+  // In-Dashboard Workday Attendance & Clock-In / Clock-Out states
+  const [isWorking, setIsWorking] = useState<boolean>(true);
+  const [workStartedAt, setWorkStartedAt] = useState<Date | null>(null);
+  const [showShiftModal, setShowShiftModal] = useState<"start" | "end" | null>(null);
+  const [shiftLocation, setShiftLocation] = useState<"Office" | "Home">("Office");
+  const [shiftNote, setShiftNote] = useState("");
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+
   // Live topbar clock ticking every 1 second
   useEffect(() => {
     const timer = setInterval(() => {
@@ -332,6 +340,66 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }, 300);
     return () => clearTimeout(delayDebounce);
   }, [searchQuery]);
+
+  const handleStartWorkSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAttendanceLoading(true);
+    try {
+      const res = await fetch("/api/auth/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "start_work",
+          location: shiftLocation,
+          note: shiftNote
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to start workday");
+
+      setIsWorking(true);
+      setWorkStartedAt(new Date());
+      if (currentUser) {
+        setCurrentUser((prev: any) => ({ ...prev, workLocation: shiftLocation }));
+      }
+      showToast(data.message || `Work session started from ${shiftLocation}!`);
+      setShowShiftModal(null);
+      setShiftNote("");
+      setTriggerRefresh(prev => prev + 1);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const handleClockOutSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAttendanceLoading(true);
+    try {
+      const res = await fetch("/api/auth/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "clock_out",
+          location: currentUser?.workLocation || shiftLocation,
+          note: shiftNote
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to clock out");
+
+      setIsWorking(false);
+      showToast(data.message || "Clocked out successfully. Super Admin has been notified!");
+      setShowShiftModal(null);
+      setShiftNote("");
+      setTriggerRefresh(prev => prev + 1);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -788,27 +856,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
               </div>
 
-              {/* User Session Work Location Badge */}
-              {currentUser?.workLocation && (
-                <div 
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.35rem",
-                    backgroundColor: currentUser.workLocation === "Office" ? "rgba(99, 102, 241, 0.12)" : "rgba(16, 185, 129, 0.12)",
-                    color: currentUser.workLocation === "Office" ? "var(--primary-color)" : "#10b981",
-                    border: `1px solid ${currentUser.workLocation === "Office" ? "rgba(99, 102, 241, 0.3)" : "rgba(16, 185, 129, 0.3)"}`,
-                    padding: "0.45rem 0.75rem",
-                    borderRadius: "10px",
-                    fontSize: "0.775rem",
-                    fontWeight: 700
-                  }}
-                  title={`You are currently logged in from: ${currentUser.workLocation}`}
-                >
-                  {currentUser.workLocation === "Office" ? <Building2 size={14} /> : <Home size={14} />}
-                  <span>{currentUser.workLocation}</span>
-                </div>
-              )}
+              {/* Interactive In-Dashboard Work Status & Attendance Control (Clock-In / Clock-Out) */}
+              <button
+                onClick={() => {
+                  if (isWorking) {
+                    setShowShiftModal("end");
+                  } else {
+                    setShowShiftModal("start");
+                  }
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.45rem",
+                  backgroundColor: isWorking 
+                    ? (currentUser?.workLocation === "Office" ? "rgba(99, 102, 241, 0.15)" : "rgba(16, 185, 129, 0.15)")
+                    : "rgba(239, 68, 68, 0.12)",
+                  color: isWorking
+                    ? (currentUser?.workLocation === "Office" ? "var(--primary-color)" : "#10b981")
+                    : "var(--danger-color)",
+                  border: isWorking
+                    ? `1px solid ${currentUser?.workLocation === "Office" ? "rgba(99, 102, 241, 0.35)" : "rgba(16, 185, 129, 0.35)"}`
+                    : "1px solid rgba(239, 68, 68, 0.35)",
+                  padding: "0.45rem 0.85rem",
+                  borderRadius: "10px",
+                  fontSize: "0.775rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+                title={isWorking ? `Working from ${currentUser?.workLocation || "Office"} (Click to Clock Out)` : "Off Duty / Clocked Out (Click to Start Work)"}
+              >
+                {isWorking ? (
+                  <>
+                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#10b981", boxShadow: "0 0 8px #10b981" }} />
+                    {currentUser?.workLocation === "Office" ? <Building2 size={14} /> : <Home size={14} />}
+                    <span>{currentUser?.workLocation || "Office"} • Working</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#ef4444" }} />
+                    <span>Clocked Out • Start Work</span>
+                  </>
+                )}
+              </button>
 
               {/* Quick Add Dropdown Trigger - hidden for Developer role */}
               {currentUser?.roleName !== "Developer" && (
@@ -1762,6 +1853,136 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <button type="button" onClick={() => setShowInnerClientForm(false)} className="crm-btn crm-btn-secondary">Cancel</button>
                   <button type="submit" disabled={innerClientLoading} className="crm-btn crm-btn-primary">
                     {innerClientLoading ? "Saving..." : "Save Client"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Work Shift Attendance Modal (Clock-In / Start Work & Clock-Out) */}
+        {showShiftModal && (
+          <div style={{ ...modalStyles.overlay, zIndex: 1200 }}>
+            <div style={{ ...modalStyles.container, maxWidth: "440px" }} className="animate-fade-in">
+              <div style={modalStyles.header}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <div style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: showShiftModal === "start" ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: showShiftModal === "start" ? "#10b981" : "#ef4444"
+                  }}>
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <h3 style={modalStyles.title}>
+                      {showShiftModal === "start" ? "Start Workday / Clock In" : "End Workday / Clock Out"}
+                    </h3>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                      Super Admin will receive an attendance alert email with your time & location.
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setShowShiftModal(null)} style={modalStyles.closeBtn}>&times;</button>
+              </div>
+
+              <form onSubmit={showShiftModal === "start" ? handleStartWorkSession : handleClockOutSession} style={modalStyles.body}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  
+                  {showShiftModal === "start" ? (
+                    <div>
+                      <label style={modalStyles.label}>Select Where You Are Working From:</label>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginTop: "0.25rem" }}>
+                        <button
+                          type="button"
+                          onClick={() => setShiftLocation("Office")}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "0.5rem",
+                            padding: "0.75rem",
+                            borderRadius: "8px",
+                            border: shiftLocation === "Office" ? "2px solid var(--primary-color)" : "1px solid var(--border-primary)",
+                            backgroundColor: shiftLocation === "Office" ? "rgba(99, 102, 241, 0.15)" : "var(--bg-primary)",
+                            color: shiftLocation === "Office" ? "var(--primary-color)" : "var(--text-secondary)",
+                            fontWeight: shiftLocation === "Office" ? 700 : 500,
+                            cursor: "pointer"
+                          }}
+                        >
+                          <Building2 size={16} /> Office (In-Person)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShiftLocation("Home")}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "0.5rem",
+                            padding: "0.75rem",
+                            borderRadius: "8px",
+                            border: shiftLocation === "Home" ? "2px solid #10b981" : "1px solid var(--border-primary)",
+                            backgroundColor: shiftLocation === "Home" ? "rgba(16, 185, 129, 0.15)" : "var(--bg-primary)",
+                            color: shiftLocation === "Home" ? "#10b981" : "var(--text-secondary)",
+                            fontWeight: shiftLocation === "Home" ? 700 : 500,
+                            cursor: "pointer"
+                          }}
+                        >
+                          <Home size={16} /> Home (Remote)
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ 
+                      padding: "0.85rem", 
+                      borderRadius: "8px", 
+                      backgroundColor: "rgba(239, 68, 68, 0.08)", 
+                      border: "1px solid rgba(239, 68, 68, 0.2)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem"
+                    }}>
+                      <div style={{ color: "#ef4444" }}>
+                        <LogOut size={22} />
+                      </div>
+                      <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+                        Clocking out will record your workday finish time and notify Super Admin immediately.
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label style={modalStyles.label}>Workday Notes / Status Update (Optional)</label>
+                    <input 
+                      type="text" 
+                      className="crm-input" 
+                      placeholder={showShiftModal === "start" ? "e.g. Working on client Shopify redesign..." : "e.g. Completed today's targets and tasks"}
+                      value={shiftNote}
+                      onChange={(e) => setShiftNote(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div style={modalStyles.actions}>
+                  <button type="button" onClick={() => setShowShiftModal(null)} className="crm-btn crm-btn-secondary">Cancel</button>
+                  <button 
+                    type="submit" 
+                    disabled={attendanceLoading} 
+                    className="crm-btn"
+                    style={{
+                      backgroundColor: showShiftModal === "start" ? "var(--primary-color)" : "var(--danger-color)",
+                      color: "#ffffff"
+                    }}
+                  >
+                    {attendanceLoading 
+                      ? "Logging..." 
+                      : showShiftModal === "start" ? "Confirm Start Work" : "Confirm Clock Out"
+                    }
                   </button>
                 </div>
               </form>

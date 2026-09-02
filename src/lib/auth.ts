@@ -15,13 +15,13 @@ async function getCryptoKey() {
   );
 }
 
-// Generate JWT token
+// Generate JWT token (Persistent session for 30 days)
 export async function signJWT(payload: any): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
   const enc = new TextEncoder();
 
-  // Add expiration (24h)
-  const exp = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
+  // Add expiration (30 days persistent login)
+  const exp = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
   const fullPayload = { ...payload, exp };
 
   const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
@@ -93,7 +93,8 @@ export async function verifySession(request: Request): Promise<any | null> {
       name: user.name,
       email: user.email,
       roleId: user.roleId,
-      roleName: user.roleName || user.role?.name || "BDA"
+      roleName: user.roleName || user.role?.name || "BDA",
+      workLocation: decoded.workLocation || "Office"
     };
   } catch (error) {
     console.error("verifySession error:", error);

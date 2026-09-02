@@ -115,14 +115,15 @@ export async function POST(request: Request) {
       }
     });
 
-    // Set token cookie
+    // Set token cookie (30-day persistent session)
     response.cookies.set({
       name: "token",
       value: token,
       httpOnly: true,
       path: "/",
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 // 24 hours
+      maxAge: 60 * 60 * 24 * 30 // 30 days
     });
 
     // Clear temp_token cookie
