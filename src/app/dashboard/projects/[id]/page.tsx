@@ -456,138 +456,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </button>
       </div>
 
-      {/* Live Deadline Countdown Banner */}
-      {project.deadline && (
-        <div 
-          className={`crm-card ${timeLeft.isExpired ? "deadline-expired-alarm" : ""}`}
-          style={{ 
-            padding: "1.25rem 1.75rem", 
-            marginBottom: "1.5rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "1rem",
-            border: timeLeft.isExpired 
-              ? "2px solid var(--danger-color)" 
-              : timeLeft.days <= 2 
-                ? "2px solid #f59e0b" 
-                : "1px solid var(--border-primary)",
-            background: timeLeft.isExpired 
-              ? "linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.3) 100%)" 
-              : timeLeft.days <= 2
-                ? "linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.15) 100%)"
-                : "var(--bg-secondary)",
-            transition: "all 0.3s ease"
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <div style={{ 
-              width: "48px", 
-              height: "48px", 
-              borderRadius: "12px", 
-              backgroundColor: timeLeft.isExpired ? "var(--danger-color)" : timeLeft.days <= 2 ? "#f59e0b" : "var(--primary-color)",
-              color: "#ffffff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: timeLeft.isExpired ? "0 0 20px rgba(239, 68, 68, 0.8)" : "none"
-            }}
-            className={timeLeft.isExpired ? "deadline-zoom-badge" : ""}
-            >
-              {timeLeft.isExpired ? <AlertOctagon size={24} /> : timeLeft.days <= 2 ? <Flame size={24} /> : <Hourglass size={24} />}
-            </div>
-            <div>
-              <div style={{ 
-                fontSize: "0.8125rem", 
-                fontWeight: 700, 
-                textTransform: "uppercase", 
-                letterSpacing: "0.05em",
-                color: timeLeft.isExpired ? "var(--danger-color)" : timeLeft.days <= 2 ? "#f59e0b" : "var(--text-secondary)"
-              }}>
-                {timeLeft.isExpired ? "🚨 PROJECT DEADLINE OVERDUE / EXPIRED" : timeLeft.days <= 2 ? "⚡ URGENT: DEADLINE APPROACHING" : "⏳ PROJECT TIME REMAINING"}
-              </div>
-              <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                <span>
-                  Target Completion: <strong>{new Date(project.deadline).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(project.deadline).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</strong>
-                </span>
-                {!isDeveloper && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveModal("deadline")}
-                    style={{
-                      border: "none",
-                      backgroundColor: "rgba(99, 102, 241, 0.15)",
-                      color: "var(--primary-color)",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                      padding: "2px 8px",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "3px"
-                    }}
-                  >
-                    <Clock size={12} /> Change Deadline
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Live Countdown Numbers */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            {timeLeft.isExpired ? (
-              <div 
-                className="deadline-zoom-badge"
-                style={{ 
-                  backgroundColor: "var(--danger-color)", 
-                  color: "#ffffff", 
-                  padding: "0.6rem 1.25rem", 
-                  borderRadius: "8px", 
-                  fontWeight: 800, 
-                  fontSize: "1.125rem",
-                  letterSpacing: "0.05em",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem"
-                }}
-              >
-                <AlertTriangle size={20} />
-                DEADLINE PASSED - IMMEDIATE ATTENTION REQUIRED
-              </div>
-            ) : (
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <div style={{ textAlign: "center", backgroundColor: "var(--bg-primary)", padding: "0.5rem 0.75rem", borderRadius: "8px", border: "1px solid var(--border-primary)", minWidth: "56px" }}>
-                  <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--primary-color)" }}>{String(timeLeft.days).padStart(2, "0")}</div>
-                  <div style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase" }}>Days</div>
-                </div>
-                <div style={{ fontSize: "1.25rem", fontWeight: 700, alignSelf: "center", color: "var(--text-tertiary)" }}>:</div>
-                <div style={{ textAlign: "center", backgroundColor: "var(--bg-primary)", padding: "0.5rem 0.75rem", borderRadius: "8px", border: "1px solid var(--border-primary)", minWidth: "56px" }}>
-                  <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--primary-color)" }}>{String(timeLeft.hours).padStart(2, "0")}</div>
-                  <div style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase" }}>Hours</div>
-                </div>
-                <div style={{ fontSize: "1.25rem", fontWeight: 700, alignSelf: "center", color: "var(--text-tertiary)" }}>:</div>
-                <div style={{ textAlign: "center", backgroundColor: "var(--bg-primary)", padding: "0.5rem 0.75rem", borderRadius: "8px", border: "1px solid var(--border-primary)", minWidth: "56px" }}>
-                  <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--primary-color)" }}>{String(timeLeft.minutes).padStart(2, "0")}</div>
-                  <div style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase" }}>Mins</div>
-                </div>
-                <div style={{ fontSize: "1.25rem", fontWeight: 700, alignSelf: "center", color: "var(--text-tertiary)" }}>:</div>
-                <div style={{ textAlign: "center", backgroundColor: "var(--bg-primary)", padding: "0.5rem 0.75rem", borderRadius: "8px", border: "1px solid var(--border-primary)", minWidth: "56px" }}>
-                  <div style={{ fontSize: "1.25rem", fontWeight: 800, color: timeLeft.days <= 2 ? "var(--danger-color)" : "var(--primary-color)" }}>{String(timeLeft.seconds).padStart(2, "0")}</div>
-                  <div style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase" }}>Secs</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Header Info */}
-      <div className="crm-card" style={{ padding: "2rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1.5rem", marginBottom: "1.5rem" }}>
-        <div>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem", flexWrap: "wrap" }}>
+      {/* Top Header Card: Project Identity, Live Countdown & Actions */}
+      <div 
+        className="crm-card" 
+        style={{ 
+          padding: "1.25rem 1.5rem", 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          flexWrap: "wrap", 
+          gap: "1rem", 
+          marginBottom: "1.25rem" 
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
             <span className="badge badge-primary">{project.serviceType}</span>
             <span className="badge" style={{ backgroundColor: "rgba(99, 102, 241, 0.15)", color: "var(--primary-color)", fontWeight: 700 }}>
               {project.currency || "INR"} ({project.pricingModel || "Fixed"})
@@ -597,14 +480,74 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 {project.currency || "INR"} {project.hourlyRate}/hr {project.estimatedHours ? `• ${project.estimatedHours} hrs est.` : ""}
               </span>
             )}
+            {project.status && (
+              <span className="badge" style={{ 
+                backgroundColor: project.status === "Completed" ? "rgba(16, 185, 129, 0.15)" : project.status === "Issue" ? "rgba(239, 68, 68, 0.15)" : "rgba(99, 102, 241, 0.15)",
+                color: project.status === "Completed" ? "#10b981" : project.status === "Issue" ? "var(--danger-color)" : "var(--primary-color)",
+                fontWeight: 700
+              }}>
+                Status: {project.status}
+              </span>
+            )}
           </div>
-          <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)" }}>{project.name}</h2>
-          <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+          <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>{project.name}</h2>
+          <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
             Client: <strong>{project.client?.name} ({project.client?.company})</strong>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+        {/* Live Countdown in Header */}
+        {project.deadline && (
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "0.85rem",
+            padding: "0.6rem 1rem",
+            borderRadius: "10px",
+            backgroundColor: "var(--bg-secondary)",
+            border: timeLeft.isExpired ? "1px solid var(--danger-color)" : "1px solid var(--border-primary)"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: timeLeft.isExpired ? "var(--danger-color)" : timeLeft.days <= 2 ? "#f59e0b" : "var(--primary-color)" }}>
+              {timeLeft.isExpired ? <AlertOctagon size={18} /> : <Clock size={18} />}
+              <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase" }}>
+                {timeLeft.isExpired ? "OVERDUE" : "Target"}:
+              </div>
+            </div>
+            
+            {timeLeft.isExpired ? (
+              <div style={{ color: "var(--danger-color)", fontWeight: 800, fontSize: "0.875rem" }}>DEADLINE PASSED</div>
+            ) : (
+              <div style={{ display: "flex", gap: "0.25rem", alignItems: "center", fontSize: "0.875rem", fontWeight: 800, color: "var(--primary-color)" }}>
+                <span>{String(timeLeft.days).padStart(2, "0")}d</span> :
+                <span>{String(timeLeft.hours).padStart(2, "0")}h</span> :
+                <span>{String(timeLeft.minutes).padStart(2, "0")}m</span> :
+                <span>{String(timeLeft.seconds).padStart(2, "0")}s</span>
+              </div>
+            )}
+
+            {!isDeveloper && (
+              <button
+                type="button"
+                onClick={() => setActiveModal("deadline")}
+                style={{
+                  border: "none",
+                  backgroundColor: "rgba(99, 102, 241, 0.12)",
+                  color: "var(--primary-color)",
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  cursor: "pointer"
+                }}
+              >
+                Edit
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Header Action Buttons */}
+        <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
           {!isDeveloper ? (
             <>
               <button 
@@ -623,35 +566,43 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   setActiveModal("editProject");
                 }} 
                 className="crm-btn crm-btn-secondary"
-                title="Edit Project Details (Budget, Currency, Rates, Type, Notes)"
+                style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}
+                title="Edit Project Details"
               >
-                <Edit size={14} /> Edit Project
+                <Edit size={13} /> Edit Project
               </button>
-              <button onClick={() => setActiveModal("status")} className="crm-btn crm-btn-secondary"><RefreshCw size={14} /> Update Project Status</button>
+              <button onClick={() => setActiveModal("status")} className="crm-btn crm-btn-secondary" style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}>
+                <RefreshCw size={13} /> Status
+              </button>
               <button onClick={() => {
                 setTimelineForm({ type: "Note", notes: "" });
                 setActiveModal("timeline");
-              }} className="crm-btn crm-btn-secondary"><Plus size={14} /> Post Timeline Update</button>
-              <button onClick={() => setActiveModal("payment")} className="crm-btn crm-btn-secondary"><CreditCard size={14} /> Record Payment</button>
-              <button onClick={() => setActiveModal("takeover")} className="crm-btn crm-btn-secondary"><UserPlus size={14} /> BDA Takeover</button>
-              <button onClick={() => setActiveModal("assign")} className="crm-btn crm-btn-primary"><Mail size={14} /> Assign Developer</button>
+              }} className="crm-btn crm-btn-secondary" style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}>
+                <Plus size={13} /> Timeline
+              </button>
+              <button onClick={() => setActiveModal("payment")} className="crm-btn crm-btn-secondary" style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}>
+                <CreditCard size={13} /> Payment
+              </button>
+              <button onClick={() => setActiveModal("takeover")} className="crm-btn crm-btn-secondary" style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}>
+                <UserPlus size={13} /> Takeover
+              </button>
+              <button onClick={() => setActiveModal("assign")} className="crm-btn crm-btn-primary" style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}>
+                <Mail size={13} /> Assign
+              </button>
             </>
           ) : (
             <div style={{ 
-              padding: "0.45rem 0.85rem", 
-              borderRadius: "8px", 
+              padding: "0.35rem 0.75rem", 
+              borderRadius: "6px", 
               backgroundColor: "var(--bg-secondary)", 
               border: "1px solid var(--border-primary)", 
-              fontSize: "0.8125rem", 
-              color: "var(--text-secondary)",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.4rem"
+              fontSize: "0.75rem", 
+              color: "var(--text-secondary)"
             }}>
-              <span style={{ color: "var(--text-tertiary)" }}>Assignment Status:</span>
-              <strong style={{ color: "var(--text-primary)" }}>Active Deliverable</strong>
+              Assignment: <strong style={{ color: "var(--text-primary)" }}>Active Deliverable</strong>
             </div>
           )}
+
           {currentUser?.roleName === "Super Admin" && (
             <button
               onClick={async () => {
@@ -672,194 +623,184 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 }
               }}
               className="crm-btn"
-              style={{ backgroundColor: "var(--danger-light)", color: "var(--danger-color)", borderColor: "var(--danger-color)" }}
+              style={{ backgroundColor: "var(--danger-light)", color: "var(--danger-color)", borderColor: "var(--danger-color)", padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}
               title="Delete Project (Super Admin only)"
             >
-              <Trash2 size={14} /> Delete Project
+              <Trash2 size={13} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Financials Overview Card - Hidden for Developer */}
-      {!isDeveloper && (
-        <div className="crm-card" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem", marginBottom: "1.5rem", backgroundColor: "var(--bg-secondary)" }}>
-          <div style={{ padding: "0.5rem" }}>
-            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>
-              {project.pricingModel === "Hourly" ? "Est. Hourly Budget" : "Contract Fixed Budget"} ({project.currency || "INR"})
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
-              {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 2 }).format(project.finalBudget)}
-            </div>
-            {project.bonus > 0 && (
-              <span style={{ fontSize: "0.75rem", color: "var(--success-color)", fontWeight: 500 }}>
-                + {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(project.bonus)} Bonus
-              </span>
-            )}
-          </div>
-
-          <div style={{ padding: "0.5rem" }}>
-            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Total Collected</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--success-color)", marginTop: "4px" }}>
-              {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 2 }).format(project.totalReceived)}
-            </div>
-          </div>
-
-          <div style={{ padding: "0.5rem" }}>
-            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Outstanding Balance</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", marginTop: "4px" }}>
-              {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 2 }).format(project.pendingAmount)}
-            </div>
-          </div>
-
-          <div style={{ padding: "0.5rem" }}>
-            <div style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", textTransform: "uppercase" }}>Primary BDA Manager</div>
-            <div style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--text-primary)", marginTop: "6px" }}>
-              {project.primaryBda?.name}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Project Closure Review & Client Outcome Card (Visible to Developers, BDAs & Admins) */}
-      {(project.clientFeedback || project.closeOutcome || project.status === "Completed" || project.status === "Cancelled") && (
-        <div 
-          className="crm-card" 
-          style={{ 
-            marginBottom: "1.5rem", 
-            border: project.closeOutcome === "Good" 
-              ? "1px solid rgba(16, 185, 129, 0.4)" 
-              : project.closeOutcome === "Bad" 
-                ? "1px solid rgba(239, 68, 68, 0.4)" 
-                : "1px solid var(--border-primary)",
-            background: project.closeOutcome === "Good"
-              ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-secondary) 100%)"
-              : project.closeOutcome === "Bad"
-                ? "linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bg-secondary) 100%)"
-                : "var(--bg-secondary)"
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Award size={20} color={project.closeOutcome === "Good" ? "#10b981" : project.closeOutcome === "Bad" ? "#ef4444" : "var(--primary-color)"} />
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
-                Project Closure Review & Client Feedback
-              </h3>
-            </div>
-            
-            {/* Outcome Badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.35rem",
-                padding: "0.35rem 0.75rem",
-                borderRadius: "8px",
-                fontWeight: 700,
-                fontSize: "0.8125rem",
-                backgroundColor: project.closeOutcome === "Good" 
-                  ? "rgba(16, 185, 129, 0.15)" 
-                  : project.closeOutcome === "Bad" 
-                    ? "rgba(239, 68, 68, 0.15)" 
-                    : "rgba(99, 102, 241, 0.15)",
-                color: project.closeOutcome === "Good" 
-                  ? "#10b981" 
-                  : project.closeOutcome === "Bad" 
-                    ? "var(--danger-color)" 
-                    : "var(--primary-color)",
-                border: "1px solid currentColor"
-              }}>
-                {project.closeOutcome === "Good" ? <ThumbsUp size={14} /> : project.closeOutcome === "Bad" ? <ThumbsDown size={14} /> : <Award size={14} />}
-                Closure Outcome: {project.closeOutcome ? `${project.closeOutcome} Project Closure` : "Standard Closure"}
-              </span>
-
-              {/* Star Rating */}
-              <div style={{ display: "flex", gap: "2px", alignItems: "center", backgroundColor: "var(--bg-primary)", padding: "0.3rem 0.6rem", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star 
-                    key={star} 
-                    size={14} 
-                    fill={star <= (Number(project.clientRating) || 5) ? "#f59e0b" : "none"} 
-                    color={star <= (Number(project.clientRating) || 5) ? "#f59e0b" : "var(--text-tertiary)"} 
-                  />
-                ))}
-                <span style={{ fontSize: "0.75rem", fontWeight: 700, marginLeft: "4px", color: "var(--text-secondary)" }}>
-                  {project.clientRating || 5}/5
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Client Feedback Comment */}
-          <div style={{ 
-            backgroundColor: "var(--bg-primary)", 
-            padding: "1rem 1.25rem", 
-            borderRadius: "8px", 
-            border: "1px solid var(--border-primary)",
-            fontSize: "0.875rem",
-            lineHeight: 1.6,
-            color: "var(--text-primary)"
-          }}>
-            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", marginBottom: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
-              <MessageCircle size={13} />
-              Client Feedback & Performance Review
-            </div>
-            <div style={{ fontStyle: project.clientFeedback ? "normal" : "italic", color: project.clientFeedback ? "var(--text-primary)" : "var(--text-tertiary)" }}>
-              {project.clientFeedback ? `"${project.clientFeedback}"` : "Client review recorded. Deliverables accepted."}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Flagged Issue Box */}
-      {!isDeveloper && project.status === "Issue" && project.issueDescription && (
-        <div style={{ 
-          backgroundColor: "var(--danger-light)", 
-          color: "var(--danger-text)", 
-          border: "1px solid rgba(239, 68, 68, 0.2)",
-          padding: "1rem 1.5rem",
-          borderRadius: "8px",
-          display: "flex",
-          gap: "1rem",
-          alignItems: "center",
-          marginBottom: "1.5rem"
-        }}>
-          <AlertOctagon size={24} />
-          <div>
-            <div style={{ fontWeight: 700 }}>Project Issue Flagged</div>
-            <div style={{ fontSize: "0.875rem", marginTop: "2px" }}>{project.issueDescription}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Dedicated Project Details & Messages Section */}
+      {/* Main Content Side-by-Side: Left Details & Right Dedicated Full View Chat */}
       <div 
         className="crm-project-layout-grid"
         style={{ 
           display: "grid", 
-          gridTemplateColumns: project?.conversationId ? "1.15fr 0.85fr" : "1fr", 
-          gap: "1.5rem", 
-          alignItems: "start" 
+          gridTemplateColumns: project?.conversationId ? "1fr 1fr" : "1fr", 
+          gap: "1.25rem", 
+          alignItems: "stretch" 
         }}
       >
-        {/* Left Column: Deadlines, Payments, Ownership & Activity Timeline */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", minWidth: 0 }}>
+        {/* Left Column: Financials, Deadlines, Milestones, Ownership & Timeline */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", minWidth: 0 }}>
           
+          {/* Financials Overview Card - Hidden for Developer */}
+          {!isDeveloper && (
+            <div className="crm-card" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "1rem", backgroundColor: "var(--bg-secondary)", padding: "1.25rem" }}>
+              <div>
+                <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", textTransform: "uppercase" }}>
+                  Budget ({project.currency || "INR"})
+                </div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
+                  {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(project.finalBudget)}
+                </div>
+                {project.bonus > 0 && (
+                  <span style={{ fontSize: "0.7rem", color: "var(--success-color)", fontWeight: 500 }}>
+                    +{new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(project.bonus)}
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", textTransform: "uppercase" }}>Collected</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--success-color)", marginTop: "2px" }}>
+                  {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(project.totalReceived)}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", textTransform: "uppercase" }}>Pending</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", marginTop: "2px" }}>
+                  {new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(project.pendingAmount)}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", textTransform: "uppercase" }}>Manager</div>
+                <div style={{ fontSize: "0.9375rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {project.primaryBda?.name || "Unassigned"}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Project Closure Review & Client Outcome Card */}
+          {(project.clientFeedback || project.closeOutcome || project.status === "Completed" || project.status === "Cancelled") && (
+            <div 
+              className="crm-card" 
+              style={{ 
+                border: project.closeOutcome === "Good" 
+                  ? "1px solid rgba(16, 185, 129, 0.4)" 
+                  : project.closeOutcome === "Bad" 
+                    ? "1px solid rgba(239, 68, 68, 0.4)" 
+                    : "1px solid var(--border-primary)",
+                background: project.closeOutcome === "Good"
+                  ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-secondary) 100%)"
+                  : project.closeOutcome === "Bad"
+                    ? "linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bg-secondary) 100%)"
+                    : "var(--bg-secondary)"
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <Award size={18} color={project.closeOutcome === "Good" ? "#10b981" : project.closeOutcome === "Bad" ? "#ef4444" : "var(--primary-color)"} />
+                  <h3 style={{ fontSize: "0.875rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+                    Closure Review
+                  </h3>
+                </div>
+                
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.25rem",
+                    padding: "0.25rem 0.5rem",
+                    borderRadius: "6px",
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    backgroundColor: project.closeOutcome === "Good" 
+                      ? "rgba(16, 185, 129, 0.15)" 
+                      : project.closeOutcome === "Bad" 
+                        ? "rgba(239, 68, 68, 0.15)" 
+                        : "rgba(99, 102, 241, 0.15)",
+                    color: project.closeOutcome === "Good" 
+                      ? "#10b981" 
+                      : project.closeOutcome === "Bad" 
+                        ? "var(--danger-color)" 
+                        : "var(--primary-color)",
+                    border: "1px solid currentColor"
+                  }}>
+                    {project.closeOutcome === "Good" ? <ThumbsUp size={12} /> : project.closeOutcome === "Bad" ? <ThumbsDown size={12} /> : <Award size={12} />}
+                    {project.closeOutcome ? `${project.closeOutcome}` : "Closed"}
+                  </span>
+
+                  <div style={{ display: "flex", gap: "2px", alignItems: "center", backgroundColor: "var(--bg-primary)", padding: "0.2rem 0.45rem", borderRadius: "6px", border: "1px solid var(--border-primary)" }}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star 
+                        key={star} 
+                        size={12} 
+                        fill={star <= (Number(project.clientRating) || 5) ? "#f59e0b" : "none"} 
+                        color={star <= (Number(project.clientRating) || 5) ? "#f59e0b" : "var(--text-tertiary)"} 
+                      />
+                    ))}
+                    <span style={{ fontSize: "0.7rem", fontWeight: 700, marginLeft: "3px", color: "var(--text-secondary)" }}>
+                      {project.clientRating || 5}/5
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {project.clientFeedback && (
+                <div style={{ 
+                  backgroundColor: "var(--bg-primary)", 
+                  padding: "0.75rem", 
+                  borderRadius: "6px", 
+                  border: "1px solid var(--border-primary)",
+                  fontSize: "0.8125rem",
+                  color: "var(--text-primary)"
+                }}>
+                  "{project.clientFeedback}"
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Flagged Issue Box */}
+          {!isDeveloper && project.status === "Issue" && project.issueDescription && (
+            <div style={{ 
+              backgroundColor: "var(--danger-light)", 
+              color: "var(--danger-text)", 
+              border: "1px solid rgba(239, 68, 68, 0.2)",
+              padding: "0.85rem 1.25rem",
+              borderRadius: "8px",
+              display: "flex",
+              gap: "0.75rem",
+              alignItems: "center"
+            }}>
+              <AlertOctagon size={20} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.875rem" }}>Project Issue Flagged</div>
+                <div style={{ fontSize: "0.8125rem", marginTop: "2px" }}>{project.issueDescription}</div>
+              </div>
+            </div>
+          )}
+
           {/* Milestone Details Card */}
           <div className="crm-card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: 0 }}>Project Deadlines & Scope</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 700, textTransform: "uppercase", marginBottom: 0 }}>Project Deadlines & Scope</h3>
               {!isDeveloper && (
                 <button
                   type="button"
                   onClick={() => setActiveModal("deadline")}
-                  style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.8125rem", fontWeight: 600, cursor: "pointer" }}
+                  style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.775rem", fontWeight: 600, cursor: "pointer" }}
                 >
-                  Edit Deadline
+                  Edit
                 </button>
               )}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.875rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", fontSize: "0.8125rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--text-tertiary)" }}>Start Date</span>
                 <strong>{new Date(project.startDate).toLocaleDateString()}</strong>
@@ -875,9 +816,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <strong>{project.source || "None"}</strong>
               </div>
               {project.notes && (
-                <div style={{ marginTop: "0.5rem", padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", fontWeight: 700, textTransform: "uppercase", marginBottom: "4px" }}>Project Scope / Notes:</div>
-                  <div style={{ fontSize: "0.8125rem", color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>{project.notes}</div>
+                <div style={{ marginTop: "0.35rem", padding: "0.6rem 0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "6px", border: "1px solid var(--border-primary)" }}>
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", fontWeight: 700, textTransform: "uppercase", marginBottom: "2px" }}>Scope / Notes:</div>
+                  <div style={{ fontSize: "0.775rem", color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>{project.notes}</div>
                 </div>
               )}
             </div>
@@ -886,24 +827,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           {/* Payment Milestone Log Card - Hidden for Developer */}
           {!isDeveloper && (
             <div className="crm-card">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-                <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: 0 }}>Milestone Payments Log</h3>
-                <button onClick={() => setActiveModal("payment")} style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.8125rem", fontWeight: 600, cursor: "pointer" }}>
-                  + Add Transaction
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 700, textTransform: "uppercase", marginBottom: 0 }}>Milestone Payments Log</h3>
+                <button onClick={() => setActiveModal("payment")} style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.775rem", fontWeight: 600, cursor: "pointer" }}>
+                  + Add Payment
                 </button>
               </div>
 
               {project.payments?.length === 0 ? (
-                <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>No payments recorded yet.</div>
+                <div style={{ padding: "1.25rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.8125rem" }}>No payments recorded yet.</div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                   {project.payments.map((pay: any) => (
-                    <div key={pay.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)", fontSize: "0.875rem" }}>
+                    <div key={pay.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "6px", border: "1px solid var(--border-primary)", fontSize: "0.8125rem" }}>
                       <div>
-                        <div style={{ fontWeight: 600 }}>{new Intl.NumberFormat("en-IN", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(pay.amount)}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>{pay.note || "No note"}</div>
+                        <div style={{ fontWeight: 700 }}>{new Intl.NumberFormat("en-IN", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(pay.amount)}</div>
+                        <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginTop: "1px" }}>{pay.note || "Payment recorded"}</div>
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
                         {new Date(pay.paymentDate).toLocaleDateString()}
                       </div>
                     </div>
@@ -916,15 +857,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           {/* Ownership Takeovers history */}
           {project.ownershipHistory?.length > 0 && (
             <div className="crm-card">
-              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: "1rem" }}>Project Managers Ownership Logs</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.875rem" }}>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 700, textTransform: "uppercase", marginBottom: "0.75rem" }}>Ownership Logs</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.8125rem" }}>
                 {project.ownershipHistory.map((h: any) => (
-                  <div key={h.id} style={{ borderLeft: "2px solid var(--primary-color)", paddingLeft: "0.75rem" }}>
+                  <div key={h.id} style={{ borderLeft: "2px solid var(--primary-color)", paddingLeft: "0.6rem" }}>
                     <div>
-                      Manager: <strong>{h.newBda?.name}</strong> taken over from <strong>{h.previousBda?.name || "Original BDA"}</strong>
+                      Manager: <strong>{h.newBda?.name}</strong> from <strong>{h.previousBda?.name || "Original BDA"}</strong>
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
-                      Date: {new Date(h.takeoverDate).toLocaleString()} • Note: {h.note || "No details"}
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                      {new Date(h.takeoverDate).toLocaleString()} • Note: {h.note || "No details"}
                     </div>
                   </div>
                 ))}
@@ -934,8 +875,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Activity Log */}
           <div className="crm-card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, textTransform: "uppercase", marginBottom: 0 }}>Project timeline & logs</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 700, textTransform: "uppercase", marginBottom: 0 }}>Project timeline & logs</h3>
               {!isDeveloper && (
                 <button 
                   type="button"
@@ -943,7 +884,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     setTimelineForm({ type: "Note", notes: "" });
                     setActiveModal("timeline");
                   }}
-                  style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.8125rem", fontWeight: 600, cursor: "pointer" }}
+                  style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.775rem", fontWeight: 600, cursor: "pointer" }}
                 >
                   + Add Update
                 </button>
@@ -951,7 +892,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             {(!project.activities || project.activities.length === 0) ? (
-              <div style={{ padding: "1.5rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+              <div style={{ padding: "1.25rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.8125rem" }}>
                 No activity logs recorded yet.
               </div>
             ) : (
@@ -961,10 +902,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <div key={act.id} style={timelineStyles.timelineItem}>
                       <div style={timelineStyles.timelineDot} />
                       <div style={timelineStyles.timelineContent}>
-                        <div style={{ fontSize: "0.875rem", color: "var(--text-primary)" }}>
+                        <div style={{ fontSize: "0.8125rem", color: "var(--text-primary)" }}>
                           <strong>{act.user?.name || "System"}</strong>: {act.notes}
                         </div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                        <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
                           {new Date(act.timestamp).toLocaleString()} • {act.type}
                         </div>
                       </div>
@@ -973,12 +914,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </div>
 
                 {project.activities.length > 3 && (
-                  <div style={{ marginTop: "1rem", textAlign: "center", borderTop: "1px solid var(--border-primary)", paddingTop: "0.75rem" }}>
+                  <div style={{ marginTop: "0.75rem", textAlign: "center", borderTop: "1px solid var(--border-primary)", paddingTop: "0.5rem" }}>
                     <button 
                       type="button"
                       onClick={() => setShowAllActivities(!showAllActivities)}
                       className="crm-btn crm-btn-secondary"
-                      style={{ fontSize: "0.775rem", padding: "4px 12px", width: "100%", justifyContent: "center" }}
+                      style={{ fontSize: "0.75rem", padding: "3px 10px", width: "100%", justifyContent: "center" }}
                     >
                       {showAllActivities 
                         ? `Show Less (Collapse)` 
@@ -991,7 +932,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        {/* Right Dedicated Column: Project Team Messages & Discussions */}
+        {/* Right Dedicated Column: Full-Height Project Team Messages & Discussions */}
         {project?.conversationId && (
           <div 
             className="crm-card" 
@@ -999,8 +940,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               padding: 0, 
               display: "flex", 
               flexDirection: "column", 
-              height: "720px", 
-              maxHeight: "calc(100vh - 120px)",
+              height: "calc(100vh - 200px)", 
+              minHeight: "580px",
               position: "sticky", 
               top: "90px",
               overflow: "hidden",
