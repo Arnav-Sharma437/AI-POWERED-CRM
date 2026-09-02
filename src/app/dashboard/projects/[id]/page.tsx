@@ -7,7 +7,7 @@ import {
   Plus, Calendar, Mail, FileText, CheckCircle2, DollarSign,
   Send, Paperclip, MessageSquare, Trash2, X, Clock, Hourglass, 
   AlertTriangle, Flame, Minimize2, Maximize2, ChevronDown, ChevronUp,
-  Star, ThumbsUp, ThumbsDown, Award, MessageCircle
+  Star, ThumbsUp, ThumbsDown, Award, MessageCircle, Edit
 } from "lucide-react";
 import { useDashboard } from "../../layout";
 import AiLoader from "@/components/AiLoader";
@@ -50,10 +50,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [deadlineForm, setDeadlineForm] = useState({ deadlineDate: "", deadlineTime: "18:00" });
 
   // Modal / Input States
-  const [activeModal, setActiveModal] = useState<string | null>(null); // 'payment' | 'takeover' | 'assign' | 'status' | 'timeline' | 'deadline'
+  const [activeModal, setActiveModal] = useState<string | null>(null); // 'payment' | 'takeover' | 'assign' | 'status' | 'timeline' | 'deadline' | 'editProject'
   const [paymentForm, setPaymentForm] = useState({ amount: "", note: "" });
   const [takeoverForm, setTakeoverForm] = useState({ newBdaId: "", note: "" });
   const [assignForm, setAssignForm] = useState({ devId: "", workDetails: "" });
+  const [editProjectForm, setEditProjectForm] = useState({
+    name: "",
+    serviceType: "Web Design",
+    currency: "INR",
+    pricingModel: "Fixed",
+    hourlyRate: "",
+    estimatedHours: "",
+    finalBudget: "",
+    bonus: "0",
+    notes: ""
+  });
   const [statusForm, setStatusForm] = useState({ 
     status: "Work in Progress", 
     issueDescription: "",
@@ -84,6 +95,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         if (!res.ok) throw new Error("Failed to load project details");
         const data = await res.json();
         setProject(data.project);
+
+        setEditProjectForm({
+          name: data.project.name || "",
+          serviceType: data.project.serviceType || "Web Design",
+          currency: data.project.currency || "INR",
+          pricingModel: data.project.pricingModel || "Fixed",
+          hourlyRate: String(data.project.hourlyRate || ""),
+          estimatedHours: String(data.project.estimatedHours || ""),
+          finalBudget: String(data.project.finalBudget || ""),
+          bonus: String(data.project.bonus || "0"),
+          notes: data.project.notes || ""
+        });
 
         setStatusForm({
           status: data.project.status,
@@ -162,34 +185,48 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     if (!currentUser || !project?.conversationId) return;
 
-    const eventSource = new EventSource("/api/chat/realtime");
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource("/api/chat/realtime");
 
-    eventSource.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        if (payload.type === "message" && payload.data.conversationId === project.conversationId) {
-          const newMsg = payload.data;
-          setChatMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-        } else if (payload.type === "delete" && payload.data.conversationId === project.conversationId) {
-          const deleteData = payload.data;
-          setChatMessages((prev) =>
-            prev.map((m) =>
-              m.id === deleteData.id
-                ? { ...m, content: "This message was deleted.", isDeleted: true }
-                : m
-            )
-          );
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === "message" && payload.data.conversationId === project.conversationId) {
+            const newMsg = payload.data;
+            setChatMessages((prev) => {
+              if (prev.some((m) => m.id === newMsg.id)) return prev;
+              return [...prev.filter((m) => !m.pending || m.id !== newMsg.id), newMsg];
+            });
+          } else if (payload.type === "delete" && payload.data.conversationId === project.conversationId) {
+            const deleteData = payload.data;
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === deleteData.id
+                  ? { ...m, content: "This message was deleted.", isDeleted: true }
+                  : m
+              )
+            );
+          }
+        } catch (err) {
+          console.error("SSE parse error in project details:", err);
         }
-      } catch (err) {
-        console.error("SSE parse error in project details:", err);
-      }
-    };
+      };
+
+      eventSource.onerror = (err) => {
+        console.error("Project chat SSE error, using interval sync:", err);
+      };
+    } catch (e) {
+      console.error("Failed to init project chat SSE:", e);
+    }
+
+    const interval = setInterval(() => {
+      loadChatMessages(project.conversationId);
+    }, 3500);
 
     return () => {
-      eventSource.close();
+      if (eventSource) eventSource.close();
+      clearInterval(interval);
     };
   }, [currentUser, project?.conversationId]);
 
@@ -343,6 +380,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         const combinedDateTime = new Date(`${deadlineForm.deadlineDate}T${deadlineForm.deadlineTime || "18:00"}:00`).toISOString();
         body = {
           deadline: combinedDateTime
+        };
+        break;
+      case "editProject":
+        url = `/api/projects/${id}`;
+        method = "PUT";
+        body = {
+          name: editProjectForm.name,
+          serviceType: editProjectForm.serviceType,
+          currency: editProjectForm.currency,
+          pricingModel: editProjectForm.pricingModel,
+          hourlyRate: editProjectForm.pricingModel === "Hourly" ? editProjectForm.hourlyRate : undefined,
+          estimatedHours: editProjectForm.pricingModel === "Hourly" ? editProjectForm.estimatedHours : undefined,
+          finalBudget: editProjectForm.finalBudget,
+          bonus: editProjectForm.bonus,
+          notes: editProjectForm.notes
         };
         break;
       case "status":
@@ -555,6 +607,26 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
           {!isDeveloper ? (
             <>
+              <button 
+                onClick={() => {
+                  setEditProjectForm({
+                    name: project.name || "",
+                    serviceType: project.serviceType || "Web Design",
+                    currency: project.currency || "INR",
+                    pricingModel: project.pricingModel || "Fixed",
+                    hourlyRate: String(project.hourlyRate || ""),
+                    estimatedHours: String(project.estimatedHours || ""),
+                    finalBudget: String(project.finalBudget || ""),
+                    bonus: String(project.bonus || "0"),
+                    notes: project.notes || ""
+                  });
+                  setActiveModal("editProject");
+                }} 
+                className="crm-btn crm-btn-secondary"
+                title="Edit Project Details (Budget, Currency, Rates, Type, Notes)"
+              >
+                <Edit size={14} /> Edit Project
+              </button>
               <button onClick={() => setActiveModal("status")} className="crm-btn crm-btn-secondary"><RefreshCw size={14} /> Update Project Status</button>
               <button onClick={() => {
                 setTimelineForm({ type: "Note", notes: "" });
@@ -1574,6 +1646,149 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Edit Project Form */}
+              {activeModal === "editProject" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div>
+                    <label style={modalStyles.label}>Project Name</label>
+                    <input 
+                      type="text" 
+                      className="crm-input" 
+                      value={editProjectForm.name}
+                      onChange={(e) => setEditProjectForm(prev => ({ ...prev, name: e.target.value }))}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={modalStyles.label}>Service / Project Type</label>
+                    <select 
+                      className="crm-select"
+                      value={editProjectForm.serviceType}
+                      onChange={(e) => setEditProjectForm(prev => ({ ...prev, serviceType: e.target.value }))}
+                    >
+                      <option value="Web Design">Web Design</option>
+                      <option value="Web Development">Web Development</option>
+                      <option value="Shopify">Shopify</option>
+                      <option value="WordPress">WordPress</option>
+                      <option value="UI/UX">UI/UX</option>
+                      <option value="Mobile App">Mobile App</option>
+                      <option value="Custom Software">Custom Software</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", backgroundColor: "var(--bg-secondary)", padding: "0.85rem", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                    <div>
+                      <label style={modalStyles.label}>Currency</label>
+                      <select
+                        className="crm-select"
+                        value={editProjectForm.currency}
+                        onChange={(e) => setEditProjectForm(prev => ({ ...prev, currency: e.target.value }))}
+                      >
+                        <option value="INR">INR (₹) - Indian Rupee</option>
+                        <option value="USD">USD ($) - US Dollar</option>
+                        <option value="EUR">EUR (€) - Euro</option>
+                        <option value="GBP">GBP (£) - British Pound</option>
+                        <option value="AED">AED (د.إ) - UAE Dirham</option>
+                        <option value="CAD">CAD ($) - Canadian Dollar</option>
+                        <option value="AUD">AUD ($) - Australian Dollar</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Pricing Model</label>
+                      <select
+                        className="crm-select"
+                        value={editProjectForm.pricingModel}
+                        onChange={(e) => setEditProjectForm(prev => ({ ...prev, pricingModel: e.target.value }))}
+                      >
+                        <option value="Fixed">Fixed Price Project</option>
+                        <option value="Hourly">Hourly Rate Contract</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {editProjectForm.pricingModel === "Hourly" ? (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", backgroundColor: "var(--bg-primary)", padding: "0.75rem", borderRadius: "8px", border: "1px dashed var(--border-primary)" }}>
+                      <div>
+                        <label style={modalStyles.label}>Hourly Rate ({editProjectForm.currency})</label>
+                        <input 
+                          type="number" 
+                          className="crm-input"
+                          placeholder="e.g. 25"
+                          value={editProjectForm.hourlyRate}
+                          onChange={(e) => {
+                            const rate = e.target.value;
+                            const hrs = editProjectForm.estimatedHours;
+                            const calcTotal = rate && hrs ? String(parseFloat(rate) * parseFloat(hrs)) : editProjectForm.finalBudget;
+                            setEditProjectForm(prev => ({ ...prev, hourlyRate: rate, finalBudget: calcTotal }));
+                          }}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Est. Hours</label>
+                        <input 
+                          type="number" 
+                          className="crm-input"
+                          placeholder="e.g. 40"
+                          value={editProjectForm.estimatedHours}
+                          onChange={(e) => {
+                            const hrs = e.target.value;
+                            const rate = editProjectForm.hourlyRate;
+                            const calcTotal = rate && hrs ? String(parseFloat(rate) * parseFloat(hrs)) : editProjectForm.finalBudget;
+                            setEditProjectForm(prev => ({ ...prev, estimatedHours: hrs, finalBudget: calcTotal }));
+                          }}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Est. Total Budget</label>
+                        <input 
+                          type="number" 
+                          className="crm-input"
+                          value={editProjectForm.finalBudget}
+                          onChange={(e) => setEditProjectForm(prev => ({ ...prev, finalBudget: e.target.value }))}
+                          required
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Final Fixed Budget ({editProjectForm.currency})</label>
+                        <input 
+                          type="number" 
+                          className="crm-input"
+                          value={editProjectForm.finalBudget}
+                          onChange={(e) => setEditProjectForm(prev => ({ ...prev, finalBudget: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Bonus Budget ({editProjectForm.currency})</label>
+                        <input 
+                          type="number" 
+                          className="crm-input"
+                          value={editProjectForm.bonus}
+                          onChange={(e) => setEditProjectForm(prev => ({ ...prev, bonus: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label style={modalStyles.label}>Project Scope & Description Notes</label>
+                    <textarea 
+                      className="crm-textarea" 
+                      rows={3} 
+                      value={editProjectForm.notes}
+                      onChange={(e) => setEditProjectForm(prev => ({ ...prev, notes: e.target.value }))}
+                    />
+                  </div>
                 </div>
               )}
 

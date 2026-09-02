@@ -147,74 +147,103 @@ function ChatContent() {
     }
   }, [activeConvId]);
 
-  // Real-time Event Listener using Server-Sent Events (SSE)
+  // Real-time Event Listener using Server-Sent Events (SSE) + 3s Polling Fallback
   useEffect(() => {
     if (!currentUser) return;
 
-    const eventSource = new EventSource("/api/chat/realtime");
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource("/api/chat/realtime");
 
-    eventSource.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        
-        if (payload.type === "message") {
-          const newMsg = payload.data;
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
           
-          // Append message if active
-          if (newMsg.conversationId === activeConvId) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === newMsg.id)) return prev;
-              const next = [...prev, newMsg];
-              globalChatCache.messagesByConv[newMsg.conversationId] = next;
-              return next;
-            });
-            // Mark as read instantly on active conversation
-            fetch(`/api/chat/conversations/${activeConvId}/read`, { method: "POST" });
-          } else {
-            // Update cache for other conversations
-            if (globalChatCache.messagesByConv[newMsg.conversationId]) {
-              globalChatCache.messagesByConv[newMsg.conversationId].push(newMsg);
+          if (payload.type === "message") {
+            const newMsg = payload.data;
+            
+            // Append message if active
+            if (newMsg.conversationId === activeConvId) {
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === newMsg.id)) return prev;
+                const next = [...prev.filter((m) => !m.pending || m.id !== newMsg.id), newMsg];
+                globalChatCache.messagesByConv[newMsg.conversationId] = next;
+                return next;
+              });
+              // Mark as read instantly on active conversation
+              fetch(`/api/chat/conversations/${activeConvId}/read`, { method: "POST" });
+            } else {
+              // Update cache for other conversations
+              if (globalChatCache.messagesByConv[newMsg.conversationId]) {
+                const existing = globalChatCache.messagesByConv[newMsg.conversationId];
+                if (!existing.some(m => m.id === newMsg.id)) {
+                  globalChatCache.messagesByConv[newMsg.conversationId].push(newMsg);
+                }
+              }
+            }
+            // Refresh list to show latest message / unread counts
+            fetchConversations();
+          } else if (payload.type === "delete") {
+            const deleteData = payload.data;
+            if (deleteData.conversationId === activeConvId) {
+              setMessages((prev) => {
+                const updated = prev.filter((m) => m.id !== deleteData.id);
+                globalChatCache.messagesByConv[deleteData.conversationId] = updated;
+                return updated;
+              });
+            }
+          } else if (payload.type === "read") {
+            const readData = payload.data;
+            if (readData.conversationId === activeConvId) {
+              setMessages((prev) =>
+                prev.map((m) => {
+                  if (m.senderId === readData.userId) return m;
+                  // Add read status
+                  const alreadyRead = m.reads.some((r: any) => r.userId === readData.userId);
+                  if (alreadyRead) return m;
+                  return {
+                    ...m,
+                    reads: [...m.reads, { userId: readData.userId, readAt: readData.readAt }]
+                  };
+                })
+              );
             }
           }
-          // Refresh list to show latest message / unread counts
-          fetchConversations();
-        } else if (payload.type === "delete") {
-          const deleteData = payload.data;
-          if (deleteData.conversationId === activeConvId) {
-            setMessages((prev) => {
-              const updated = prev.filter((m) => m.id !== deleteData.id);
-              globalChatCache.messagesByConv[deleteData.conversationId] = updated;
-              return updated;
-            });
-          }
-        } else if (payload.type === "read") {
-          const readData = payload.data;
-          if (readData.conversationId === activeConvId) {
-            setMessages((prev) =>
-              prev.map((m) => {
-                if (m.senderId === readData.userId) return m;
-                // Add read status
-                const alreadyRead = m.reads.some((r: any) => r.userId === readData.userId);
-                if (alreadyRead) return m;
-                return {
-                  ...m,
-                  reads: [...m.reads, { userId: readData.userId, readAt: readData.readAt }]
-                };
-              })
-            );
-          }
+        } catch (err) {
+          console.error("Failed to parse SSE payload:", err);
         }
-      } catch (err) {
-        console.error("Failed to parse SSE payload:", err);
-      }
-    };
+      };
 
-    eventSource.onerror = (err) => {
-      console.error("SSE stream error:", err);
-    };
+      eventSource.onerror = (err) => {
+        console.error("SSE stream error, relying on sync polling:", err);
+      };
+    } catch (e) {
+      console.error("SSE init failed:", e);
+    }
+
+    // Resilient background syncing every 3.5 seconds
+    const interval = setInterval(() => {
+      if (activeConvId) {
+        fetch(`/api/chat/conversations/${activeConvId}/messages`)
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => {
+            if (data?.messages) {
+              setMessages((prev) => {
+                const pendingOnly = prev.filter(m => m.pending);
+                const merged = [...data.messages, ...pendingOnly.filter(p => !data.messages.some((m: any) => m.content === p.content && Math.abs(new Date(m.createdAt).getTime() - new Date(p.createdAt).getTime()) < 10000))];
+                globalChatCache.messagesByConv[activeConvId] = merged;
+                return merged;
+              });
+            }
+          })
+          .catch(() => {});
+      }
+      fetchConversations();
+    }, 3500);
 
     return () => {
-      eventSource.close();
+      if (eventSource) eventSource.close();
+      clearInterval(interval);
     };
   }, [currentUser, activeConvId]);
 
@@ -277,6 +306,8 @@ function ChatContent() {
         const errData = await res.json();
         alert(errData.error || "Failed to send message");
         // Remove optimistic message on failure
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      } else {
         const data = await res.json();
         if (data.message) {
           setMessages((prev) => {
@@ -285,6 +316,7 @@ function ChatContent() {
             return updated;
           });
         }
+        fetchConversations();
       }
     } catch (err) {
       console.error(err);
