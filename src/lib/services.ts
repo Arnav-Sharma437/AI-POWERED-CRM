@@ -1118,6 +1118,8 @@ export async function updateProject(id: string, data: any, userId: string): Prom
       where: { id },
       data: {
         name: data.name,
+        clientId: data.clientId,
+        serviceType: data.serviceType,
         source: data.source,
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         deadline: data.deadline ? new Date(data.deadline) : undefined,

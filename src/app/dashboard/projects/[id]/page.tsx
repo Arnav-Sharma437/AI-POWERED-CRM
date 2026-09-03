@@ -14,7 +14,7 @@ import AiLoader from "@/components/AiLoader";
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const { bdas, devs, setTriggerRefresh, triggerRefresh, currentUser } = useDashboard();
+  const { bdas, devs, clientsList, setTriggerRefresh, triggerRefresh, currentUser } = useDashboard();
   
   // Resolve params
   const resolvedParams = use(params);
@@ -54,6 +54,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [assignForm, setAssignForm] = useState<{ devId: string; devIds: string[]; workDetails: string }>({ devId: "", devIds: [], workDetails: "" });
   const [editProjectForm, setEditProjectForm] = useState({
     name: "",
+    clientId: "",
+    source: "Upwork",
+    platform: "Upwork",
+    platformAccountId: "Rakesh",
+    startDate: "",
+    deadline: "",
+    deadlineTime: "18:00",
     serviceType: "Web Design",
     currency: "INR",
     pricingModel: "Fixed",
@@ -102,8 +109,57 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         const data = await res.json();
         setProject(data.project);
 
+        let plat = "Upwork";
+        let platAcc = "Rakesh";
+        const rawSource = data.project.source || "";
+        if (rawSource.includes("Upwork")) {
+          plat = "Upwork";
+          const match = rawSource.match(/\((.*?)\)/);
+          platAcc = match ? match[1] : "Rakesh";
+        } else if (rawSource.includes("Freelancer")) {
+          plat = "Freelancer";
+          const match = rawSource.match(/\((.*?)\)/);
+          platAcc = match ? match[1] : "Pixxelu";
+        } else if (rawSource.includes("WhatsApp")) {
+          plat = "WhatsApp";
+          platAcc = "";
+        } else if (rawSource.includes("Outside")) {
+          plat = "Outside";
+          platAcc = "";
+        }
+
+        let startDateStr = "";
+        if (data.project.startDate) {
+          const sd = new Date(data.project.startDate);
+          startDateStr = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, "0")}-${String(sd.getDate()).padStart(2, "0")}`;
+        }
+
+        let deadlineDateStr = "";
+        let deadlineTimeStr = "18:00";
+        if (data.project.deadline) {
+          const d = new Date(data.project.deadline);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const hh = String(d.getHours()).padStart(2, "0");
+          const min = String(d.getMinutes()).padStart(2, "0");
+          deadlineDateStr = `${yyyy}-${mm}-${dd}`;
+          deadlineTimeStr = `${hh}:${min}`;
+          setDeadlineForm({
+            deadlineDate: deadlineDateStr,
+            deadlineTime: deadlineTimeStr
+          });
+        }
+
         setEditProjectForm({
           name: data.project.name || "",
+          clientId: data.project.clientId || "",
+          source: rawSource || `${plat} (${platAcc})`,
+          platform: plat,
+          platformAccountId: platAcc,
+          startDate: startDateStr,
+          deadline: deadlineDateStr,
+          deadlineTime: deadlineTimeStr,
           serviceType: data.project.serviceType || "Web Design",
           currency: data.project.currency || "INR",
           pricingModel: data.project.pricingModel || "Fixed",
@@ -121,19 +177,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           clientRating: String(data.project.clientRating || "5"),
           clientFeedback: data.project.clientFeedback || ""
         });
-
-        if (data.project.deadline) {
-          const d = new Date(data.project.deadline);
-          const yyyy = d.getFullYear();
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          const dd = String(d.getDate()).padStart(2, "0");
-          const hh = String(d.getHours()).padStart(2, "0");
-          const min = String(d.getMinutes()).padStart(2, "0");
-          setDeadlineForm({
-            deadlineDate: `${yyyy}-${mm}-${dd}`,
-            deadlineTime: `${hh}:${min}`
-          });
-        }
 
         if (data.project.conversationId) {
           loadChatMessages(data.project.conversationId);
@@ -399,8 +442,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       case "editProject":
         url = `/api/projects/${id}`;
         method = "PUT";
+        let editDeadlineIso = undefined;
+        if (editProjectForm.deadline) {
+          editDeadlineIso = new Date(`${editProjectForm.deadline}T${editProjectForm.deadlineTime || "18:00"}:00`).toISOString();
+        }
         body = {
           name: editProjectForm.name,
+          clientId: editProjectForm.clientId || undefined,
+          source: editProjectForm.source,
+          startDate: editProjectForm.startDate ? new Date(`${editProjectForm.startDate}T00:00:00`).toISOString() : undefined,
+          deadline: editDeadlineIso,
           serviceType: editProjectForm.serviceType,
           currency: editProjectForm.currency,
           pricingModel: editProjectForm.pricingModel,
@@ -566,8 +617,53 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <>
               <button 
                 onClick={() => {
+                  let plat = "Upwork";
+                  let platAcc = "Rakesh";
+                  const rawSource = project.source || "";
+                  if (rawSource.includes("Upwork")) {
+                    plat = "Upwork";
+                    const match = rawSource.match(/\((.*?)\)/);
+                    platAcc = match ? match[1] : "Rakesh";
+                  } else if (rawSource.includes("Freelancer")) {
+                    plat = "Freelancer";
+                    const match = rawSource.match(/\((.*?)\)/);
+                    platAcc = match ? match[1] : "Pixxelu";
+                  } else if (rawSource.includes("WhatsApp")) {
+                    plat = "WhatsApp";
+                    platAcc = "";
+                  } else if (rawSource.includes("Outside")) {
+                    plat = "Outside";
+                    platAcc = "";
+                  }
+
+                  let startDateStr = "";
+                  if (project.startDate) {
+                    const sd = new Date(project.startDate);
+                    startDateStr = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, "0")}-${String(sd.getDate()).padStart(2, "0")}`;
+                  }
+
+                  let deadlineDateStr = "";
+                  let deadlineTimeStr = "18:00";
+                  if (project.deadline) {
+                    const d = new Date(project.deadline);
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, "0");
+                    const dd = String(d.getDate()).padStart(2, "0");
+                    const hh = String(d.getHours()).padStart(2, "0");
+                    const min = String(d.getMinutes()).padStart(2, "0");
+                    deadlineDateStr = `${yyyy}-${mm}-${dd}`;
+                    deadlineTimeStr = `${hh}:${min}`;
+                  }
+
                   setEditProjectForm({
                     name: project.name || "",
+                    clientId: project.clientId || "",
+                    source: rawSource || `${plat} (${platAcc})`,
+                    platform: plat,
+                    platformAccountId: platAcc,
+                    startDate: startDateStr,
+                    deadline: deadlineDateStr,
+                    deadlineTime: deadlineTimeStr,
                     serviceType: project.serviceType || "Web Design",
                     currency: project.currency || "INR",
                     pricingModel: project.pricingModel || "Fixed",
@@ -1711,22 +1807,136 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     />
                   </div>
 
-                  <div>
-                    <label style={modalStyles.label}>Service / Project Type</label>
-                    <select 
-                      className="crm-select"
-                      value={editProjectForm.serviceType}
-                      onChange={(e) => setEditProjectForm(prev => ({ ...prev, serviceType: e.target.value }))}
-                    >
-                      <option value="Web Design">Web Design</option>
-                      <option value="Web Development">Web Development</option>
-                      <option value="Shopify">Shopify</option>
-                      <option value="WordPress">WordPress</option>
-                      <option value="UI/UX">UI/UX</option>
-                      <option value="Mobile App">Mobile App</option>
-                      <option value="Custom Software">Custom Software</option>
-                      <option value="Other">Other</option>
-                    </select>
+                  {/* Lead/Client Acquisition Platform */}
+                  <div style={{ display: "grid", gridTemplateColumns: (editProjectForm.platform === "Upwork" || editProjectForm.platform === "Freelancer") ? "1fr 1fr" : "1fr", gap: "1rem", backgroundColor: "var(--bg-secondary)", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                    <div>
+                      <label style={modalStyles.label}>Client Platform / Source</label>
+                      <select 
+                        className="crm-select"
+                        value={editProjectForm.platform}
+                        onChange={(e) => {
+                          const plat = e.target.value;
+                          const defaultAccount = plat === "Upwork" ? "Rakesh" : plat === "Freelancer" ? "Pixxelu" : "";
+                          setEditProjectForm(prev => ({ 
+                            ...prev, 
+                            platform: plat, 
+                            platformAccountId: defaultAccount,
+                            source: defaultAccount ? `${plat} (${defaultAccount})` : plat
+                          }));
+                        }}
+                      >
+                        <option value="Upwork">Upwork</option>
+                        <option value="Freelancer">Freelancer</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                        <option value="Outside">Outside / Direct Client</option>
+                      </select>
+                    </div>
+
+                    {editProjectForm.platform === "Upwork" && (
+                      <div>
+                        <label style={modalStyles.label}>Upwork Account / ID</label>
+                        <select 
+                          className="crm-select"
+                          value={editProjectForm.platformAccountId}
+                          onChange={(e) => {
+                            const acc = e.target.value;
+                            setEditProjectForm(prev => ({ 
+                              ...prev, 
+                              platformAccountId: acc,
+                              source: `Upwork (${acc})`
+                            }));
+                          }}
+                        >
+                          <option value="Rakesh">Rakesh</option>
+                          <option value="Shikha">Shikha</option>
+                          <option value="Deepali">Deepali</option>
+                          <option value="Divya">Divya</option>
+                          <option value="Archna">Archna</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {editProjectForm.platform === "Freelancer" && (
+                      <div>
+                        <label style={modalStyles.label}>Freelancer Account / ID</label>
+                        <select 
+                          className="crm-select"
+                          value={editProjectForm.platformAccountId}
+                          onChange={(e) => {
+                            const acc = e.target.value;
+                            setEditProjectForm(prev => ({ 
+                              ...prev, 
+                              platformAccountId: acc,
+                              source: `Freelancer (${acc})`
+                            }));
+                          }}
+                        >
+                          <option value="Pixxelu">Pixxelu</option>
+                          <option value="Archna">Archna</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={modalStyles.label}>Select Client</label>
+                      <select 
+                        className="crm-select"
+                        value={editProjectForm.clientId}
+                        onChange={(e) => setEditProjectForm(prev => ({ ...prev, clientId: e.target.value }))}
+                      >
+                        <option value="">Choose Client</option>
+                        {(clientsList || []).map((c: any) => <option key={c.id} value={c.id}>{c.name} ({c.company || "Client"})</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Service / Project Type</label>
+                      <select 
+                        className="crm-select"
+                        value={editProjectForm.serviceType}
+                        onChange={(e) => setEditProjectForm(prev => ({ ...prev, serviceType: e.target.value }))}
+                      >
+                        <option value="Web Design">Web Design</option>
+                        <option value="Web Development">Web Development</option>
+                        <option value="Shopify">Shopify</option>
+                        <option value="WordPress">WordPress</option>
+                        <option value="UI/UX">UI/UX</option>
+                        <option value="Mobile App">Mobile App</option>
+                        <option value="Custom Software">Custom Software</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem" }}>
+                    <div>
+                      <label style={modalStyles.label}>Start Date</label>
+                      <input 
+                        type="date" 
+                        className="crm-input"
+                        value={editProjectForm.startDate}
+                        onChange={(e) => setEditProjectForm(prev => ({ ...prev, startDate: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Deadline Date</label>
+                      <input 
+                        type="date" 
+                        className="crm-input"
+                        value={editProjectForm.deadline}
+                        onChange={(e) => setEditProjectForm(prev => ({ ...prev, deadline: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={modalStyles.label}>Deadline Time</label>
+                      <input 
+                        type="time" 
+                        className="crm-input"
+                        value={editProjectForm.deadlineTime}
+                        onChange={(e) => setEditProjectForm(prev => ({ ...prev, deadlineTime: e.target.value }))}
+                      />
+                    </div>
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", backgroundColor: "var(--bg-secondary)", padding: "0.85rem", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
