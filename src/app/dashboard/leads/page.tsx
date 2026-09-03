@@ -14,8 +14,21 @@ export default function LeadsPage() {
   const router = useRouter();
   const { openQuickAdd, triggerRefresh, bdas, currentUser } = useDashboard();
   
-  const [loading, setLoading] = useState(true);
-  const [leads, setLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("crm_leads_cache");
+        return cached ? JSON.parse(cached) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("crm_leads_cache");
+    }
+    return true;
+  });
   const [error, setError] = useState("");
   
   // Search & Filter state
@@ -39,7 +52,11 @@ export default function LeadsPage() {
         const res = await fetch("/api/leads");
         if (res.ok) {
           const data = await res.json();
-          setLeads(data.leads || []);
+          const leadsList = data.leads || [];
+          setLeads(leadsList);
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("crm_leads_cache", JSON.stringify(leadsList));
+          }
         }
       } catch (err) {
         console.error("Error loading leads", err);

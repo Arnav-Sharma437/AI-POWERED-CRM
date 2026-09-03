@@ -33,8 +33,21 @@ export default function ClientsPage() {
   const router = useRouter();
   const { triggerRefresh } = useDashboard();
   
-  const [loading, setLoading] = useState(true);
-  const [clients, setClients] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("crm_clients_cache");
+        return cached ? JSON.parse(cached) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("crm_clients_cache");
+    }
+    return true;
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
@@ -44,7 +57,11 @@ export default function ClientsPage() {
         const res = await fetch("/api/clients");
         if (res.ok) {
           const data = await res.json();
-          setClients(data.clients || []);
+          const clientsList = data.clients || [];
+          setClients(clientsList);
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("crm_clients_cache", JSON.stringify(clientsList));
+          }
         }
       } catch (err) {
         console.error("Error loading clients", err);

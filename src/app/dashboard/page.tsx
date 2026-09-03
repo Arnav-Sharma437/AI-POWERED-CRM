@@ -17,9 +17,25 @@ export default function DashboardPage() {
   const isDeveloper = currentUser?.roleName === "Developer";
   const isSuperAdmin = currentUser?.roleName === "Super Admin";
   
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
-  const [devProjects, setDevProjects] = useState<any[]>([]);
+  // Memory Cache for 0ms Instant Page Transitions
+  const [data, setData] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("crm_dashboard_stats_cache");
+        return cached ? JSON.parse(cached) : null;
+      } catch { return null; }
+    }
+    return null;
+  });
+  const [devProjects, setDevProjects] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("crm_projects_cache");
+        return cached ? JSON.parse(cached) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
 
   // Date Range Filter States (Super Admin & BDA)
   const [dateRange, setDateRange] = useState<"all" | "7d" | "30d" | "month" | "year" | "custom">("all");
@@ -31,6 +47,13 @@ export default function DashboardPage() {
     logs: any[];
     userSummaries: any[];
   }>({ logs: [], userSummaries: [] });
+
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("crm_dashboard_stats_cache");
+    }
+    return true;
+  });
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -48,10 +71,16 @@ export default function DashboardPage() {
         if (statsRes.ok) {
           const statsData = await statsRes.json();
           setData(statsData.stats);
+          if (typeof window !== "undefined" && dateRange === "all") {
+            sessionStorage.setItem("crm_dashboard_stats_cache", JSON.stringify(statsData.stats));
+          }
         }
         if (projRes.ok) {
           const projData = await projRes.json();
           setDevProjects(projData.projects || []);
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("crm_projects_cache", JSON.stringify(projData.projects || []));
+          }
         }
         if (attRes.ok) {
           const attJson = await attRes.json();

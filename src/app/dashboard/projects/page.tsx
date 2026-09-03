@@ -23,8 +23,21 @@ export default function ProjectsPage() {
   const { openQuickAdd, triggerRefresh, currentUser } = useDashboard();
   const isDeveloper = currentUser?.roleName === "Developer";
   
-  const [loading, setLoading] = useState(true);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("crm_projects_cache");
+        return cached ? JSON.parse(cached) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("crm_projects_cache");
+    }
+    return true;
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
@@ -36,7 +49,11 @@ export default function ProjectsPage() {
         const res = await fetch("/api/projects");
         if (res.ok) {
           const data = await res.json();
-          setProjects(data.projects || []);
+          const projList = data.projects || [];
+          setProjects(projList);
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("crm_projects_cache", JSON.stringify(projList));
+          }
         }
       } catch (err) {
         console.error("Error loading projects", err);
