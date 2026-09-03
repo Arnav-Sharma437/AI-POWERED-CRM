@@ -606,16 +606,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <div style={{ 
-                padding: "0.35rem 0.75rem", 
-                borderRadius: "6px", 
-                backgroundColor: "var(--bg-secondary)", 
-                border: "1px solid var(--border-primary)", 
-                fontSize: "0.75rem", 
-                color: "var(--text-secondary)"
-              }}>
-                Assignment: <strong style={{ color: "var(--text-primary)" }}>Active Deliverable</strong>
-              </div>
+              <button onClick={() => setActiveModal("status")} className="crm-btn crm-btn-secondary" style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }} title="Update Project Kanban Stage / Status">
+                <RefreshCw size={13} /> Update Status
+              </button>
               <button 
                 onClick={() => {
                   setTimelineForm({ type: "Note", notes: "" });

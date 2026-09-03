@@ -64,12 +64,17 @@ export async function PUT(
 
     const body = await request.json();
 
-    // If developer attempts to change project status, deadline, budget, or other fields
+    // If developer is updating, allow status and notes updates (Kanban moving), but sanitize financial/management fields
+    let updatePayload = body;
     if (session.roleName === "Developer") {
-      return NextResponse.json({ error: "Forbidden: Developers do not have permission to modify project status or settings." }, { status: 403 });
+      updatePayload = {
+        status: body.status,
+        notes: body.notes,
+        issueDescription: body.issueDescription
+      };
     }
 
-    const project = await updateProject(id, body, session.userId);
+    const project = await updateProject(id, updatePayload, session.userId);
     return NextResponse.json({ success: true, project });
   } catch (error) {
     console.error("Project PUT error:", error);

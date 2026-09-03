@@ -233,7 +233,7 @@ export default function ProjectsPage() {
                 key={stage.id}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
-                  if (draggedProjectId && !isDeveloper) {
+                  if (draggedProjectId) {
                     handleStatusChange(draggedProjectId, stage.id);
                     setDraggedProjectId(null);
                   }
@@ -284,7 +284,7 @@ export default function ProjectsPage() {
                 }}>
                   {stageProjects.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-tertiary)", fontSize: "0.8125rem", border: "1px dashed var(--border-primary)", borderRadius: "10px" }}>
-                      {!isDeveloper ? "Drop project here" : "No deliverables in this stage"}
+                      Drop project here
                     </div>
                   ) : (
                     stageProjects.map((p) => {
@@ -292,15 +292,15 @@ export default function ProjectsPage() {
                       return (
                         <div
                           key={p.id}
-                          draggable={!isDeveloper}
-                          onDragStart={() => !isDeveloper && setDraggedProjectId(p.id)}
+                          draggable
+                          onDragStart={() => setDraggedProjectId(p.id)}
                           onClick={() => router.push(`/dashboard/projects/${p.id}`)}
                           style={{
                             backgroundColor: "var(--bg-primary)",
                             borderRadius: "8px",
                             border: "1px solid var(--border-primary)",
                             padding: "1rem",
-                            cursor: isDeveloper ? "pointer" : "grab",
+                            cursor: "grab",
                             boxShadow: "0 2px 4px rgba(0, 0, 0, 0.04)",
                             transition: "transform 0.15s ease, box-shadow 0.15s ease",
                             display: "flex",
