@@ -87,7 +87,20 @@ export default function TrashPage() {
   return (
     <div className="crm-container animate-fade-in">
       <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Trash Bin</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Trash Bin</h1>
+          <span style={{
+            fontSize: "0.8125rem",
+            fontWeight: 700,
+            backgroundColor: "var(--danger-light)",
+            color: "var(--danger-color)",
+            padding: "0.25rem 0.75rem",
+            borderRadius: "20px",
+            border: "1px solid rgba(239, 68, 68, 0.2)"
+          }}>
+            Total: {trashedLeads.length + trashedProjects.length} {trashedLeads.length + trashedProjects.length === 1 ? "Item" : "Items"}
+          </span>
+        </div>
         <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
           Restore accidentally deleted leads or projects, or purge them permanently from the system.
         </p>

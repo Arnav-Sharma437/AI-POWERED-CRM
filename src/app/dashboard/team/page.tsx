@@ -160,9 +160,22 @@ export default function TeamPage() {
   return (
     <div className="crm-container animate-fade-in">
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Team Management</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Team Management</h1>
+            <span style={{
+              fontSize: "0.8125rem",
+              fontWeight: 700,
+              backgroundColor: "var(--primary-light)",
+              color: "var(--primary-color)",
+              padding: "0.25rem 0.75rem",
+              borderRadius: "20px",
+              border: "1px solid rgba(224, 86, 36, 0.2)"
+            }}>
+              Total: {users.length} {users.length === 1 ? "Member" : "Members"}
+            </span>
+          </div>
           <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
             Add, update, activate, and manage user roles and permissions.
           </p>

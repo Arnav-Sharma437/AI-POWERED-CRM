@@ -163,6 +163,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [currentUser, triggerRefresh]);
 
+  // Dynamic Browser Tab Title with unread message badge (e.g. "(3) Pixxelu CRM - Agency Operations")
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const baseTitle = "Pixxelu CRM - Agency Operations";
+      if (unreadChatCount > 0) {
+        document.title = `(${unreadChatCount}) ${baseTitle}`;
+      } else {
+        document.title = baseTitle;
+      }
+    }
+  }, [unreadChatCount]);
+
   const [popupNotification, setPopupNotification] = useState<{ id?: string; title: string; message: string; linkUrl?: string } | null>(null);
 
   const fetchNotifications = async () => {

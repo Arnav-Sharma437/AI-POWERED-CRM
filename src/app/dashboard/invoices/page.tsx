@@ -139,6 +139,17 @@ export default function InvoicesListPage() {
             <span style={{ fontSize: "0.7rem", fontWeight: 700, backgroundColor: "rgba(99, 102, 241, 0.15)", color: "var(--primary-color)", padding: "2px 8px", borderRadius: "6px" }}>
               Super Admin Only
             </span>
+            <span style={{
+              fontSize: "0.8125rem",
+              fontWeight: 700,
+              backgroundColor: "var(--primary-light)",
+              color: "var(--primary-color)",
+              padding: "0.25rem 0.75rem",
+              borderRadius: "20px",
+              border: "1px solid rgba(224, 86, 36, 0.2)"
+            }}>
+              Total: {invoices.length} {invoices.length === 1 ? "Invoice" : "Invoices"}
+            </span>
           </div>
           <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
             Create, manage, and dispatch GST-compliant invoices and customer billings.

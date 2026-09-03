@@ -169,7 +169,20 @@ export default function LeadsPage() {
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Leads Pipeline</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <h1 style={styles.title}>Leads Pipeline</h1>
+            <span style={{
+              fontSize: "0.8125rem",
+              fontWeight: 700,
+              backgroundColor: "var(--primary-light)",
+              color: "var(--primary-color)",
+              padding: "0.25rem 0.75rem",
+              borderRadius: "20px",
+              border: "1px solid rgba(224, 86, 36, 0.2)"
+            }}>
+              Total: {leads.length} {leads.length === 1 ? "Lead" : "Leads"}
+            </span>
+          </div>
           <p style={styles.subtitle}>Manage incoming contacts, qualification states, and follow-ups</p>
         </div>
         <button onClick={() => openQuickAdd("lead")} className="crm-btn crm-btn-primary">

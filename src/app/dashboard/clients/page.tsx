@@ -66,7 +66,20 @@ export default function ClientsPage() {
       {/* Header with View Toggle */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Client Accounts</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Client Accounts</h1>
+            <span style={{
+              fontSize: "0.8125rem",
+              fontWeight: 700,
+              backgroundColor: "var(--primary-light)",
+              color: "var(--primary-color)",
+              padding: "0.25rem 0.75rem",
+              borderRadius: "20px",
+              border: "1px solid rgba(224, 86, 36, 0.2)"
+            }}>
+              Total: {clients.length} {clients.length === 1 ? "Account" : "Accounts"}
+            </span>
+          </div>
           <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
             Monitor client portfolios in their assigned project currencies (USD, INR, EUR, etc.), outstanding balances, and active contracts.
           </p>

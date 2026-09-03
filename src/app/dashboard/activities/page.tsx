@@ -40,7 +40,20 @@ export default function ActivitiesPage() {
   return (
     <div className="crm-container animate-fade-in">
       <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Timeline & Activity Audit</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-primary)" }}>Timeline & Activity Audit</h1>
+          <span style={{
+            fontSize: "0.8125rem",
+            fontWeight: 700,
+            backgroundColor: "var(--primary-light)",
+            color: "var(--primary-color)",
+            padding: "0.25rem 0.75rem",
+            borderRadius: "20px",
+            border: "1px solid rgba(224, 86, 36, 0.2)"
+          }}>
+            Total: {activities.length} {activities.length === 1 ? "Log" : "Logs"}
+          </span>
+        </div>
         <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
           Chronological record of CRM interactions, client updates, BDA handovers, and system reminders.
         </p>

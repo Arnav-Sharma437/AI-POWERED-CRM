@@ -225,7 +225,20 @@ export default function CalendarPage() {
       {/* Header controls */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Shared Calendar</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <h1 style={styles.title}>Shared Calendar</h1>
+            <span style={{
+              fontSize: "0.8125rem",
+              fontWeight: 700,
+              backgroundColor: "var(--primary-light)",
+              color: "var(--primary-color)",
+              padding: "0.25rem 0.75rem",
+              borderRadius: "20px",
+              border: "1px solid rgba(224, 86, 36, 0.2)"
+            }}>
+              Total: {meetings.length} {meetings.length === 1 ? "Meeting" : "Meetings"}
+            </span>
+          </div>
           <p style={styles.subtitle}>Team meetings, client calls, Google Meet discussions, and project deadlines</p>
         </div>
         
