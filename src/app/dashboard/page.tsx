@@ -46,7 +46,19 @@ export default function DashboardPage() {
   const [attendanceData, setAttendanceData] = useState<{
     logs: any[];
     userSummaries: any[];
-  }>({ logs: [], userSummaries: [] });
+  }>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("crm_attendance_cache");
+        return cached ? JSON.parse(cached) : { logs: [], userSummaries: [] };
+      } catch { return { logs: [], userSummaries: [] }; }
+    }
+    return { logs: [], userSummaries: [] };
+  });
+
+  const [attendanceLoading, setAttendanceLoading] = useState(
+    typeof window !== "undefined" ? !sessionStorage.getItem("crm_attendance_cache") : true
+  );
 
   const [loading, setLoading] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -84,15 +96,20 @@ export default function DashboardPage() {
         }
         if (attRes.ok) {
           const attJson = await attRes.json();
-          setAttendanceData({
+          const attData = {
             logs: attJson.logs || [],
             userSummaries: attJson.userSummaries || []
-          });
+          };
+          setAttendanceData(attData);
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("crm_attendance_cache", JSON.stringify(attData));
+          }
         }
       } catch (err) {
         console.error("Error loading dashboard data", err);
       } finally {
         setLoading(false);
+        setAttendanceLoading(false);
       }
     }
     fetchDashboardData();
@@ -408,28 +425,29 @@ export default function DashboardPage() {
                     alert(e.message || "Failed to send weekly reports");
                   }
                 }}
-                className="crm-btn"
+                className="crm-btn crm-btn-secondary"
                 style={{
-                  backgroundColor: "rgba(99, 102, 241, 0.15)",
-                  color: "var(--primary-color)",
-                  border: "1px solid var(--primary-color)",
-                  fontSize: "0.8125rem",
-                  padding: "0.4rem 0.85rem",
+                  fontSize: "0.775rem",
+                  padding: "0.35rem 0.75rem",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "0.4rem",
-                  fontWeight: 700
+                  fontWeight: 500
                 }}
               >
                 📧 Mail Weekly Reports to Team & Admin
               </button>
-              <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--primary-color)", backgroundColor: "rgba(99, 102, 241, 0.12)", padding: "0.4rem 0.75rem", borderRadius: "8px" }}>
+              <div style={{ fontSize: "0.775rem", fontWeight: 500, color: "var(--text-primary)", backgroundColor: "var(--bg-primary)", border: "1px solid var(--border-primary)", padding: "0.35rem 0.65rem", borderRadius: "8px" }}>
                 {attendanceData.userSummaries.filter(u => u.isCurrentlyWorking).length} / {attendanceData.userSummaries.length} Active Now
               </div>
             </div>
           </div>
 
-          {attendanceData.userSummaries.length === 0 ? (
+          {attendanceLoading && attendanceData.userSummaries.length === 0 ? (
+            <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.8125rem" }}>
+              Syncing live attendance records...
+            </div>
+          ) : attendanceData.userSummaries.length === 0 ? (
             <div style={styles.emptyState}>No team members found</div>
           ) : (
             <div style={{ overflowX: "auto" }}>

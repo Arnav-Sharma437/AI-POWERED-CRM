@@ -373,10 +373,10 @@ export default function ProjectsPage() {
 
                           {/* Title & Client */}
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--text-primary)", lineHeight: 1.25 }}>
+                            <div style={{ fontWeight: 500, fontSize: "0.8125rem", color: "var(--text-primary)", lineHeight: 1.3 }}>
                               {p.name}
                             </div>
-                            <div style={{ fontSize: "0.725rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
                               {p.client?.name || "Direct Client"}
                             </div>
                           </div>
