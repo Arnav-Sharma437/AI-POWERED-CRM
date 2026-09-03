@@ -713,10 +713,37 @@ export async function listProjects(includeTrashed = false, userContext?: { userI
     });
 
     return projects.map(p => {
+      let currency = (p as any).currency || "INR";
+      let pricingModel = (p as any).pricingModel || "Fixed";
+      let hourlyRate = (p as any).hourlyRate;
+      let estimatedHours = (p as any).estimatedHours;
+      let closeOutcome = undefined;
+      let cleanNotes = p.notes;
+
+      try {
+        if (p.notes && p.notes.startsWith("{") && p.notes.endsWith("}")) {
+          const parsed = JSON.parse(p.notes);
+          if (parsed.currency) currency = parsed.currency;
+          if (parsed.pricingModel) pricingModel = parsed.pricingModel;
+          if (parsed.hourlyRate) hourlyRate = parsed.hourlyRate;
+          if (parsed.estimatedHours) estimatedHours = parsed.estimatedHours;
+          if (parsed.closeOutcome) closeOutcome = parsed.closeOutcome;
+          cleanNotes = parsed.generalNotes || "";
+        }
+      } catch {
+        // keep cleanNotes
+      }
+
       const payments = (p as any).payments || [];
       const totalReceived = isDeveloper ? 0 : payments.reduce((sum: number, pay: any) => sum + pay.amount, 0);
       return {
         ...p,
+        notes: cleanNotes,
+        currency,
+        pricingModel,
+        hourlyRate,
+        estimatedHours,
+        closeOutcome,
         finalBudget: isDeveloper ? 0 : p.finalBudget,
         bonus: isDeveloper ? 0 : p.bonus,
         totalReceived,
