@@ -510,7 +510,14 @@ export async function listClients(includeTrashed = false): Promise<any[]> {
       const currencyBreakdown: Record<string, { totalBudget: number; totalReceived: number; totalOutstanding: number }> = {};
       
       c.projects.forEach((p: any) => {
-        const curr = p.currency || "INR";
+        let curr = p.currency || "INR";
+        try {
+          if (p.notes && p.notes.startsWith("{") && p.notes.endsWith("}")) {
+            const parsed = JSON.parse(p.notes);
+            if (parsed.currency) curr = parsed.currency;
+          }
+        } catch {}
+
         if (!currencyBreakdown[curr]) {
           currencyBreakdown[curr] = { totalBudget: 0, totalReceived: 0, totalOutstanding: 0 };
         }
@@ -520,7 +527,14 @@ export async function listClients(includeTrashed = false): Promise<any[]> {
         currencyBreakdown[curr].totalOutstanding += (p.finalBudget - pPayments);
       });
 
-      const primaryCurrency = (c.projects[0] as any)?.currency || "INR";
+      let primaryCurrency = (c.projects[0] as any)?.currency || "INR";
+      try {
+        if (c.projects[0]?.notes && c.projects[0].notes.startsWith("{") && c.projects[0].notes.endsWith("}")) {
+          const parsed = JSON.parse(c.projects[0].notes);
+          if (parsed.currency) primaryCurrency = parsed.currency;
+        }
+      } catch {}
+
       const totalBudget = c.projects.reduce((sum, p) => sum + p.finalBudget, 0);
       const totalReceived = c.projects.reduce((sum, p) => sum + (p.payments || []).reduce((s: number, pay: any) => s + pay.amount, 0), 0);
 

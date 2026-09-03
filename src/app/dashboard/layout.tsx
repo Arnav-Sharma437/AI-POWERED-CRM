@@ -605,6 +605,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Leads", icon: UserSquare2, path: "/dashboard/leads" },
     { name: "Clients", icon: UserSquare2, path: "/dashboard/clients" },
     { name: "Projects", icon: Briefcase, path: "/dashboard/projects" },
+    { name: "Payments", icon: CreditCard, path: "/dashboard/payments" },
     { name: "Invoices", icon: ReceiptText, path: "/dashboard/invoices", superAdminOnly: true },
     { name: "Calendar", icon: Calendar, path: "/dashboard/calendar" },
     { name: "Activities", icon: Activity, path: "/dashboard/activities" },
@@ -616,7 +617,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Role-based navigation: 
   // Super Admin: sees all items including Invoices
   // Developer: Dashboard, Projects, Calendar, and Chat
-  // BDA / Other: All except Invoices (Super Admin only)
+  // BDA / Other: All except Invoices (Super Admin only) & Payments (Confidential)
   const navItems = currentUser?.roleName === "Developer"
     ? allNavItems.filter(item => ["Dashboard", "Projects", "Calendar", "Chat"].includes(item.name))
     : currentUser?.roleName === "Super Admin"

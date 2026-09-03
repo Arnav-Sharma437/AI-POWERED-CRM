@@ -141,7 +141,7 @@ export default function DashboardPage() {
     { name: "Active Projects", val: data.kpis.activeProjects, icon: Briefcase, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", link: "/dashboard/projects" },
     { name: "Today's Work Time", val: formatMinutes(myAttendanceSummary?.totalWorkedMinutes || 0), icon: Clock, color: "#6366f1", bg: "rgba(99, 102, 241, 0.12)", link: "/dashboard" },
     { name: "Deadlines (7d)", val: data.kpis.upcomingDeadlines, icon: AlertTriangle, color: "var(--danger-color)", bg: "var(--danger-light)", link: "/dashboard/projects" },
-    { name: "Pending Bills", val: new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(data.kpis.pendingPaymentsSum), icon: DollarSign, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", link: "/dashboard/projects" },
+    { name: "Pending Bills", val: new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(data.kpis.pendingPaymentsSum), icon: DollarSign, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", link: "/dashboard/payments" },
   ];
 
   return (
