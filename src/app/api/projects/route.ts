@@ -26,6 +26,15 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const project = await createProject(body, session.userId);
+
+    // Broadcast instant real-time sync event across all logged-in users & dashboards
+    try {
+      const { chatEmitter } = await import("@/lib/events");
+      chatEmitter.emit("crm_update", { entity: "project", action: "create", projectId: project.id });
+    } catch (e) {
+      console.error("Failed to emit crm_update for project:", e);
+    }
+
     return NextResponse.json({ success: true, project });
   } catch (error: any) {
     console.error("Projects POST error:", error);

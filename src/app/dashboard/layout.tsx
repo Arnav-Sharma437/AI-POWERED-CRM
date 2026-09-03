@@ -307,28 +307,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           localStorage.setItem("crm_user", JSON.stringify(meData.user));
         }
 
-        // Load lists
-        const uRes = await fetch("/api/users");
+        // Parallelize all reference data calls for ultra-fast load
+        const [uRes, clRes, prRes, attRes] = await Promise.all([
+          fetch("/api/users"),
+          fetch("/api/clients"),
+          fetch("/api/projects"),
+          fetch("/api/auth/attendance")
+        ]);
+
         if (uRes.ok) {
           const uData = await uRes.json();
           setBdas(uData.users.filter((u: any) => u.isActive && (u.roleName === "BDA" || u.roleName === "Super Admin")));
           setDevs(uData.users.filter((u: any) => u.isActive && u.roleName === "Developer"));
         }
 
-        const clRes = await fetch("/api/clients");
         if (clRes.ok) {
           const clData = await clRes.json();
           setClientsList(clData.clients || []);
         }
 
-        const prRes = await fetch("/api/projects");
         if (prRes.ok) {
           const prData = await prRes.json();
           setProjectsList(prData.projects || []);
         }
 
-        // Fetch user's live attendance status
-        const attRes = await fetch("/api/auth/attendance");
         if (attRes.ok) {
           const attData = await attRes.json();
           const mySummary = attData.userSummaries?.find((u: any) => u.userId === meData.user.id);
