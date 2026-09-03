@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { 
   Users, Flame, Calendar, BellRing, Briefcase, 
   AlertTriangle, DollarSign, ArrowUpRight, Plus, 
-  MapPin, ClipboardList, CheckCircle, Clock, Building2, Home, Activity
+  MapPin, ClipboardList, CheckCircle, Clock, Building2, Home, Activity,
+  Filter, CalendarRange, ChevronDown
 } from "lucide-react";
 import { useDashboard } from "./layout";
 import AiLoader from "@/components/AiLoader";
@@ -20,6 +21,11 @@ export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [devProjects, setDevProjects] = useState<any[]>([]);
 
+  // Date Range Filter States (Super Admin & BDA)
+  const [dateRange, setDateRange] = useState<"all" | "7d" | "30d" | "month" | "year" | "custom">("all");
+  const [customFrom, setCustomFrom] = useState<string>("");
+  const [customTo, setCustomTo] = useState<string>("");
+
   // Attendance Tracker States
   const [attendanceData, setAttendanceData] = useState<{
     logs: any[];
@@ -29,8 +35,13 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchDashboardData() {
       try {
+        let statsUrl = `/api/dashboard/stats?range=${dateRange}`;
+        if (dateRange === "custom" && customFrom) {
+          statsUrl += `&from=${customFrom}&to=${customTo || customFrom}`;
+        }
+
         const [statsRes, projRes, attRes] = await Promise.all([
-          fetch("/api/dashboard/stats"),
+          fetch(statsUrl),
           fetch("/api/projects"),
           fetch("/api/auth/attendance")
         ]);
@@ -56,7 +67,7 @@ export default function DashboardPage() {
       }
     }
     fetchDashboardData();
-  }, [triggerRefresh]);
+  }, [triggerRefresh, dateRange, customFrom, customTo]);
 
   if (loading) {
     return (
@@ -130,6 +141,202 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Super Admin & BDA Date-Wise Analytics & Range Banner */}
+      {!isDeveloper && (
+        <div className="crm-card" style={{
+          padding: "1rem 1.25rem",
+          marginBottom: "1.5rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
+          backgroundColor: "var(--bg-secondary)",
+          border: "1px solid var(--border-primary)",
+          borderRadius: "12px",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <div style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "8px",
+              backgroundColor: "var(--primary-light)",
+              color: "var(--primary-color)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0
+            }}>
+              <CalendarRange size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <span>Date-Wise Analytics & Metrics</span>
+                {dateRange !== "all" && (
+                  <span style={{
+                    fontSize: "0.7rem",
+                    backgroundColor: "var(--primary-color)",
+                    color: "#ffffff",
+                    padding: "1px 7px",
+                    borderRadius: "10px",
+                    fontWeight: 700
+                  }}>
+                    Filtered
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                {dateRange === "all" ? "Showing all-time CRM pipeline metrics" :
+                 dateRange === "7d" ? "Showing past 7 days operations & conversions" :
+                 dateRange === "30d" ? "Showing past 30 days operations" :
+                 dateRange === "month" ? "Showing current month records" :
+                 dateRange === "year" ? "Showing current year records" :
+                 `Custom: ${customFrom || "Start"} to ${customTo || customFrom || "End"}`}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+            {/* Quick Range Presets */}
+            <div style={{
+              display: "flex",
+              backgroundColor: "var(--bg-primary)",
+              border: "1px solid var(--border-primary)",
+              borderRadius: "8px",
+              padding: "2px",
+              gap: "2px"
+            }}>
+              <button
+                type="button"
+                onClick={() => setDateRange("all")}
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  fontSize: "0.775rem",
+                  fontWeight: 600,
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  backgroundColor: dateRange === "all" ? "var(--primary-color)" : "transparent",
+                  color: dateRange === "all" ? "#ffffff" : "var(--text-secondary)",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                All Time
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateRange("7d")}
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  fontSize: "0.775rem",
+                  fontWeight: 600,
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  backgroundColor: dateRange === "7d" ? "var(--primary-color)" : "transparent",
+                  color: dateRange === "7d" ? "#ffffff" : "var(--text-secondary)",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                Last 7 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateRange("30d")}
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  fontSize: "0.775rem",
+                  fontWeight: 600,
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  backgroundColor: dateRange === "30d" ? "var(--primary-color)" : "transparent",
+                  color: dateRange === "30d" ? "#ffffff" : "var(--text-secondary)",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                Last 30 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateRange("month")}
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  fontSize: "0.775rem",
+                  fontWeight: 600,
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  backgroundColor: dateRange === "month" ? "var(--primary-color)" : "transparent",
+                  color: dateRange === "month" ? "#ffffff" : "var(--text-secondary)",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                This Month
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateRange("year")}
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  fontSize: "0.775rem",
+                  fontWeight: 600,
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  backgroundColor: dateRange === "year" ? "var(--primary-color)" : "transparent",
+                  color: dateRange === "year" ? "#ffffff" : "var(--text-secondary)",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                This Year
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateRange("custom")}
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  fontSize: "0.775rem",
+                  fontWeight: 600,
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  backgroundColor: dateRange === "custom" ? "var(--primary-color)" : "transparent",
+                  color: dateRange === "custom" ? "#ffffff" : "var(--text-secondary)",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                Custom Range 📅
+              </button>
+            </div>
+
+            {/* Custom Date Pickers */}
+            {dateRange === "custom" && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <input
+                  type="date"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="crm-input"
+                  style={{ padding: "0.35rem 0.5rem", fontSize: "0.775rem", width: "135px" }}
+                  title="From Date"
+                />
+                <span style={{ color: "var(--text-tertiary)", fontSize: "0.75rem" }}>to</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="crm-input"
+                  style={{ padding: "0.35rem 0.5rem", fontSize: "0.775rem", width: "135px" }}
+                  title="To Date"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Attendance & Shift Status Overview Card for the Logged-in User */}
       <div className="crm-card" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.5rem", background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)", border: "1px solid rgba(99, 102, 241, 0.25)" }}>

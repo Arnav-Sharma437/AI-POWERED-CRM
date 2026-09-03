@@ -2,15 +2,78 @@ import { NextResponse } from "next/server";
 import { checkDbConnection, isDemoMode, listLeads, listProjects, listMeetings, listActivities, listUsers } from "@/lib/services";
 import { mockDb } from "@/lib/mockData";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await checkDbConnection();
 
-    const leads = await listLeads();
-    const projects = await listProjects();
-    const meetings = await listMeetings();
-    const activities = await listActivities();
+    const { searchParams } = new URL(request.url);
+    const range = searchParams.get("range") || "all"; // '7d' | '30d' | 'month' | 'year' | 'custom' | 'all'
+    const fromParam = searchParams.get("from");
+    const toParam = searchParams.get("to");
+
+    let rangeStart: Date | null = null;
+    let rangeEnd: Date | null = null;
+
+    const now = new Date();
+    if (range === "7d") {
+      rangeStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      rangeStart.setHours(0, 0, 0, 0);
+      rangeEnd = new Date(now);
+      rangeEnd.setHours(23, 59, 59, 999);
+    } else if (range === "30d") {
+      rangeStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      rangeStart.setHours(0, 0, 0, 0);
+      rangeEnd = new Date(now);
+      rangeEnd.setHours(23, 59, 59, 999);
+    } else if (range === "month") {
+      rangeStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (range === "year") {
+      rangeStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+      rangeEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else if (range === "custom" && fromParam) {
+      rangeStart = new Date(fromParam);
+      rangeStart.setHours(0, 0, 0, 0);
+      if (toParam) {
+        rangeEnd = new Date(toParam);
+        rangeEnd.setHours(23, 59, 59, 999);
+      } else {
+        rangeEnd = new Date(fromParam);
+        rangeEnd.setHours(23, 59, 59, 999);
+      }
+    }
+
+    let leads = await listLeads();
+    let projects = await listProjects();
+    let meetings = await listMeetings();
+    let activities = await listActivities();
     const users = await listUsers();
+
+    // If date range is specified, filter entities based on their timestamps
+    if (rangeStart) {
+      const startTime = rangeStart.getTime();
+      const endTime = rangeEnd ? rangeEnd.getTime() : Date.now();
+
+      leads = leads.filter(l => {
+        const t = new Date(l.createdAt || l.updatedAt).getTime();
+        return t >= startTime && t <= endTime;
+      });
+
+      projects = projects.filter(p => {
+        const t = new Date(p.startDate || p.createdAt).getTime();
+        return t >= startTime && t <= endTime;
+      });
+
+      meetings = meetings.filter(m => {
+        const t = new Date(m.startTime).getTime();
+        return t >= startTime && t <= endTime;
+      });
+
+      activities = activities.filter(a => {
+        const t = new Date(a.timestamp).getTime();
+        return t >= startTime && t <= endTime;
+      });
+    }
 
     // 1. KPI Calculations
     const totalLeads = leads.length;
