@@ -1892,11 +1892,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </select>
                     </div>
                     <div>
-                      <label style={modalStyles.label}>Payment Amount (INR)</label>
+                      <label style={modalStyles.label}>
+                        Payment Amount ({(() => {
+                          const selectedProj = projectsList.find(p => p.id === paymentForm.projectId);
+                          return selectedProj?.currency || "INR";
+                        })()})
+                      </label>
                       <input 
                         type="number" 
                         className="crm-input" 
-                        placeholder="15000"
+                        placeholder="e.g. 500"
                         value={paymentForm.amount}
                         onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
                         required

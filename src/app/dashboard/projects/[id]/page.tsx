@@ -965,7 +965,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   {project.payments.map((pay: any) => (
                     <div key={pay.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "6px", border: "1px solid var(--border-primary)", fontSize: "0.8125rem" }}>
                       <div>
-                        <div style={{ fontWeight: 700 }}>{new Intl.NumberFormat("en-IN", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(pay.amount)}</div>
+                        <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{new Intl.NumberFormat("en-US", { style: "currency", currency: project.currency || "INR", maximumFractionDigits: 0 }).format(pay.amount)}</div>
                         <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginTop: "1px" }}>{pay.note || "Payment recorded"}</div>
                       </div>
                       <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
@@ -1472,11 +1472,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               {activeModal === "payment" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                   <div>
-                    <label style={modalStyles.label}>Milestone Payment Amount (INR)</label>
+                    <label style={modalStyles.label}>
+                      Milestone Payment Amount ({project?.currency || "INR"})
+                    </label>
                     <input 
                       type="number" 
                       className="crm-input" 
-                      placeholder="e.g. 15000"
+                      placeholder={`e.g. ${project?.currency === "USD" ? "500" : project?.currency === "AUD" ? "350" : "15000"}`}
                       value={paymentForm.amount}
                       onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
                       required
