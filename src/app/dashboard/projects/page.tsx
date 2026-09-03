@@ -411,28 +411,19 @@ export default function ProjectsPage() {
                               {new Date(p.deadline).toLocaleDateString([], { month: "short", day: "numeric" })}
                             </div>
 
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
                               {assignedDevs.length > 0 ? (
                                 assignedDevs.map((dev: any) => (
                                   <div 
                                     key={dev.id}
-                                    title={`Assigned Developer: ${dev.name} (${dev.email})`}
-                                    style={{
-                                      width: "22px",
-                                      height: "22px",
-                                      borderRadius: "50%",
-                                      backgroundColor: "var(--bg-tertiary)",
-                                      border: "1px solid var(--border-secondary)",
-                                      color: "var(--text-primary)",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      fontSize: "0.675rem",
-                                      fontWeight: 700,
-                                      cursor: "help"
-                                    }}
+                                    className="dev-avatar-pill"
                                   >
-                                    {dev.name?.charAt(0).toUpperCase()}
+                                    <div className="dev-avatar-circle">
+                                      {dev.name?.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="dev-avatar-name">
+                                      {dev.name}
+                                    </span>
                                   </div>
                                 ))
                               ) : (

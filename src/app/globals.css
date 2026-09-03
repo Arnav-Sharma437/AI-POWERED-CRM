@@ -630,11 +630,62 @@ body {
     padding: 0.45rem 0.75rem !important;
     font-size: 0.8rem !important;
   }
+}
 
-  div[style*="gridTemplateColumns: \"repeat(auto-fit, minmax(240px, 1fr))\""],
-  div[style*="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))"] {
-    grid-template-columns: 1fr !important;
-  }
+/* Dev Avatar Left-Slide Expand on Hover */
+.dev-avatar-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-direction: row-reverse;
+  border-radius: 9999px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  max-width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.dev-avatar-pill:hover {
+  max-width: 140px;
+  background-color: var(--bg-secondary);
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  padding-left: 6px;
+}
+
+.dev-avatar-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.675rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.dev-avatar-name {
+  opacity: 0;
+  white-space: nowrap;
+  font-size: 0.675rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  padding-right: 4px;
+  padding-left: 2px;
+  transform: translateX(6px);
+  transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.dev-avatar-pill:hover .dev-avatar-name {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 

@@ -537,6 +537,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
             <span className="badge badge-primary">{project.serviceType}</span>
+            {project.source && (
+              <span className="badge" style={{ 
+                backgroundColor: project.source.includes("Upwork") ? "rgba(16, 185, 129, 0.12)" : project.source.includes("Freelancer") ? "rgba(59, 130, 246, 0.12)" : "var(--bg-tertiary)", 
+                color: project.source.includes("Upwork") ? "#10b981" : project.source.includes("Freelancer") ? "#3b82f6" : "var(--text-secondary)",
+                fontWeight: 600
+              }}>
+                {project.source}
+              </span>
+            )}
             <span className="badge" style={{ backgroundColor: "rgba(99, 102, 241, 0.15)", color: "var(--primary-color)", fontWeight: 700 }}>
               {project.currency || "INR"} ({project.pricingModel || "Fixed"})
             </span>
@@ -1829,6 +1838,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       >
                         <option value="Upwork">Upwork</option>
                         <option value="Freelancer">Freelancer</option>
+                        <option value="LinkedIn">LinkedIn</option>
                         <option value="WhatsApp">WhatsApp</option>
                         <option value="Outside">Outside / Direct Client</option>
                       </select>

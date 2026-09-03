@@ -328,12 +328,12 @@ export default function PaymentsPage() {
                       {formatOriginal(p.totalReceived || 0, curr)}
                     </td>
 
-                    <td style={{ textAlign: "right", fontWeight: 500, color: isPending ? "var(--text-primary)" : "var(--text-tertiary)", fontSize: "0.8125rem" }}>
+                    <td style={{ textAlign: "right", fontWeight: 500, color: isPending ? "#ef4444" : "var(--text-tertiary)", fontSize: "0.8125rem" }}>
                       {formatOriginal(p.pendingAmount || 0, curr)}
                     </td>
 
                     <td style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 600, color: isPending ? "var(--text-primary)" : "var(--text-tertiary)", fontSize: "0.8125rem" }}>
+                      <div style={{ fontWeight: 600, color: isPending ? "#ef4444" : "var(--text-tertiary)", fontSize: "0.8125rem" }}>
                         {formatInr(convertedPendingInr)}
                       </div>
                       <div style={{ fontSize: "0.675rem", color: "var(--text-tertiary)" }}>
@@ -347,9 +347,9 @@ export default function PaymentsPage() {
                         borderRadius: "10px",
                         fontSize: "0.725rem",
                         fontWeight: 500,
-                        backgroundColor: isPending ? "var(--bg-tertiary)" : "rgba(16, 185, 129, 0.1)",
-                        color: isPending ? "var(--text-secondary)" : "#10b981",
-                        border: isPending ? "1px solid var(--border-primary)" : "1px solid rgba(16, 185, 129, 0.2)",
+                        backgroundColor: isPending ? "rgba(239, 68, 68, 0.08)" : "rgba(16, 185, 129, 0.1)",
+                        color: isPending ? "#ef4444" : "#10b981",
+                        border: isPending ? "1px solid rgba(239, 68, 68, 0.2)" : "1px solid rgba(16, 185, 129, 0.2)",
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "4px"

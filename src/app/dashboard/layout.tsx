@@ -1468,6 +1468,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         >
                           <option value="Upwork">Upwork</option>
                           <option value="Freelancer">Freelancer</option>
+                          <option value="LinkedIn">LinkedIn</option>
                           <option value="WhatsApp">WhatsApp</option>
                           <option value="Outside">Outside / Direct Client</option>
                         </select>
