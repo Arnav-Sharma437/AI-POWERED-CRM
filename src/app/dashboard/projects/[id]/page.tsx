@@ -7,7 +7,7 @@ import {
   Plus, Calendar, Mail, FileText, CheckCircle2, DollarSign,
   Send, Paperclip, MessageSquare, Trash2, X, Clock, Hourglass, 
   AlertTriangle, Flame, Minimize2, Maximize2, ChevronDown, ChevronUp,
-  Star, ThumbsUp, ThumbsDown, Award, MessageCircle, Edit
+  Star, ThumbsUp, ThumbsDown, Award, MessageCircle, Edit, Users
 } from "lucide-react";
 import { useDashboard } from "../../layout";
 import AiLoader from "@/components/AiLoader";
@@ -601,30 +601,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <UserPlus size={13} /> Takeover
               </button>
 
-              {project.isAssigned || (project.assignedDevs && project.assignedDevs.length > 0) ? (
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.35rem",
-                    padding: "0.45rem 0.75rem",
-                    borderRadius: "10px",
-                    backgroundColor: "var(--bg-tertiary)",
-                    border: "1px solid var(--border-primary)",
-                    color: "var(--text-secondary)",
-                    fontSize: "0.8125rem",
-                    fontWeight: 500
-                  }}
-                  title={`Project is locked and already assigned to ${project.assignedDevs?.map((d: any) => d.name).join(", ")}`}
-                >
-                  <span style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: "var(--success-color)" }} />
-                  <span>Assigned to {project.assignedDevs?.[0]?.name || "Developer"} (Locked)</span>
-                </div>
-              ) : (
-                <button onClick={() => setActiveModal("assign")} className="crm-btn crm-btn-primary" style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}>
-                  <Mail size={13} /> Assign Developer
-                </button>
-              )}
+              <button 
+                onClick={() => {
+                  setAssignForm({ devId: "", devIds: [], workDetails: "" });
+                  setActiveModal("assign");
+                }} 
+                className="crm-btn crm-btn-secondary" 
+                style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}
+              >
+                <UserPlus size={13} /> Assign Developer
+              </button>
             </>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -1047,6 +1033,66 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </div>
             </div>
 
+            {/* Project Group Members Header Bar */}
+            <div style={{
+              padding: "0.5rem 1rem",
+              backgroundColor: "var(--bg-secondary)",
+              borderBottom: "1px solid var(--border-primary)",
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.4rem",
+              fontSize: "0.75rem"
+            }}>
+              <span style={{ color: "var(--text-tertiary)", display: "flex", alignItems: "center", gap: "0.25rem", fontWeight: 500, marginRight: "0.25rem" }}>
+                <Users size={12} /> Group Members ({project?.conversationMembers?.length || (project?.assignedDevs?.length || 0) + 1}):
+              </span>
+
+              {(project?.conversationMembers && project.conversationMembers.length > 0 
+                ? project.conversationMembers 
+                : [
+                    ...(project?.primaryBda ? [{ id: project.primaryBda.id, name: project.primaryBda.name, roleName: "Primary BDA" }] : []),
+                    ...(project?.assignedDevs || []).map((d: any) => ({ ...d, roleName: "Developer" }))
+                  ]
+              ).map((member: any) => (
+                <div 
+                  key={member.id}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.3rem",
+                    padding: "2px 7px",
+                    borderRadius: "12px",
+                    backgroundColor: "var(--bg-primary)",
+                    border: "1px solid var(--border-primary)",
+                    fontSize: "0.725rem"
+                  }}
+                >
+                  <span style={{
+                    width: "16px",
+                    height: "16px",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--bg-tertiary)",
+                    color: "var(--text-primary)",
+                    border: "1px solid var(--border-secondary)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.625rem",
+                    fontWeight: 700
+                  }}>
+                    {member.name?.charAt(0).toUpperCase()}
+                  </span>
+                  <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                    {member.name}
+                  </span>
+                  <span style={{ fontSize: "0.625rem", color: "var(--text-tertiary)" }}>
+                    ({member.roleName || "Team"})
+                  </span>
+                </div>
+              ))}
+            </div>
+
             {/* Dedicated Messages Scrollable Panel (Scroll strictly contained here) */}
             <div 
               ref={chatContainerRef}
@@ -1408,12 +1454,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       overflowY: "auto"
                     }}>
                       {devs.map((d) => {
+                        const isAlreadyAssigned = (project?.assignedDevs || []).some((ad: any) => ad.id === d.id);
                         const isSelected = assignForm.devIds.includes(d.id);
                         return (
                           <button
                             key={d.id}
                             type="button"
+                            disabled={isAlreadyAssigned}
                             onClick={() => {
+                              if (isAlreadyAssigned) return;
                               setAssignForm(prev => ({
                                 ...prev,
                                 devIds: isSelected 
@@ -1430,12 +1479,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                               gap: "0.35rem",
                               padding: "0.4rem 0.75rem",
                               borderRadius: "8px",
-                              border: isSelected ? "2px solid var(--primary-color)" : "1px solid var(--border-primary)",
-                              backgroundColor: isSelected ? "rgba(99, 102, 241, 0.15)" : "var(--bg-primary)",
-                              color: isSelected ? "var(--primary-color)" : "var(--text-primary)",
+                              border: isAlreadyAssigned 
+                                ? "1px dashed var(--border-secondary)" 
+                                : isSelected 
+                                  ? "2px solid var(--primary-color)" 
+                                  : "1px solid var(--border-primary)",
+                              backgroundColor: isAlreadyAssigned 
+                                ? "var(--bg-tertiary)" 
+                                : isSelected 
+                                  ? "var(--bg-primary)" 
+                                  : "var(--bg-primary)",
+                              color: isAlreadyAssigned 
+                                ? "var(--text-tertiary)" 
+                                : isSelected 
+                                  ? "var(--primary-color)" 
+                                  : "var(--text-primary)",
                               fontWeight: isSelected ? 700 : 500,
                               fontSize: "0.8125rem",
-                              cursor: "pointer",
+                              cursor: isAlreadyAssigned ? "not-allowed" : "pointer",
+                              opacity: isAlreadyAssigned ? 0.65 : 1,
                               transition: "all 0.15s ease"
                             }}
                           >
@@ -1443,18 +1505,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                               width: "14px",
                               height: "14px",
                               borderRadius: "4px",
-                              border: isSelected ? "2px solid var(--primary-color)" : "1px solid var(--text-tertiary)",
-                              backgroundColor: isSelected ? "var(--primary-color)" : "transparent",
+                              border: isAlreadyAssigned
+                                ? "1px solid var(--text-tertiary)"
+                                : isSelected 
+                                  ? "2px solid var(--primary-color)" 
+                                  : "1px solid var(--text-tertiary)",
+                              backgroundColor: isAlreadyAssigned 
+                                ? "var(--bg-tertiary)" 
+                                : isSelected 
+                                  ? "var(--primary-color)" 
+                                  : "transparent",
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
                               color: "#ffffff",
                               fontSize: "10px"
                             }}>
-                              {isSelected ? "✓" : ""}
+                              {isAlreadyAssigned ? "🔒" : isSelected ? "✓" : ""}
                             </span>
                             <span>{d.name}</span>
-                            <span style={{ fontSize: "0.7rem", opacity: 0.75 }}>({d.email})</span>
+                            <span style={{ fontSize: "0.7rem", opacity: 0.75 }}>
+                              {isAlreadyAssigned ? "(Already Assigned - Locked)" : `(${d.email})`}
+                            </span>
                           </button>
                         );
                       })}

@@ -396,27 +396,30 @@ export default function ProjectsPage() {
                               {new Date(p.deadline).toLocaleDateString([], { month: "short", day: "numeric" })}
                             </div>
 
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                              {primaryDev ? (
-                                <div 
-                                  title={`Assigned Developer: ${primaryDev.name} (${primaryDev.email})`}
-                                  style={{
-                                    width: "22px",
-                                    height: "22px",
-                                    borderRadius: "50%",
-                                    backgroundColor: "var(--bg-tertiary)",
-                                    border: "1px solid var(--border-secondary)",
-                                    color: "var(--text-primary)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: "0.675rem",
-                                    fontWeight: 700,
-                                    cursor: "help"
-                                  }}
-                                >
-                                  {devInitial}
-                                </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap" }}>
+                              {assignedDevs.length > 0 ? (
+                                assignedDevs.map((dev: any) => (
+                                  <div 
+                                    key={dev.id}
+                                    title={`Assigned Developer: ${dev.name} (${dev.email})`}
+                                    style={{
+                                      width: "22px",
+                                      height: "22px",
+                                      borderRadius: "50%",
+                                      backgroundColor: "var(--bg-tertiary)",
+                                      border: "1px solid var(--border-secondary)",
+                                      color: "var(--text-primary)",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontSize: "0.675rem",
+                                      fontWeight: 700,
+                                      cursor: "help"
+                                    }}
+                                  >
+                                    {dev.name?.charAt(0).toUpperCase()}
+                                  </div>
+                                ))
                               ) : (
                                 <span style={{ fontSize: "0.675rem", color: "var(--text-tertiary)" }}>
                                   Unassigned

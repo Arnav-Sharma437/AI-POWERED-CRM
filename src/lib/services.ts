@@ -892,20 +892,25 @@ export async function getProjectById(id: string, userContext?: { userId: string;
       // Keep cleanNotes
     }
 
-    // Extract assigned developers from project conversation members
+    // Extract assigned developers & conversation members from project conversation
     const assignedDevs: any[] = [];
-    const seenDevIds = new Set<string>();
+    const conversationMembers: any[] = [];
+    const seenMemberIds = new Set<string>();
+
     if (project.conversations) {
       project.conversations.forEach((conv: any) => {
         (conv.members || []).forEach((m: any) => {
-          if (m.user && (m.user.role?.name === "Developer" || m.user.roleName === "Developer")) {
-            if (!seenDevIds.has(m.user.id)) {
-              seenDevIds.add(m.user.id);
-              assignedDevs.push({
-                id: m.user.id,
-                name: m.user.name,
-                email: m.user.email
-              });
+          if (m.user && !seenMemberIds.has(m.user.id)) {
+            seenMemberIds.add(m.user.id);
+            const memberObj = {
+              id: m.user.id,
+              name: m.user.name,
+              email: m.user.email,
+              roleName: m.user.role?.name || "Member"
+            };
+            conversationMembers.push(memberObj);
+            if (m.user.role?.name === "Developer" || m.user.roleName === "Developer") {
+              assignedDevs.push(memberObj);
             }
           }
         });
@@ -927,6 +932,7 @@ export async function getProjectById(id: string, userContext?: { userId: string;
       hourlyRate: (project as any).hourlyRate || hourlyRate,
       estimatedHours: (project as any).estimatedHours || estimatedHours,
       assignedDevs,
+      conversationMembers,
       isAssigned: assignedDevs.length > 0,
       conversationId,
       finalBudget: isDeveloper ? 0 : project.finalBudget,
@@ -1308,14 +1314,14 @@ export async function sendDevAssignmentEmail(projectId: string, devId: string, w
       }
     });
 
-    // Check backend lock: If project already has assigned developers, reject reassignment
+    // Check backend lock: If this specific developer is already assigned to this project, reject duplicate assignment
     const alreadyAssignedDevs = ((projectData as any)?.conversations || []).flatMap((c: any) => 
       (c.members || []).filter((m: any) => m.user?.role?.name === "Developer")
     );
     const isAlreadyThisDev = alreadyAssignedDevs.some((m: any) => m.userId === devId);
 
-    if (alreadyAssignedDevs.length > 0 && !isAlreadyThisDev) {
-      throw new Error("This project is already assigned to a developer and locked from reassignment.");
+    if (isAlreadyThisDev) {
+      throw new Error(`Developer ${devUser?.name || "User"} is already assigned to this project.`);
     }
 
     const devName = devUser?.name || "Developer";

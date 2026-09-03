@@ -158,17 +158,6 @@ export default function DashboardPage() {
               : "Real-time pipeline metrics, team attendance, office work duration, and live schedules."}
           </p>
         </div>
-        {!isDeveloper && (
-          <div style={styles.headerActions}>
-            <button 
-              onClick={() => openQuickAdd("lead")} 
-              className="crm-btn crm-btn-primary"
-            >
-              <Plus size={16} />
-              Add Lead URL
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Super Admin & BDA Date-Wise Analytics & Range Banner */}
@@ -237,91 +226,36 @@ export default function DashboardPage() {
               padding: "2px",
               gap: "2px"
             }}>
-              <button
-                type="button"
-                onClick={() => setDateRange("all")}
-                style={{
-                  padding: "0.35rem 0.65rem",
-                  fontSize: "0.775rem",
-                  fontWeight: 600,
-                  borderRadius: "6px",
-                  border: "none",
-                  cursor: "pointer",
-                  backgroundColor: dateRange === "all" ? "var(--primary-color)" : "transparent",
-                  color: dateRange === "all" ? "#ffffff" : "var(--text-secondary)",
-                  transition: "all 0.15s ease"
-                }}
-              >
-                All Time
-              </button>
-              <button
-                type="button"
-                onClick={() => setDateRange("7d")}
-                style={{
-                  padding: "0.35rem 0.65rem",
-                  fontSize: "0.775rem",
-                  fontWeight: 600,
-                  borderRadius: "6px",
-                  border: "none",
-                  cursor: "pointer",
-                  backgroundColor: dateRange === "7d" ? "var(--primary-color)" : "transparent",
-                  color: dateRange === "7d" ? "#ffffff" : "var(--text-secondary)",
-                  transition: "all 0.15s ease"
-                }}
-              >
-                Last 7 Days
-              </button>
-              <button
-                type="button"
-                onClick={() => setDateRange("30d")}
-                style={{
-                  padding: "0.35rem 0.65rem",
-                  fontSize: "0.775rem",
-                  fontWeight: 600,
-                  borderRadius: "6px",
-                  border: "none",
-                  cursor: "pointer",
-                  backgroundColor: dateRange === "30d" ? "var(--primary-color)" : "transparent",
-                  color: dateRange === "30d" ? "#ffffff" : "var(--text-secondary)",
-                  transition: "all 0.15s ease"
-                }}
-              >
-                Last 30 Days
-              </button>
-              <button
-                type="button"
-                onClick={() => setDateRange("month")}
-                style={{
-                  padding: "0.35rem 0.65rem",
-                  fontSize: "0.775rem",
-                  fontWeight: 600,
-                  borderRadius: "6px",
-                  border: "none",
-                  cursor: "pointer",
-                  backgroundColor: dateRange === "month" ? "var(--primary-color)" : "transparent",
-                  color: dateRange === "month" ? "#ffffff" : "var(--text-secondary)",
-                  transition: "all 0.15s ease"
-                }}
-              >
-                This Month
-              </button>
-              <button
-                type="button"
-                onClick={() => setDateRange("year")}
-                style={{
-                  padding: "0.35rem 0.65rem",
-                  fontSize: "0.775rem",
-                  fontWeight: 600,
-                  borderRadius: "6px",
-                  border: "none",
-                  cursor: "pointer",
-                  backgroundColor: dateRange === "year" ? "var(--primary-color)" : "transparent",
-                  color: dateRange === "year" ? "#ffffff" : "var(--text-secondary)",
-                  transition: "all 0.15s ease"
-                }}
-              >
-                This Year
-              </button>
+              {[
+                { id: "all", label: "All Time" },
+                { id: "7d", label: "Last 7 Days" },
+                { id: "30d", label: "Last 30 Days" },
+                { id: "month", label: "This Month" },
+                { id: "year", label: "This Year" },
+              ].map(preset => {
+                const isActive = dateRange === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setDateRange(preset.id as any)}
+                    style={{
+                      padding: "0.35rem 0.65rem",
+                      fontSize: "0.775rem",
+                      fontWeight: isActive ? 600 : 400,
+                      borderRadius: "6px",
+                      border: isActive ? "1px solid var(--border-secondary)" : "1px solid transparent",
+                      cursor: "pointer",
+                      backgroundColor: isActive ? "var(--bg-secondary)" : "transparent",
+                      color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                      boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                      transition: "all 0.15s ease"
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
               <button
                 type="button"
                 onClick={() => setDateRange("custom")}
