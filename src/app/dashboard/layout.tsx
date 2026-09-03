@@ -128,7 +128,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     finalBudget: "", 
     bonus: "0", 
     primaryBdaId: "", 
-    serviceType: "Web Design" 
+    serviceType: "Web Design",
+    devId: "",
+    workDetails: ""
   });
   const [meetingForm, setMeetingForm] = useState({ title: "", type: "Meeting", startTime: "", notes: "", leadId: "", projectId: "", assignedUserIds: [] as string[] });
   const [paymentForm, setPaymentForm] = useState({ projectId: "", amount: "", note: "" });
@@ -460,13 +462,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const handleNotificationClick = async (notif: any) => {
+    // Optimistic UI state update immediately
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+    setShowNotifications(false);
     try {
       await fetch(`/api/notifications/${notif.id}`, { method: "PUT" });
-      setShowNotifications(false);
       setTriggerRefresh(prev => prev + 1);
-      if (notif.linkUrl) router.push(notif.linkUrl);
     } catch (err) {
       console.error("Error updating notification", err);
+    }
+    if (notif.linkUrl) router.push(notif.linkUrl);
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    if (!currentUser) return;
+    // Optimistically mark all as read
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    try {
+      await fetch(`/api/notifications`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUser.id })
+      });
+      setTriggerRefresh(prev => prev + 1);
+    } catch (err) {
+      console.error("Error marking all notifications read", err);
     }
   };
 
@@ -584,7 +604,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         finalBudget: "", 
         bonus: "0", 
         primaryBdaId: currentUser?.id || "", 
-        serviceType: "Web Design" 
+        serviceType: "Web Design",
+        devId: "",
+        workDetails: ""
       });
       setCustomServiceType("");
       setMeetingForm({ title: "", type: "Meeting", startTime: "", notes: "", leadId: "", projectId: "", assignedUserIds: [currentUser?.id || ""] });
@@ -1006,14 +1028,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {showNotifications && (
                   <div style={topbarStyles.notifDropdown}>
                     <div style={topbarStyles.dropdownHeader}>
-                      <span>Notifications Center</span>
-                      <button onClick={async () => {
-                        // Mark all read mock
-                        for (const n of notifications) {
-                          if (!n.isRead) await fetch(`/api/notifications/${n.id}`, { method: "PUT" });
-                        }
-                        setTriggerRefresh(prev => prev + 1);
-                      }} style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.75rem", cursor: "pointer" }}>Mark all read</button>
+                      <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>Notifications</span>
+                      {notifications.filter(n => !n.isRead).length > 0 && (
+                        <button 
+                          onClick={handleMarkAllNotificationsRead} 
+                          style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.75rem", cursor: "pointer", fontWeight: 500 }}
+                        >
+                          Mark all as read
+                        </button>
+                      )}
                     </div>
                     <div style={topbarStyles.notifList}>
                       {notifications.length === 0 ? (
@@ -1027,19 +1050,52 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             onClick={() => handleNotificationClick(n)}
                             style={{
                               ...topbarStyles.notifItem,
-                              backgroundColor: n.isRead ? "transparent" : "var(--bg-primary)"
+                              backgroundColor: n.isRead ? "transparent" : "var(--bg-primary)",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                              gap: "0.5rem"
                             }}
                           >
-                            <div style={{ display: "flex", gap: "0.5rem" }}>
+                            <div style={{ display: "flex", gap: "0.5rem", flexGrow: 1 }}>
                               {!n.isRead && <span style={topbarStyles.unreadDot} />}
                               <div>
-                                <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{n.title}</div>
-                                <div style={{ fontSize: "0.825rem", color: "var(--text-secondary)", marginTop: "2px" }}>{n.message}</div>
+                                <div style={{ fontWeight: n.isRead ? 400 : 600, fontSize: "0.875rem", color: "var(--text-primary)" }}>{n.title}</div>
+                                <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "2px" }}>{n.message}</div>
                                 <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "4px" }}>
                                   {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                               </div>
                             </div>
+
+                            {!n.isRead && (
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, isRead: true } : item));
+                                  try {
+                                    await fetch(`/api/notifications/${n.id}`, { method: "PUT" });
+                                    setTriggerRefresh(prev => prev + 1);
+                                  } catch (err) {
+                                    console.error(err);
+                                  }
+                                }}
+                                style={{
+                                  border: "none",
+                                  backgroundColor: "transparent",
+                                  color: "var(--text-tertiary)",
+                                  cursor: "pointer",
+                                  fontSize: "0.7rem",
+                                  padding: "2px 6px",
+                                  borderRadius: "4px",
+                                  whiteSpace: "nowrap"
+                                }}
+                                title="Mark as read"
+                              >
+                                Mark read
+                              </button>
+                            )}
                           </div>
                         ))
                       )}
@@ -1585,17 +1641,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </div>
                     )}
 
-                    <div>
-                      <label style={modalStyles.label}>Assigned Primary BDA</label>
-                      <select 
-                        className="crm-select"
-                        value={projectForm.primaryBdaId}
-                        onChange={(e) => setProjectForm(prev => ({ ...prev, primaryBdaId: e.target.value }))}
-                        required
-                      >
-                        {bdas.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                      </select>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div>
+                        <label style={modalStyles.label}>Assigned Primary BDA</label>
+                        <select 
+                          className="crm-select"
+                          value={projectForm.primaryBdaId}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, primaryBdaId: e.target.value }))}
+                          required
+                        >
+                          {bdas.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Assign Developer (Locks Assignment)</label>
+                        <select 
+                          className="crm-select"
+                          value={projectForm.devId}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, devId: e.target.value }))}
+                        >
+                          <option value="">-- No Developer (Assign Later) --</option>
+                          {devs.map(d => <option key={d.id} value={d.id}>{d.name} ({d.email})</option>)}
+                        </select>
+                      </div>
                     </div>
+
+                    {projectForm.devId && (
+                      <div>
+                        <label style={modalStyles.label}>Developer Task Requirements / Initial Instructions</label>
+                        <textarea
+                          className="crm-textarea"
+                          rows={3}
+                          placeholder="Provide project overview, technology stack, and initial deliverables for the assigned developer..."
+                          value={projectForm.workDetails}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, workDetails: e.target.value }))}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 

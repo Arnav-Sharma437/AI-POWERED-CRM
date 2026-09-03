@@ -721,7 +721,18 @@ export async function listProjects(includeTrashed = false, userContext?: { userI
       include: {
         client: true,
         primaryBda: true,
-        payments: !isDeveloper
+        payments: !isDeveloper,
+        conversations: {
+          include: {
+            members: {
+              include: {
+                user: {
+                  select: { id: true, name: true, email: true, role: { select: { name: true } } }
+                }
+              }
+            }
+          }
+        }
       },
       orderBy: { deadline: "asc" }
     });
@@ -748,6 +759,26 @@ export async function listProjects(includeTrashed = false, userContext?: { userI
         // keep cleanNotes
       }
 
+      // Extract assigned developers from project conversation members
+      const assignedDevs: any[] = [];
+      const seenDevIds = new Set<string>();
+      if (p.conversations) {
+        p.conversations.forEach((conv: any) => {
+          (conv.members || []).forEach((m: any) => {
+            if (m.user && (m.user.role?.name === "Developer" || m.user.roleName === "Developer")) {
+              if (!seenDevIds.has(m.user.id)) {
+                seenDevIds.add(m.user.id);
+                assignedDevs.push({
+                  id: m.user.id,
+                  name: m.user.name,
+                  email: m.user.email
+                });
+              }
+            }
+          });
+        });
+      }
+
       const payments = (p as any).payments || [];
       const totalReceived = isDeveloper ? 0 : payments.reduce((sum: number, pay: any) => sum + pay.amount, 0);
       return {
@@ -758,6 +789,8 @@ export async function listProjects(includeTrashed = false, userContext?: { userI
         hourlyRate,
         estimatedHours,
         closeOutcome,
+        assignedDevs,
+        isAssigned: assignedDevs.length > 0,
         finalBudget: isDeveloper ? 0 : p.finalBudget,
         bonus: isDeveloper ? 0 : p.bonus,
         totalReceived,
@@ -798,6 +831,8 @@ export async function getProjectById(id: string, userContext?: { userId: string;
       totalReceived,
       pendingAmount: isDeveloper ? 0 : project.finalBudget - totalReceived,
       ownershipHistory,
+      assignedDevs: (project as any).assignedDevs || [],
+      isAssigned: ((project as any).assignedDevs || []).length > 0,
       activities: mockDb.activities.filter(a => a.projectId === id).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
       attachments: mockDb.attachments.filter(att => att.projectId === id)
     };
@@ -812,9 +847,14 @@ export async function getProjectById(id: string, userContext?: { userId: string;
         activities: { include: { user: true }, orderBy: { timestamp: "desc" } },
         attachments: { include: { uploadedBy: true } },
         conversations: {
-          select: {
-            id: true,
-            members: { select: { userId: true } }
+          include: {
+            members: {
+              include: {
+                user: {
+                  select: { id: true, name: true, email: true, role: { select: { name: true } } }
+                }
+              }
+            }
           }
         }
       }
@@ -852,6 +892,28 @@ export async function getProjectById(id: string, userContext?: { userId: string;
       // Keep cleanNotes
     }
 
+    // Extract assigned developers from project conversation members
+    const assignedDevs: any[] = [];
+    const seenDevIds = new Set<string>();
+    if (project.conversations) {
+      project.conversations.forEach((conv: any) => {
+        (conv.members || []).forEach((m: any) => {
+          if (m.user && (m.user.role?.name === "Developer" || m.user.roleName === "Developer")) {
+            if (!seenDevIds.has(m.user.id)) {
+              seenDevIds.add(m.user.id);
+              assignedDevs.push({
+                id: m.user.id,
+                name: m.user.name,
+                email: m.user.email
+              });
+            }
+          }
+        });
+      });
+    }
+
+    const conversationId = project.conversations[0]?.id || null;
+
     const payments = (project as any).payments || [];
     const totalReceived = isDeveloper ? 0 : payments.reduce((sum: number, pay: any) => sum + pay.amount, 0);
     return {
@@ -864,6 +926,9 @@ export async function getProjectById(id: string, userContext?: { userId: string;
       pricingModel: (project as any).pricingModel || pricingModel,
       hourlyRate: (project as any).hourlyRate || hourlyRate,
       estimatedHours: (project as any).estimatedHours || estimatedHours,
+      assignedDevs,
+      isAssigned: assignedDevs.length > 0,
+      conversationId,
       finalBudget: isDeveloper ? 0 : project.finalBudget,
       bonus: isDeveloper ? 0 : project.bonus,
       totalReceived,
@@ -880,6 +945,7 @@ export async function createProject(data: any, userId: string): Promise<any> {
   const pricingModel = data.pricingModel || "Fixed";
   const hourlyRate = data.hourlyRate ? parseFloat(data.hourlyRate) : undefined;
   const estimatedHours = data.estimatedHours ? parseFloat(data.estimatedHours) : undefined;
+  const devId = data.devId || data.assignedDevId || "";
 
   if (isMockMode) {
     const newProj: Project = {
@@ -901,6 +967,11 @@ export async function createProject(data: any, userId: string): Promise<any> {
       isTrashed: false,
       createdAt: new Date()
     };
+    if (devId) {
+      const dev = mockDb.users.find(u => u.id === devId);
+      (newProj as any).assignedDevs = dev ? [{ id: dev.id, name: dev.name, email: dev.email }] : [];
+      (newProj as any).isAssigned = true;
+    }
     mockDb.projects.push(newProj);
 
     mockDb.activities.push({
@@ -908,7 +979,7 @@ export async function createProject(data: any, userId: string): Promise<any> {
       timestamp: new Date(),
       userId,
       type: "System",
-      notes: `Created project ${data.name} (${currency} ${pricingModel})`,
+      notes: `Created project ${data.name} (${currency} ${pricingModel})${devId ? ` and assigned to developer.` : ""}`,
       projectId: newProj.id
     });
 
@@ -923,7 +994,7 @@ export async function createProject(data: any, userId: string): Promise<any> {
       generalNotes: data.notes || ""
     };
 
-    return await prisma.project.create({
+    const project = await prisma.project.create({
       data: {
         name: data.name,
         clientId: data.clientId,
@@ -945,6 +1016,33 @@ export async function createProject(data: any, userId: string): Promise<any> {
         }
       }
     });
+
+    // Create project conversation group
+    const conversationMembers = [{ userId: data.primaryBdaId }];
+    if (devId && devId !== data.primaryBdaId) {
+      conversationMembers.push({ userId: devId });
+    }
+
+    try {
+      await prisma.conversation.create({
+        data: {
+          type: "PROJECT",
+          projectId: project.id,
+          members: {
+            create: conversationMembers
+          }
+        }
+      });
+
+      // If developer was selected during creation, trigger assignment notification & email
+      if (devId) {
+        await sendDevAssignmentEmail(project.id, devId, data.workDetails || `Assigned to project ${data.name} at creation.`);
+      }
+    } catch (chatErr) {
+      console.error("Failed to initialize conversation/assign on project creation:", chatErr);
+    }
+
+    return project;
   }
 }
 
@@ -961,20 +1059,14 @@ export async function updateProject(id: string, data: any, userId: string): Prom
       notes = `Project status flagged as Issue: ${data.issueDescription}`;
     }
 
-    const updated: Project = {
+    const updated = {
       ...old,
       ...data,
       startDate: data.startDate ? new Date(data.startDate) : old.startDate,
       deadline: data.deadline ? new Date(data.deadline) : old.deadline,
       finalBudget: data.finalBudget ? parseFloat(data.finalBudget) : old.finalBudget,
       bonus: data.bonus !== undefined ? parseFloat(data.bonus) : old.bonus,
-      currency: data.currency !== undefined ? data.currency : old.currency,
-      pricingModel: data.pricingModel !== undefined ? data.pricingModel : old.pricingModel,
-      hourlyRate: data.hourlyRate !== undefined ? parseFloat(data.hourlyRate) : old.hourlyRate,
-      estimatedHours: data.estimatedHours !== undefined ? parseFloat(data.estimatedHours) : old.estimatedHours,
-      closeOutcome: data.closeOutcome !== undefined ? data.closeOutcome : old.closeOutcome,
-      clientRating: data.clientRating !== undefined ? (Number(data.clientRating) || 5) : old.clientRating,
-      clientFeedback: data.clientFeedback !== undefined ? data.clientFeedback : old.clientFeedback,
+      updatedAt: new Date()
     };
     mockDb.projects[idx] = updated;
 
@@ -1182,20 +1274,49 @@ export async function sendDevAssignmentEmail(projectId: string, devId: string, w
     projectData = mockDb.projects.find(p => p.id === projectId);
     const devName = devUser?.name || "Developer";
 
+    if (projectData) {
+      if (!(projectData as any).assignedDevs) (projectData as any).assignedDevs = [];
+      if (!(projectData as any).assignedDevs.some((d: any) => d.id === devId)) {
+        (projectData as any).assignedDevs.push({ id: devId, name: devName, email: devUser?.email });
+      }
+      (projectData as any).isAssigned = true;
+    }
+
     mockDb.activities.push({
       id: `act-${Date.now()}`,
       timestamp: new Date(),
       userId: devId,
       type: "System",
-      notes: `Project assignment email dispatched to developer ${devName}. Requirements: ${workDetails}`,
+      notes: `Project assigned to developer ${devName}. Requirements: ${workDetails}`,
       projectId
     });
   } else {
     devUser = await prisma.user.findUnique({ where: { id: devId } });
     projectData = await prisma.project.findUnique({
       where: { id: projectId },
-      include: { client: true }
+      include: {
+        client: true,
+        conversations: {
+          include: {
+            members: {
+              include: {
+                user: { select: { id: true, role: { select: { name: true } } } }
+              }
+            }
+          }
+        }
+      }
     });
+
+    // Check backend lock: If project already has assigned developers, reject reassignment
+    const alreadyAssignedDevs = ((projectData as any)?.conversations || []).flatMap((c: any) => 
+      (c.members || []).filter((m: any) => m.user?.role?.name === "Developer")
+    );
+    const isAlreadyThisDev = alreadyAssignedDevs.some((m: any) => m.userId === devId);
+
+    if (alreadyAssignedDevs.length > 0 && !isAlreadyThisDev) {
+      throw new Error("This project is already assigned to a developer and locked from reassignment.");
+    }
 
     const devName = devUser?.name || "Developer";
 
@@ -1203,7 +1324,7 @@ export async function sendDevAssignmentEmail(projectId: string, devId: string, w
       data: {
         userId: devId,
         type: "System",
-        notes: `Project assignment email dispatched to developer ${devName}. Requirements: ${workDetails}`,
+        notes: `Project assignment locked and assigned to developer ${devName}. Requirements: ${workDetails}`,
         projectId
       }
     });
@@ -1213,7 +1334,7 @@ export async function sendDevAssignmentEmail(projectId: string, devId: string, w
       await prisma.notification.create({
         data: {
           title: "New Task Assigned",
-          message: `You have been assigned a task on project: ${projectData?.name || "Project"}`,
+          message: `You have been assigned to project: ${projectData?.name || "Project"}`,
           type: "NewProject",
           userId: devId,
           linkUrl: `/dashboard/projects/${projectId}`
@@ -1555,6 +1676,22 @@ export async function markNotificationRead(id: string): Promise<boolean> {
   } else {
     await prisma.notification.update({
       where: { id },
+      data: { isRead: true }
+    });
+    return true;
+  }
+}
+
+export async function markAllNotificationsRead(userId: string): Promise<boolean> {
+  await checkDbConnection();
+  if (isMockMode) {
+    mockDb.notifications.forEach(n => {
+      if (n.userId === userId) n.isRead = true;
+    });
+    return true;
+  } else {
+    await prisma.notification.updateMany({
+      where: { userId, isRead: false },
       data: { isRead: true }
     });
     return true;

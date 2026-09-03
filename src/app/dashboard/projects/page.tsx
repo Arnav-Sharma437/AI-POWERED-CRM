@@ -319,6 +319,10 @@ export default function ProjectsPage() {
                   ) : (
                     stageProjects.map((p) => {
                       const isOverdue = new Date(p.deadline).getTime() < Date.now() && p.status !== "Completed" && p.status !== "Cancelled";
+                      const assignedDevs = p.assignedDevs || [];
+                      const primaryDev = assignedDevs[0];
+                      const devInitial = primaryDev?.name ? primaryDev.name.charAt(0).toUpperCase() : "";
+
                       return (
                         <div
                           key={p.id}
@@ -326,65 +330,99 @@ export default function ProjectsPage() {
                           onDragStart={() => setDraggedProjectId(p.id)}
                           onClick={() => router.push(`/dashboard/projects/${p.id}`)}
                           style={{
-                            backgroundColor: "var(--bg-primary)",
+                            backgroundColor: "var(--bg-secondary)",
                             borderRadius: "8px",
                             border: "1px solid var(--border-primary)",
-                            padding: "1rem",
+                            padding: "0.75rem 0.85rem",
                             cursor: "grab",
-                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.04)",
-                            transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                            transition: "all 0.15s ease",
                             display: "flex",
                             flexDirection: "column",
-                            gap: "0.625rem"
+                            gap: "0.45rem"
                           }}
                         >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
-                            <span className="badge badge-primary" style={{ fontSize: "0.7rem", padding: "0.15rem 0.4rem" }}>
+                          {/* Top Row: Service Badge & Status */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.35rem" }}>
+                            <span style={{ 
+                              fontSize: "0.675rem", 
+                              fontWeight: 500, 
+                              padding: "0.1rem 0.4rem", 
+                              borderRadius: "4px", 
+                              backgroundColor: "var(--bg-tertiary)", 
+                              color: "var(--text-secondary)" 
+                            }}>
                               {p.serviceType}
                             </span>
-                            {!isDeveloper && p.status === "Issue" && (
-                              <span style={{ color: "var(--danger-color)", display: "flex", alignItems: "center", gap: "2px", fontSize: "0.7rem", fontWeight: 600 }}>
-                                <AlertCircle size={12} /> Issue
+
+                            {p.status === "Issue" && (
+                              <span style={{ color: "var(--danger-color)", display: "flex", alignItems: "center", gap: "2px", fontSize: "0.675rem", fontWeight: 500 }}>
+                                <AlertCircle size={11} /> Issue
                               </span>
                             )}
                             {p.closeOutcome && (
                               <span style={{ 
-                                color: p.closeOutcome === "Good" ? "#10b981" : p.closeOutcome === "Bad" ? "#ef4444" : "var(--primary-color)", 
-                                fontSize: "0.7rem", 
-                                fontWeight: 700 
+                                color: p.closeOutcome === "Good" ? "var(--success-color)" : p.closeOutcome === "Bad" ? "var(--danger-color)" : "var(--text-secondary)", 
+                                fontSize: "0.675rem", 
+                                fontWeight: 500 
                               }}>
-                                {p.closeOutcome === "Good" ? "★ Good Close" : p.closeOutcome === "Bad" ? "✕ Bad Close" : "• Closed"}
+                                {p.closeOutcome === "Good" ? "★ Good" : p.closeOutcome === "Bad" ? "✕ Bad" : "• Closed"}
                               </span>
                             )}
                           </div>
 
+                          {/* Title & Client */}
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--text-primary)", lineHeight: 1.3 }}>
+                            <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--text-primary)", lineHeight: 1.25 }}>
                               {p.name}
                             </div>
-                            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                              Client: {p.client?.name}
+                            <div style={{ fontSize: "0.725rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
+                              {p.client?.name || "Direct Client"}
                             </div>
                           </div>
 
-                          {/* Redacted for Developer */}
-                          {!isDeveloper && (
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", color: "var(--text-secondary)", backgroundColor: "var(--bg-secondary)", padding: "0.375rem 0.5rem", borderRadius: "6px" }}>
-                              <span>Budget ({p.pricingModel || "Fixed"}):</span>
-                              <strong style={{ color: "var(--text-primary)" }}>
-                                {new Intl.NumberFormat("en-US", { style: "currency", currency: p.currency || "INR", maximumFractionDigits: 0 }).format(p.finalBudget)}
-                              </strong>
+                          {/* Bottom Row: Deadline & Developer Initial Avatar */}
+                          <div style={{ 
+                            display: "flex", 
+                            justifyContent: "space-between", 
+                            alignItems: "center", 
+                            fontSize: "0.725rem", 
+                            borderTop: "1px solid var(--border-primary)", 
+                            paddingTop: "0.4rem", 
+                            marginTop: "0.15rem" 
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", color: isOverdue ? "var(--danger-color)" : "var(--text-tertiary)", fontWeight: isOverdue ? 500 : 400 }}>
+                              <Calendar size={11} />
+                              {new Date(p.deadline).toLocaleDateString([], { month: "short", day: "numeric" })}
                             </div>
-                          )}
 
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", borderTop: "1px solid var(--border-primary)", paddingTop: "0.5rem", marginTop: "0.25rem" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", color: isOverdue ? "var(--danger-color)" : "var(--text-tertiary)", fontWeight: isOverdue ? 600 : 400 }}>
-                              <Calendar size={12} />
-                              {new Date(p.deadline).toLocaleDateString()}
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                              {primaryDev ? (
+                                <div 
+                                  title={`Assigned Developer: ${primaryDev.name} (${primaryDev.email})`}
+                                  style={{
+                                    width: "22px",
+                                    height: "22px",
+                                    borderRadius: "50%",
+                                    backgroundColor: "var(--bg-tertiary)",
+                                    border: "1px solid var(--border-secondary)",
+                                    color: "var(--text-primary)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "0.675rem",
+                                    fontWeight: 700,
+                                    cursor: "help"
+                                  }}
+                                >
+                                  {devInitial}
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: "0.675rem", color: "var(--text-tertiary)" }}>
+                                  Unassigned
+                                </span>
+                              )}
                             </div>
-                            <span style={{ fontSize: "0.7rem", color: "var(--primary-color)", display: "flex", alignItems: "center", gap: "2px", fontWeight: 500 }}>
-                              Board →
-                            </span>
                           </div>
                         </div>
                       );

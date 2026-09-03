@@ -600,9 +600,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <button onClick={() => setActiveModal("takeover")} className="crm-btn crm-btn-secondary" style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}>
                 <UserPlus size={13} /> Takeover
               </button>
-              <button onClick={() => setActiveModal("assign")} className="crm-btn crm-btn-primary" style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}>
-                <Mail size={13} /> Assign
-              </button>
+
+              {project.isAssigned || (project.assignedDevs && project.assignedDevs.length > 0) ? (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    padding: "0.45rem 0.75rem",
+                    borderRadius: "10px",
+                    backgroundColor: "var(--bg-tertiary)",
+                    border: "1px solid var(--border-primary)",
+                    color: "var(--text-secondary)",
+                    fontSize: "0.8125rem",
+                    fontWeight: 500
+                  }}
+                  title={`Project is locked and already assigned to ${project.assignedDevs?.map((d: any) => d.name).join(", ")}`}
+                >
+                  <span style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: "var(--success-color)" }} />
+                  <span>Assigned to {project.assignedDevs?.[0]?.name || "Developer"} (Locked)</span>
+                </div>
+              ) : (
+                <button onClick={() => setActiveModal("assign")} className="crm-btn crm-btn-primary" style={{ padding: "0.45rem 0.75rem", fontSize: "0.8125rem" }}>
+                  <Mail size={13} /> Assign Developer
+                </button>
+              )}
             </>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>

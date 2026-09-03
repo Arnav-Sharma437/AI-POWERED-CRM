@@ -30,3 +30,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
   }
 }
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { userId } = body;
+    if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+    const { markAllNotificationsRead } = await import("@/lib/services");
+    await markAllNotificationsRead(userId);
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Notifications PUT error:", error);
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  }
+}

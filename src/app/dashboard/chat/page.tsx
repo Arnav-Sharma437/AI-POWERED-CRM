@@ -613,6 +613,82 @@ function ChatContent() {
               </div>
             </div>
 
+            {/* Project Group Chat Members Bar - Shows real members from database */}
+            {activeConversation.type === "PROJECT" && (
+              <div style={{
+                padding: "0.5rem 1.25rem",
+                backgroundColor: "var(--bg-secondary)",
+                borderBottom: "1px solid var(--border-primary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+                fontSize: "0.775rem"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <span style={{ color: "var(--text-tertiary)", display: "flex", alignItems: "center", gap: "0.25rem", fontWeight: 500 }}>
+                    <Users size={13} /> Project Members ({activeConversation.members?.length || 0}):
+                  </span>
+                  {(activeConversation.members || []).map((m: any) => (
+                    <div 
+                      key={m.id}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        padding: "2px 8px",
+                        borderRadius: "14px",
+                        backgroundColor: "var(--bg-primary)",
+                        border: "1px solid var(--border-primary)",
+                        fontSize: "0.75rem"
+                      }}
+                    >
+                      <span style={{
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        backgroundColor: "var(--primary-light)",
+                        color: "var(--primary-color)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.65rem",
+                        fontWeight: 700
+                      }}>
+                        {m.name?.charAt(0).toUpperCase()}
+                      </span>
+                      <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                        {m.name}
+                      </span>
+                      <span style={{ fontSize: "0.65rem", color: "var(--text-tertiary)" }}>
+                        ({m.role?.name || m.roleName || "Member"})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {activeConversation.projectId && (
+                  <button
+                    onClick={() => router.push(`/dashboard/projects/${activeConversation.projectId}`)}
+                    style={{
+                      border: "none",
+                      background: "none",
+                      color: "var(--primary-color)",
+                      fontSize: "0.75rem",
+                      cursor: "pointer",
+                      fontWeight: 500,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.25rem"
+                    }}
+                  >
+                    View Project Details →
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Chat Message History */}
             <div style={styles.messageHistory}>
               {loadingMsg ? (
