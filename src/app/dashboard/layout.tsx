@@ -117,7 +117,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [projectForm, setProjectForm] = useState({ 
     name: "", 
     clientId: "", 
-    source: "LinkedIn", 
+    source: "Upwork", 
+    platform: "Upwork",
+    platformAccountId: "Rakesh",
     startDate: "", 
     deadline: "", 
     deadlineTime: "18:00", 
@@ -593,7 +595,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setProjectForm({ 
         name: "", 
         clientId: "", 
-        source: "LinkedIn", 
+        source: "Upwork (Rakesh)", 
+        platform: "Upwork",
+        platformAccountId: "Rakesh",
         startDate: "", 
         deadline: "", 
         deadlineTime: "18:00", 
@@ -1444,6 +1448,77 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         required
                       />
                     </div>
+                    {/* Lead/Client Acquisition Platform */}
+                    <div style={{ display: "grid", gridTemplateColumns: (projectForm.platform === "Upwork" || projectForm.platform === "Freelancer") ? "1fr 1fr" : "1fr", gap: "1rem", backgroundColor: "var(--bg-secondary)", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div>
+                        <label style={modalStyles.label}>Client Platform / Source</label>
+                        <select 
+                          className="crm-select"
+                          value={projectForm.platform}
+                          onChange={(e) => {
+                            const plat = e.target.value;
+                            const defaultAccount = plat === "Upwork" ? "Rakesh" : plat === "Freelancer" ? "Pixxelu" : "";
+                            setProjectForm(prev => ({ 
+                              ...prev, 
+                              platform: plat, 
+                              platformAccountId: defaultAccount,
+                              source: defaultAccount ? `${plat} (${defaultAccount})` : plat
+                            }));
+                          }}
+                        >
+                          <option value="Upwork">Upwork</option>
+                          <option value="Freelancer">Freelancer</option>
+                          <option value="WhatsApp">WhatsApp</option>
+                          <option value="Outside">Outside / Direct Client</option>
+                        </select>
+                      </div>
+
+                      {projectForm.platform === "Upwork" && (
+                        <div>
+                          <label style={modalStyles.label}>Upwork Account / ID</label>
+                          <select 
+                            className="crm-select"
+                            value={projectForm.platformAccountId}
+                            onChange={(e) => {
+                              const acc = e.target.value;
+                              setProjectForm(prev => ({ 
+                                ...prev, 
+                                platformAccountId: acc,
+                                source: `Upwork (${acc})`
+                              }));
+                            }}
+                          >
+                            <option value="Rakesh">Rakesh</option>
+                            <option value="Shikha">Shikha</option>
+                            <option value="Deepali">Deepali</option>
+                            <option value="Divya">Divya</option>
+                            <option value="Archna">Archna</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {projectForm.platform === "Freelancer" && (
+                        <div>
+                          <label style={modalStyles.label}>Freelancer Account / ID</label>
+                          <select 
+                            className="crm-select"
+                            value={projectForm.platformAccountId}
+                            onChange={(e) => {
+                              const acc = e.target.value;
+                              setProjectForm(prev => ({ 
+                                ...prev, 
+                                platformAccountId: acc,
+                                source: `Freelancer (${acc})`
+                              }));
+                            }}
+                          >
+                            <option value="Pixxelu">Pixxelu</option>
+                            <option value="Archna">Archna</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                       <div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>

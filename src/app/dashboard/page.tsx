@@ -466,43 +466,43 @@ export default function DashboardPage() {
                 <tbody>
                   {attendanceData.userSummaries.map((u) => (
                     <tr key={u.userId} style={{ borderBottom: "1px solid var(--border-primary)", transition: "background 0.15s" }}>
-                      <td style={{ padding: "0.85rem 0.6rem", fontWeight: 700, color: "var(--text-primary)", fontSize: "0.8125rem" }}>
+                      <td style={{ padding: "0.75rem 0.6rem", fontWeight: 500, color: "var(--text-primary)", fontSize: "0.8125rem" }}>
                         {u.userName}
                       </td>
-                      <td style={{ padding: "0.85rem 0.6rem" }}>
-                        <span className={`badge ${u.roleName === "Super Admin" ? "badge-primary" : u.roleName === "Developer" ? "badge-info" : "badge-success"}`} style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem", fontWeight: 600 }}>
+                      <td style={{ padding: "0.75rem 0.6rem" }}>
+                        <span className={`badge ${u.roleName === "Super Admin" ? "badge-primary" : u.roleName === "Developer" ? "badge-info" : "badge-success"}`} style={{ fontSize: "0.725rem", padding: "0.2rem 0.5rem", fontWeight: 500 }}>
                           {u.roleName}
                         </span>
                       </td>
-                      <td style={{ padding: "0.85rem 0.6rem" }}>
+                      <td style={{ padding: "0.75rem 0.6rem" }}>
                         <span style={{
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "0.35rem",
-                          padding: "0.25rem 0.6rem",
-                          borderRadius: "8px",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                          backgroundColor: u.isCurrentlyWorking ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.1)",
+                          padding: "0.2rem 0.55rem",
+                          borderRadius: "6px",
+                          fontSize: "0.725rem",
+                          fontWeight: 500,
+                          backgroundColor: u.isCurrentlyWorking ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.08)",
                           color: u.isCurrentlyWorking ? "#10b981" : "var(--text-tertiary)"
                         }}>
-                          <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: u.isCurrentlyWorking ? "#10b981" : "#ef4444" }} />
+                          <span style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: u.isCurrentlyWorking ? "#10b981" : "#ef4444" }} />
                           {u.isCurrentlyWorking ? "Working Now" : "Clocked Out"}
                         </span>
                       </td>
-                      <td style={{ padding: "0.85rem 0.6rem" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-secondary)", fontSize: "0.775rem" }}>
-                          {u.currentLocation === "Home" ? <Home size={13} color="#10b981" /> : <Building2 size={13} color="var(--primary-color)" />}
+                      <td style={{ padding: "0.75rem 0.6rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-secondary)", fontSize: "0.75rem" }}>
+                          {u.currentLocation === "Home" ? <Home size={12} color="#10b981" /> : <Building2 size={12} color="var(--primary-color)" />}
                           <span>{u.currentLocation || "Office"}</span>
                         </div>
                       </td>
-                      <td style={{ padding: "0.85rem 0.6rem", color: "var(--text-primary)", fontFamily: "monospace", fontSize: "0.775rem" }}>
+                      <td style={{ padding: "0.75rem 0.6rem", color: "var(--text-secondary)", fontSize: "0.75rem" }}>
                         {u.firstClockIn ? new Date(u.firstClockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
                       </td>
-                      <td style={{ padding: "0.85rem 0.6rem", color: "var(--text-secondary)", fontFamily: "monospace", fontSize: "0.775rem" }}>
-                        {u.isCurrentlyWorking ? <span style={{ color: "#10b981", fontWeight: 600 }}>Active Now</span> : u.lastClockOut ? new Date(u.lastClockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
+                      <td style={{ padding: "0.75rem 0.6rem", color: "var(--text-secondary)", fontSize: "0.75rem" }}>
+                        {u.isCurrentlyWorking ? <span style={{ color: "#10b981", fontWeight: 500 }}>Active Now</span> : u.lastClockOut ? new Date(u.lastClockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
                       </td>
-                      <td style={{ padding: "0.85rem 0.6rem", textAlign: "right", fontWeight: 800, color: "var(--primary-color)", fontFamily: "monospace", fontSize: "0.85rem" }}>
+                      <td style={{ padding: "0.75rem 0.6rem", textAlign: "right", fontWeight: 600, color: "var(--text-primary)", fontSize: "0.8125rem" }}>
                         {formatMinutes(u.totalWorkedMinutes)}
                       </td>
                     </tr>

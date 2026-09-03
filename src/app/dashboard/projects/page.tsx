@@ -342,18 +342,33 @@ export default function ProjectsPage() {
                             gap: "0.45rem"
                           }}
                         >
-                          {/* Top Row: Service Badge & Status */}
+                          {/* Top Row: Service Badge, Platform & Status */}
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.35rem" }}>
-                            <span style={{ 
-                              fontSize: "0.675rem", 
-                              fontWeight: 500, 
-                              padding: "0.1rem 0.4rem", 
-                              borderRadius: "4px", 
-                              backgroundColor: "var(--bg-tertiary)", 
-                              color: "var(--text-secondary)" 
-                            }}>
-                              {p.serviceType}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap" }}>
+                              <span style={{ 
+                                fontSize: "0.675rem", 
+                                fontWeight: 500, 
+                                padding: "0.1rem 0.4rem", 
+                                borderRadius: "4px", 
+                                backgroundColor: "var(--bg-tertiary)", 
+                                color: "var(--text-secondary)" 
+                              }}>
+                                {p.serviceType}
+                              </span>
+
+                              {p.source && (
+                                <span style={{ 
+                                  fontSize: "0.65rem", 
+                                  fontWeight: 500, 
+                                  padding: "0.1rem 0.35rem", 
+                                  borderRadius: "4px", 
+                                  backgroundColor: p.source.includes("Upwork") ? "rgba(16, 185, 129, 0.12)" : p.source.includes("Freelancer") ? "rgba(59, 130, 246, 0.12)" : "var(--bg-tertiary)", 
+                                  color: p.source.includes("Upwork") ? "#10b981" : p.source.includes("Freelancer") ? "#3b82f6" : "var(--text-secondary)"
+                                }}>
+                                  {p.source}
+                                </span>
+                              )}
+                            </div>
 
                             {p.status === "Issue" && (
                               <span style={{ color: "var(--danger-color)", display: "flex", alignItems: "center", gap: "2px", fontSize: "0.675rem", fontWeight: 500 }}>

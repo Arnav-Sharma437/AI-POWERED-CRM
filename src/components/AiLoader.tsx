@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Cpu, Bot, Zap } from "lucide-react";
 
 interface AiLoaderProps {
   label?: string;
@@ -10,8 +9,8 @@ interface AiLoaderProps {
 }
 
 export default function AiLoader({
-  label = "Synthesizing AI Engine...",
-  sublabel = "Accessing neural data stream & pipeline",
+  label = "Pixxelu Operations",
+  sublabel = "Syncing workspace data...",
   size = "md"
 }: AiLoaderProps) {
   const isFullscreen = size === "fullscreen";
@@ -31,23 +30,23 @@ export default function AiLoader({
         alignItems: "center",
         justifyContent: "center",
         zIndex: 9999,
-        gap: "1.5rem"
+        gap: "1.25rem"
       }
     : {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: isSmall ? "1.5rem" : "3.5rem 2rem",
-        gap: "1.25rem",
+        padding: isSmall ? "1.5rem" : "3rem 1.5rem",
+        gap: "1rem",
         width: "100%"
       };
 
-  const orbSize = isSmall ? 48 : isFullscreen ? 88 : 64;
+  const orbSize = isSmall ? 40 : isFullscreen ? 68 : 52;
 
   return (
     <div style={containerStyle} className="animate-fade-in">
-      {/* Central Neural Quantum Core */}
+      {/* Clean Minimal Spinner with Pixxelu Logo */}
       <div
         style={{
           position: "relative",
@@ -58,97 +57,52 @@ export default function AiLoader({
           justifyContent: "center"
         }}
       >
-        {/* Outer Orbit Track 1 (Pixxelu Orange Dashed Track) */}
+        {/* Subtle circular track */}
         <div
           style={{
             position: "absolute",
-            inset: -8,
+            inset: 0,
             borderRadius: "50%",
-            border: "2px dashed rgba(224, 86, 36, 0.55)",
-            animation: "ai-spin 5s linear infinite"
+            border: "2px solid var(--border-primary)",
+            borderTopColor: "var(--primary-color)",
+            animation: "ai-spin 0.9s linear infinite"
           }}
         />
 
-        {/* Orbit Track 2 (Orange/Amber Arc) */}
+        {/* Central Clean Pixxelu Logo */}
         <div
           style={{
-            position: "absolute",
-            inset: -4,
+            width: `${orbSize - 12}px`,
+            height: `${orbSize - 12}px`,
             borderRadius: "50%",
-            border: "2px solid transparent",
-            borderTopColor: "#f97316",
-            borderRightColor: "#fbbf24",
-            animation: "ai-spin-reverse 2.5s linear infinite"
-          }}
-        />
-
-        {/* Core Glowing Pixxelu Emblem */}
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            borderRadius: "50%",
-            backgroundColor: "#ffffff",
+            backgroundColor: "var(--bg-secondary)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "8px",
-            boxShadow: "0 0 25px rgba(224, 86, 36, 0.4)",
-            border: "2px solid rgba(224, 86, 36, 0.3)",
-            animation: "ai-pulse-glow 2s ease-in-out infinite"
+            padding: "6px",
+            border: "1px solid var(--border-primary)"
           }}
         >
           <img 
             src="/logo.png" 
             alt="Pixxelu" 
             style={{ 
-              width: "80%", 
+              width: "100%", 
               height: "auto", 
-              objectFit: "contain",
-              filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))"
+              objectFit: "contain"
             }} 
           />
         </div>
-
-        {/* Floating Quantum Particle 1 */}
-        <div
-          style={{
-            position: "absolute",
-            top: "-6px",
-            right: "2px",
-            width: "8px",
-            height: "8px",
-            borderRadius: "50%",
-            backgroundColor: "#f97316",
-            boxShadow: "0 0 10px #f97316",
-            animation: "ai-particle-float 2s ease-in-out infinite"
-          }}
-        />
-
-        {/* Floating Quantum Particle 2 */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "-4px",
-            left: "4px",
-            width: "6px",
-            height: "6px",
-            borderRadius: "50%",
-            backgroundColor: "#fbbf24",
-            boxShadow: "0 0 8px #fbbf24",
-            animation: "ai-particle-float 2.5s ease-in-out infinite reverse"
-          }}
-        />
       </div>
 
-      {/* Futuristic Labeling */}
+      {/* Clean, Simple, Non-bold Typography */}
       <div style={{ textAlign: "center" }}>
         <div
-          className="ai-shimmer-text"
           style={{
-            fontSize: isSmall ? "0.875rem" : isFullscreen ? "1.25rem" : "1.05rem",
-            letterSpacing: "0.5px",
-            marginBottom: "4px"
+            fontSize: isSmall ? "0.8125rem" : isFullscreen ? "1.1rem" : "0.9375rem",
+            color: "var(--text-primary)",
+            fontWeight: 500,
+            marginBottom: "2px"
           }}
         >
           {label}
@@ -156,7 +110,7 @@ export default function AiLoader({
         {sublabel && (
           <div
             style={{
-              fontSize: isSmall ? "0.75rem" : "0.8125rem",
+              fontSize: isSmall ? "0.725rem" : "0.775rem",
               color: "var(--text-tertiary)",
               fontWeight: 400
             }}

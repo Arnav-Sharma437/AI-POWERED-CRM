@@ -182,33 +182,33 @@ export default function PaymentsPage() {
 
       {/* Financial KPI Summary Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
-        <div className="crm-card" style={{ padding: "1.25rem", display: "flex", alignItems: "center", gap: "1rem", borderLeft: "4px solid var(--primary-color)" }}>
-          <div style={{ width: "44px", height: "44px", borderRadius: "10px", backgroundColor: "var(--primary-light)", color: "var(--primary-color)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <DollarSign size={22} />
+        <div className="crm-card" style={{ padding: "1.25rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "var(--bg-tertiary)", color: "var(--text-secondary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <DollarSign size={20} />
           </div>
           <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.5px" }}>Total Contract Value (INR)</div>
-            <div style={{ fontSize: "1.375rem", fontWeight: 800, color: "var(--text-primary)", marginTop: "2px" }}>{formatInr(totalContractInr)}</div>
+            <div style={{ fontSize: "0.725rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 500, letterSpacing: "0.5px" }}>Total Contract Value (INR)</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>{formatInr(totalContractInr)}</div>
           </div>
         </div>
 
-        <div className="crm-card" style={{ padding: "1.25rem", display: "flex", alignItems: "center", gap: "1rem", borderLeft: "4px solid #10b981" }}>
-          <div style={{ width: "44px", height: "44px", borderRadius: "10px", backgroundColor: "rgba(16, 185, 129, 0.12)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <CheckCircle size={22} />
+        <div className="crm-card" style={{ padding: "1.25rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "rgba(16, 185, 129, 0.1)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <CheckCircle size={20} />
           </div>
           <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.5px" }}>Total Received (INR)</div>
-            <div style={{ fontSize: "1.375rem", fontWeight: 800, color: "#10b981", marginTop: "2px" }}>{formatInr(totalReceivedInr)}</div>
+            <div style={{ fontSize: "0.725rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 500, letterSpacing: "0.5px" }}>Total Received (INR)</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>{formatInr(totalReceivedInr)}</div>
           </div>
         </div>
 
-        <div className="crm-card" style={{ padding: "1.25rem", display: "flex", alignItems: "center", gap: "1rem", borderLeft: "4px solid var(--warning-color)" }}>
-          <div style={{ width: "44px", height: "44px", borderRadius: "10px", backgroundColor: "var(--warning-light)", color: "var(--warning-color)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Clock size={22} />
+        <div className="crm-card" style={{ padding: "1.25rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div style={{ width: "40px", height: "40px", borderRadius: "8px", backgroundColor: "var(--bg-tertiary)", color: "var(--text-secondary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Clock size={20} />
           </div>
           <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.5px" }}>Total Pending Bills (INR)</div>
-            <div style={{ fontSize: "1.375rem", fontWeight: 800, color: "var(--warning-color)", marginTop: "2px" }}>{formatInr(totalPendingInr)}</div>
+            <div style={{ fontSize: "0.725rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 500, letterSpacing: "0.5px" }}>Total Pending Bills (INR)</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-primary)", marginTop: "2px" }}>{formatInr(totalPendingInr)}</div>
           </div>
         </div>
       </div>
@@ -290,71 +290,71 @@ export default function PaymentsPage() {
                 return (
                   <tr key={p.id}>
                     <td>
-                      <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+                      <div style={{ fontWeight: 500, color: "var(--text-primary)", fontSize: "0.8125rem" }}>
                         {p.client?.name || "Independent Client"}
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
                         {p.client?.company || "Direct Account"}
                       </div>
                     </td>
 
                     <td>
-                      <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                      <div style={{ fontWeight: 500, color: "var(--text-primary)", fontSize: "0.8125rem" }}>
                         {p.name}
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
                         BDA: {p.primaryBda?.name || "Unassigned"} • {p.serviceType}
                       </div>
                     </td>
 
                     <td>
                       <span style={{
-                        backgroundColor: "rgba(99, 102, 241, 0.12)",
-                        color: "var(--primary-color)",
-                        padding: "3px 8px",
-                        borderRadius: "6px",
-                        fontSize: "0.775rem",
-                        fontWeight: 800,
-                        fontFamily: "monospace"
+                        backgroundColor: "var(--bg-tertiary)",
+                        color: "var(--text-secondary)",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontSize: "0.725rem",
+                        fontWeight: 500
                       }}>
                         {curr}
                       </span>
                     </td>
 
-                    <td style={{ textAlign: "right", fontWeight: 700, color: "var(--text-primary)", fontFamily: "monospace" }}>
+                    <td style={{ textAlign: "right", fontWeight: 500, color: "var(--text-primary)", fontSize: "0.8125rem" }}>
                       {formatOriginal(p.finalBudget || 0, curr)}
                     </td>
 
-                    <td style={{ textAlign: "right", fontWeight: 700, color: "#10b981", fontFamily: "monospace" }}>
+                    <td style={{ textAlign: "right", fontWeight: 500, color: "var(--text-secondary)", fontSize: "0.8125rem" }}>
                       {formatOriginal(p.totalReceived || 0, curr)}
                     </td>
 
-                    <td style={{ textAlign: "right", fontWeight: 700, color: isPending ? "var(--warning-color)" : "var(--text-tertiary)", fontFamily: "monospace" }}>
+                    <td style={{ textAlign: "right", fontWeight: 500, color: isPending ? "var(--text-primary)" : "var(--text-tertiary)", fontSize: "0.8125rem" }}>
                       {formatOriginal(p.pendingAmount || 0, curr)}
                     </td>
 
-                    <td style={{ textAlign: "right", fontFamily: "monospace" }}>
-                      <div style={{ fontWeight: 800, color: isPending ? "var(--text-primary)" : "var(--text-tertiary)" }}>
+                    <td style={{ textAlign: "right" }}>
+                      <div style={{ fontWeight: 600, color: isPending ? "var(--text-primary)" : "var(--text-tertiary)", fontSize: "0.8125rem" }}>
                         {formatInr(convertedPendingInr)}
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
+                      <div style={{ fontSize: "0.675rem", color: "var(--text-tertiary)" }}>
                         Total: {formatInr(convertedTotalInr)}
                       </div>
                     </td>
 
                     <td style={{ textAlign: "center" }}>
                       <span style={{
-                        padding: "3px 10px",
-                        borderRadius: "12px",
-                        fontSize: "0.75rem",
-                        fontWeight: 700,
-                        backgroundColor: isPending ? "var(--warning-light)" : "rgba(16, 185, 129, 0.12)",
-                        color: isPending ? "var(--warning-color)" : "#10b981",
+                        padding: "2px 8px",
+                        borderRadius: "10px",
+                        fontSize: "0.725rem",
+                        fontWeight: 500,
+                        backgroundColor: isPending ? "var(--bg-tertiary)" : "rgba(16, 185, 129, 0.1)",
+                        color: isPending ? "var(--text-secondary)" : "#10b981",
+                        border: isPending ? "1px solid var(--border-primary)" : "1px solid rgba(16, 185, 129, 0.2)",
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "4px"
                       }}>
-                        {isPending ? "⏳ Pending" : "✓ Settled"}
+                        {isPending ? "Pending" : "✓ Settled"}
                       </span>
                     </td>
 
