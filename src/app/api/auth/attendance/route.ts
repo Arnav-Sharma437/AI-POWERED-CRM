@@ -93,6 +93,14 @@ export async function GET(request: Request) {
       };
     });
 
+    // Helper for reliable local date string (YYYY-MM-DD)
+    const getLocalDateKey = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     // Official Calendar Holidays for 2026/Company
     const officialHolidays2026 = [
       { date: "2026-01-26", name: "Republic Day" },
@@ -124,7 +132,7 @@ export async function GET(request: Request) {
 
     for (let d = new Date(startOfMonth); d <= today; d.setDate(d.getDate() + 1)) {
       const dayOfWeek = d.getDay();
-      const dateStr = d.toISOString().split("T")[0];
+      const dateStr = getLocalDateKey(d);
       if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayDateSet.has(dateStr)) {
         elapsedWorkingDaysThisMonth++;
       }
@@ -135,7 +143,7 @@ export async function GET(request: Request) {
     let elapsedWorkingDaysThisWeek = 0;
     for (let d = new Date(startOfWeek); d <= today; d.setDate(d.getDate() + 1)) {
       const dayOfWeek = d.getDay();
-      const dateStr = d.toISOString().split("T")[0];
+      const dateStr = getLocalDateKey(d);
       if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayDateSet.has(dateStr)) {
         elapsedWorkingDaysThisWeek++;
       }
@@ -146,7 +154,7 @@ export async function GET(request: Request) {
     const chronologicalLogs = [...attendanceLogs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     // Process attendance per user cleanly with paired sessions
-    const todayKey = today.toISOString().split("T")[0];
+    const todayKey = getLocalDateKey(new Date());
 
     allUsers.forEach(u => {
       const uLogs = chronologicalLogs.filter(l => l.userId === u.id);
@@ -157,7 +165,7 @@ export async function GET(request: Request) {
 
       uLogs.forEach(log => {
         const logTime = new Date(log.timestamp);
-        const dateKey = logTime.toISOString().split("T")[0];
+        const dateKey = getLocalDateKey(logTime);
 
         if (!dayMap[dateKey]) {
           dayMap[dateKey] = {
@@ -174,15 +182,6 @@ export async function GET(request: Request) {
         const dayRec = dayMap[dateKey];
 
         if (log.action === "CLOCK_IN") {
-          if (currentClockInTime) {
-            // Previous session was unclosed
-            const prevDateKey = currentClockInTime.toISOString().split("T")[0];
-            if (prevDateKey !== dateKey) {
-              if (dayMap[prevDateKey] && dayMap[prevDateKey].minutes === 0) {
-                dayMap[prevDateKey].minutes = 480; // Default 8 hours for unclosed past days
-              }
-            }
-          }
           currentClockInTime = logTime;
           currentClockInLocation = log.location || "Office";
           if (!dayRec.clockIn) {
@@ -196,7 +195,7 @@ export async function GET(request: Request) {
             if (sessionMinutes > 720) sessionMinutes = 480; // Cap to 8 hours if abnormal
             if (sessionMinutes < 0) sessionMinutes = 0;
 
-            const sessionDateKey = currentClockInTime.toISOString().split("T")[0];
+            const sessionDateKey = getLocalDateKey(currentClockInTime);
             if (dayMap[sessionDateKey]) {
               dayMap[sessionDateKey].minutes += sessionMinutes;
             } else {
@@ -207,39 +206,35 @@ export async function GET(request: Request) {
         }
       });
 
-      // Handle ongoing live session
-      let isWorkingNow = false;
+      // Determine real live status directly from the latest logged action
+      const latestLog = uLogs.length > 0 ? uLogs[uLogs.length - 1] : null;
+      const isWorkingNow = latestLog?.action === "CLOCK_IN";
       let liveTodayMinutes = 0;
 
-      if (currentClockInTime) {
-        const inDate = new Date(currentClockInTime);
-        const inDateKey = inDate.toISOString().split("T")[0];
+      if (isWorkingNow && latestLog) {
+        currentClockInLocation = latestLog.location || "Office";
+        const inDate = new Date(latestLog.timestamp);
+        const inDateKey = getLocalDateKey(inDate);
 
-        if (inDateKey === todayKey) {
-          isWorkingNow = true;
-          const liveDiff = Math.max(0, Math.round((now - inDate.getTime()) / 60000));
-          liveTodayMinutes = Math.min(liveDiff, 720); // Cap live session to 12h max
-          if (!dayMap[todayKey]) {
-            dayMap[todayKey] = {
-              date: todayKey,
-              dateStr: inDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-              dayName: inDate.toLocaleDateString("en-IN", { weekday: "short" }),
-              clockIn: inDate.toISOString(),
-              clockOut: null,
-              location: currentClockInLocation,
-              minutes: 0
-            };
-          }
-        } else {
-          if (dayMap[inDateKey] && dayMap[inDateKey].minutes === 0) {
-            dayMap[inDateKey].minutes = 480;
-          }
+        const liveDiff = Math.max(0, Math.round((now - inDate.getTime()) / 60000));
+        liveTodayMinutes = Math.min(liveDiff, 720); // Cap live session to 12h max
+
+        if (!dayMap[inDateKey]) {
+          dayMap[inDateKey] = {
+            date: inDateKey,
+            dateStr: inDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+            dayName: inDate.toLocaleDateString("en-IN", { weekday: "short" }),
+            clockIn: inDate.toISOString(),
+            clockOut: null,
+            location: currentClockInLocation,
+            minutes: 0
+          };
         }
       }
 
       // Compute total minutes accurately
       const userDaysList = Object.values(dayMap);
-      let todayTotalMinutes = (dayMap[todayKey]?.minutes || 0) + liveTodayMinutes;
+      let todayTotalMinutes = (dayMap[todayKey]?.minutes || 0) + (isWorkingNow ? liveTodayMinutes : 0);
       let weeklyTotalMinutes = 0;
       let lifetimeTotalMinutes = 0;
       let thisWeekDaysCount = 0;
@@ -250,7 +245,7 @@ export async function GET(request: Request) {
         dDate.setHours(0, 0, 0, 0);
 
         let dMins = d.minutes;
-        if (d.date === todayKey) {
+        if (d.date === todayKey && isWorkingNow) {
           dMins += liveTodayMinutes;
         }
 
@@ -269,7 +264,7 @@ export async function GET(request: Request) {
       if (uSummary) {
         uSummary.isCurrentlyWorking = isWorkingNow;
         uSummary.currentLocation = currentClockInLocation;
-        uSummary.firstClockIn = dayMap[todayKey]?.clockIn || null;
+        uSummary.firstClockIn = dayMap[todayKey]?.clockIn || (isWorkingNow && latestLog ? latestLog.timestamp : null);
         uSummary.lastClockOut = dayMap[todayKey]?.clockOut || null;
         uSummary.totalWorkedMinutes = todayTotalMinutes;
         uSummary.totalWeeklyWorkedMinutes = weeklyTotalMinutes;

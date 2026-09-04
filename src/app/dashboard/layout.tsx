@@ -75,7 +75,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [currentLiveTime, setCurrentLiveTime] = useState<Date>(new Date());
 
   // In-Dashboard Workday Attendance & Clock-In / Clock-Out states
-  const [isWorking, setIsWorking] = useState<boolean>(true);
+  const [isWorking, setIsWorking] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("crm_is_working");
+      return saved === "true";
+    }
+    return false;
+  });
   const [workStartedAt, setWorkStartedAt] = useState<Date | null>(null);
   const [showShiftModal, setShowShiftModal] = useState<"start" | "end" | null>(null);
   const [shiftLocation, setShiftLocation] = useState<"Office" | "Home">("Office");
@@ -340,7 +346,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           const attData = await attRes.json();
           const mySummary = attData.userSummaries?.find((u: any) => u.userId === meData.user.id);
           if (mySummary) {
-            setIsWorking(mySummary.isCurrentlyWorking);
+            const workingState = Boolean(mySummary.isCurrentlyWorking);
+            setIsWorking(workingState);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("crm_is_working", String(workingState));
+            }
             if (mySummary.currentLocation) {
               setShiftLocation(mySummary.currentLocation as "Office" | "Home");
             }
@@ -398,6 +408,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleStartWorkSession = async (e: React.FormEvent) => {
     e.preventDefault();
     setAttendanceLoading(true);
+    // Immediate optimistic update
+    setIsWorking(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("crm_is_working", "true");
+    }
     try {
       const res = await fetch("/api/auth/attendance", {
         method: "POST",
@@ -421,6 +436,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setShiftNote("");
       setTriggerRefresh(prev => prev + 1);
     } catch (err: any) {
+      setIsWorking(false);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("crm_is_working", "false");
+      }
       showToast(err.message, "error");
     } finally {
       setAttendanceLoading(false);
@@ -430,6 +449,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleClockOutSession = async (e: React.FormEvent) => {
     e.preventDefault();
     setAttendanceLoading(true);
+    // Immediate optimistic update
+    setIsWorking(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("crm_is_working", "false");
+    }
     try {
       const res = await fetch("/api/auth/attendance", {
         method: "POST",
@@ -449,6 +473,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setShiftNote("");
       setTriggerRefresh(prev => prev + 1);
     } catch (err: any) {
+      setIsWorking(true);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("crm_is_working", "true");
+      }
       showToast(err.message, "error");
     } finally {
       setAttendanceLoading(false);
@@ -949,6 +977,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               {/* Interactive In-Dashboard Work Status & Attendance Control (Clock-In / Clock-Out) */}
               <button
+                type="button"
                 onClick={() => {
                   if (isWorking) {
                     setShowShiftModal("end");
@@ -959,30 +988,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "0.45rem",
+                  gap: "0.5rem",
                   backgroundColor: isWorking 
-                    ? (currentUser?.workLocation === "Office" ? "rgba(99, 102, 241, 0.15)" : "rgba(16, 185, 129, 0.15)")
+                    ? "rgba(16, 185, 129, 0.15)"
                     : "rgba(239, 68, 68, 0.12)",
                   color: isWorking
-                    ? (currentUser?.workLocation === "Office" ? "var(--primary-color)" : "#10b981")
+                    ? "#10b981"
                     : "var(--danger-color)",
                   border: isWorking
-                    ? `1px solid ${currentUser?.workLocation === "Office" ? "rgba(99, 102, 241, 0.35)" : "rgba(16, 185, 129, 0.35)"}`
+                    ? "1px solid rgba(16, 185, 129, 0.45)"
                     : "1px solid rgba(239, 68, 68, 0.35)",
-                  padding: "0.45rem 0.85rem",
+                  padding: "0.45rem 0.9rem",
                   borderRadius: "10px",
                   fontSize: "0.775rem",
                   fontWeight: 700,
                   cursor: "pointer",
-                  transition: "all 0.2s ease"
+                  transition: "all 0.2s ease",
+                  boxShadow: isWorking ? "0 0 12px rgba(16, 185, 129, 0.15)" : "none"
                 }}
-                title={isWorking ? `Working from ${currentUser?.workLocation || "Office"} (Click to Clock Out)` : "Off Duty / Clocked Out (Click to Start Work)"}
+                title={isWorking ? `Working from ${currentUser?.workLocation || shiftLocation || "Office"} (Click to Clock Out)` : "Off Duty / Clocked Out (Click to Start Work)"}
               >
                 {isWorking ? (
                   <>
-                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#10b981", boxShadow: "0 0 8px #10b981" }} />
-                    {currentUser?.workLocation === "Office" ? <Building2 size={14} /> : <Home size={14} />}
-                    <span>{currentUser?.workLocation || "Office"} • Working</span>
+                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#10b981", boxShadow: "0 0 10px #10b981" }} />
+                    {currentUser?.workLocation === "Home" || shiftLocation === "Home" ? <Home size={14} style={{ color: "#10b981" }} /> : <Building2 size={14} style={{ color: "#10b981" }} />}
+                    <span style={{ color: "#10b981" }}>{currentUser?.workLocation || shiftLocation || "Office"} • Working</span>
                   </>
                 ) : (
                   <>

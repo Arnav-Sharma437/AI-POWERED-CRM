@@ -46,6 +46,25 @@ export default function PaymentsPage() {
   const [filterCurrency, setFilterCurrency] = useState("");
   const [filterStatus, setFilterStatus] = useState("all"); // 'all' | 'monthly' | 'onetime' | 'pending' | 'settled'
 
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>(CURRENCY_TO_INR_RATES);
+
+  useEffect(() => {
+    async function loadRates() {
+      try {
+        const res = await fetch("/api/currency/rates");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ratesToInr) {
+            setExchangeRates(data.ratesToInr);
+          }
+        }
+      } catch (e) {
+        console.warn("Using fallback currency exchange rates", e);
+      }
+    }
+    loadRates();
+  }, []);
+
   useEffect(() => {
     async function loadProjects() {
       try {
@@ -107,10 +126,10 @@ export default function PaymentsPage() {
     }).format(amt);
   };
 
-  // Convert to INR with standard exchange rate
+  // Convert to INR with dynamic live exchange rate
   const convertToInr = (amt: number, curr = "INR") => {
     const code = curr.toUpperCase();
-    const rate = CURRENCY_TO_INR_RATES[code] || 1;
+    const rate = exchangeRates[code] || CURRENCY_TO_INR_RATES[code] || 1;
     return amt * rate;
   };
 

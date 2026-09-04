@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkDbConnection, isDemoMode, listLeads, listProjects, listMeetings, listActivities, listUsers } from "@/lib/services";
 import { mockDb } from "@/lib/mockData";
+import { getLiveExchangeRates } from "@/lib/currency";
 
 export async function GET(request: Request) {
   try {
@@ -106,20 +107,12 @@ export async function GET(request: Request) {
       return date >= startOfToday && date <= next7Days && p.status !== "Completed" && p.status !== "Cancelled";
     }).length;
 
-    const CURRENCY_TO_INR_RATES: Record<string, number> = {
-      INR: 1,
-      USD: 87.5,
-      EUR: 94.0,
-      GBP: 110.0,
-      AED: 23.8,
-      CAD: 63.5,
-      AUD: 56.5
-    };
+    const liveRates = await getLiveExchangeRates();
 
     const pendingPaymentsSum = projects.reduce((sum, p) => {
       const pending = p.pendingAmount || 0;
       const curr = (p.currency || "INR").toUpperCase();
-      const rate = CURRENCY_TO_INR_RATES[curr] || 1;
+      const rate = liveRates[curr] || 1;
       return sum + (pending * rate);
     }, 0);
 
