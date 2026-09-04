@@ -1648,14 +1648,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         </select>
                       </div>
                       <div>
-                        <label style={modalStyles.label}>Pricing Model</label>
+                        <label style={modalStyles.label}>Engagement & Pricing Model</label>
                         <select
                           className="crm-select"
                           value={projectForm.pricingModel}
                           onChange={(e) => setProjectForm(prev => ({ ...prev, pricingModel: e.target.value }))}
                         >
-                          <option value="Fixed">Fixed Price Project</option>
-                          <option value="Hourly">Hourly Rate Contract</option>
+                          <option value="Monthly">🔄 Monthly Retainer / Ongoing</option>
+                          <option value="Fixed">📦 One-Time / Fixed Milestone</option>
+                          <option value="Hourly">⏱️ Hourly Rate Contract</option>
                         </select>
                       </div>
                     </div>
@@ -1710,11 +1711,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     ) : (
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                         <div>
-                          <label style={modalStyles.label}>Final Fixed Budget ({projectForm.currency})</label>
+                          <label style={modalStyles.label}>
+                            {projectForm.pricingModel === "Monthly" 
+                              ? `Monthly Retainer Budget (${projectForm.currency}/month)` 
+                              : `Final Fixed Budget (${projectForm.currency})`}
+                          </label>
                           <input 
                             type="number" 
                             className="crm-input"
-                            placeholder="e.g. 50000"
+                            placeholder={projectForm.pricingModel === "Monthly" ? "e.g. 50000/mo" : "e.g. 50000"}
                             value={projectForm.finalBudget}
                             onChange={(e) => setProjectForm(prev => ({ ...prev, finalBudget: e.target.value }))}
                             required

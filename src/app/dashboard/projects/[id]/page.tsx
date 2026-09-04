@@ -547,7 +547,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </span>
             )}
             <span className="badge" style={{ backgroundColor: "rgba(99, 102, 241, 0.15)", color: "var(--primary-color)", fontWeight: 700 }}>
-              {project.currency || "INR"} ({project.pricingModel || "Fixed"})
+              {project.pricingModel === "Monthly" 
+                ? `🔄 Monthly Retainer (${project.currency || "INR"})` 
+                : `${project.currency || "INR"} (${project.pricingModel || "Fixed"})`}
             </span>
             {project.pricingModel === "Hourly" && project.hourlyRate && (
               <span className="badge" style={{ backgroundColor: "rgba(16, 185, 129, 0.15)", color: "#10b981", fontWeight: 600 }}>
@@ -1983,14 +1985,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       </select>
                     </div>
                     <div>
-                      <label style={modalStyles.label}>Pricing Model</label>
+                      <label style={modalStyles.label}>Engagement & Pricing Model</label>
                       <select
                         className="crm-select"
                         value={editProjectForm.pricingModel}
                         onChange={(e) => setEditProjectForm(prev => ({ ...prev, pricingModel: e.target.value }))}
                       >
-                        <option value="Fixed">Fixed Price Project</option>
-                        <option value="Hourly">Hourly Rate Contract</option>
+                        <option value="Monthly">🔄 Monthly Retainer / Ongoing</option>
+                        <option value="Fixed">📦 One-Time / Fixed Milestone</option>
+                        <option value="Hourly">⏱️ Hourly Rate Contract</option>
                       </select>
                     </div>
                   </div>
@@ -2043,10 +2046,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   ) : (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                       <div>
-                        <label style={modalStyles.label}>Final Fixed Budget ({editProjectForm.currency})</label>
+                        <label style={modalStyles.label}>
+                          {editProjectForm.pricingModel === "Monthly" 
+                            ? `Monthly Retainer Budget (${editProjectForm.currency}/month)` 
+                            : `Final Fixed Budget (${editProjectForm.currency})`}
+                        </label>
                         <input 
                           type="number" 
                           className="crm-input"
+                          placeholder={editProjectForm.pricingModel === "Monthly" ? "e.g. 50000/mo" : "e.g. 50000"}
                           value={editProjectForm.finalBudget}
                           onChange={(e) => setEditProjectForm(prev => ({ ...prev, finalBudget: e.target.value }))}
                           required
@@ -2057,6 +2065,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <input 
                           type="number" 
                           className="crm-input"
+                          placeholder="0"
                           value={editProjectForm.bonus}
                           onChange={(e) => setEditProjectForm(prev => ({ ...prev, bonus: e.target.value }))}
                         />

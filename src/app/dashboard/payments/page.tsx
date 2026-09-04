@@ -41,10 +41,10 @@ export default function PaymentsPage() {
     return true;
   });
 
-  const [paymentCategory, setPaymentCategory] = useState<"all" | "ongoing" | "pending" | "settled">("all");
+  const [paymentCategory, setPaymentCategory] = useState<"all" | "monthly" | "onetime" | "pending" | "settled">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCurrency, setFilterCurrency] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all"); // 'all' | 'ongoing' | 'pending' | 'settled'
+  const [filterStatus, setFilterStatus] = useState("all"); // 'all' | 'monthly' | 'onetime' | 'pending' | 'settled'
 
   useEffect(() => {
     async function loadProjects() {
@@ -122,9 +122,10 @@ export default function PaymentsPage() {
     }).format(amt);
   };
 
-  const ONGOING_STATUSES = ["Not Started", "Work in Progress", "Review", "Issue"];
+  const isOngoingMonthly = (p: any) => p.pricingModel === "Monthly" || p.status === "Ongoing";
 
-  const ongoingCount = projects.filter(p => ONGOING_STATUSES.includes(p.status)).length;
+  const monthlyCount = projects.filter(p => isOngoingMonthly(p) && p.status !== "Completed" && p.status !== "Cancelled").length;
+  const onetimeCount = projects.filter(p => !isOngoingMonthly(p) && p.status !== "Completed" && p.status !== "Cancelled").length;
   const pendingCount = projects.filter(p => (p.pendingAmount || 0) > 0).length;
   const settledCount = projects.filter(p => (p.pendingAmount || 0) <= 0).length;
 
@@ -139,11 +140,13 @@ export default function PaymentsPage() {
     const matchesCurrency = !filterCurrency || curr === filterCurrency;
 
     const isPending = (p.pendingAmount || 0) > 0;
-    const isOngoing = ONGOING_STATUSES.includes(p.status);
+    const isMonthly = isOngoingMonthly(p);
 
     let matchesCategory = true;
-    if (paymentCategory === "ongoing") {
-      matchesCategory = isOngoing;
+    if (paymentCategory === "monthly") {
+      matchesCategory = isMonthly && p.status !== "Completed" && p.status !== "Cancelled";
+    } else if (paymentCategory === "onetime") {
+      matchesCategory = !isMonthly && p.status !== "Completed" && p.status !== "Cancelled";
     } else if (paymentCategory === "pending") {
       matchesCategory = isPending;
     } else if (paymentCategory === "settled") {
@@ -152,7 +155,8 @@ export default function PaymentsPage() {
 
     const matchesStatus = 
       filterStatus === "all" ? true :
-      filterStatus === "ongoing" ? isOngoing :
+      filterStatus === "monthly" ? isMonthly :
+      filterStatus === "onetime" ? !isMonthly :
       filterStatus === "pending" ? isPending :
       !isPending;
 
@@ -186,7 +190,7 @@ export default function PaymentsPage() {
             </span>
           </div>
           <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Track client project contract values, received payments, outstanding balances in original currency and converted INR equivalent.
+            Track client project contract values, received payments, monthly retainers, and outstanding balances.
           </p>
         </div>
 
@@ -217,19 +221,34 @@ export default function PaymentsPage() {
           All Payments ({projects.length})
         </button>
         <button
-          onClick={() => { setPaymentCategory("ongoing"); setFilterStatus("all"); }}
+          onClick={() => { setPaymentCategory("monthly"); setFilterStatus("all"); }}
           className="crm-btn"
           style={{
             padding: "0.5rem 1rem",
             fontSize: "0.875rem",
             fontWeight: 600,
             borderRadius: "8px",
-            backgroundColor: paymentCategory === "ongoing" ? "var(--primary-color)" : "var(--bg-secondary)",
-            color: paymentCategory === "ongoing" ? "#ffffff" : "var(--text-secondary)",
+            backgroundColor: paymentCategory === "monthly" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: paymentCategory === "monthly" ? "#ffffff" : "var(--text-secondary)",
             border: "1px solid var(--border-primary)"
           }}
         >
-          ⚡ Ongoing Projects Payments ({ongoingCount})
+          🔄 Ongoing / Monthly Retainers ({monthlyCount})
+        </button>
+        <button
+          onClick={() => { setPaymentCategory("onetime"); setFilterStatus("all"); }}
+          className="crm-btn"
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            borderRadius: "8px",
+            backgroundColor: paymentCategory === "onetime" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: paymentCategory === "onetime" ? "#ffffff" : "var(--text-secondary)",
+            border: "1px solid var(--border-primary)"
+          }}
+        >
+          📦 One-Time Project Invoices ({onetimeCount})
         </button>
         <button
           onClick={() => { setPaymentCategory("pending"); setFilterStatus("all"); }}

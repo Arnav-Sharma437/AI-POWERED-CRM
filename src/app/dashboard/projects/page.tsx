@@ -38,7 +38,7 @@ export default function ProjectsPage() {
     }
     return true;
   });
-  const [projectCategory, setProjectCategory] = useState<"all" | "ongoing" | "completed" | "on_hold">("all");
+  const [projectCategory, setProjectCategory] = useState<"all" | "monthly" | "onetime" | "completed" | "on_hold">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
@@ -90,9 +90,10 @@ export default function ProjectsPage() {
     }
   };
 
-  const ONGOING_STATUSES = ["Ongoing", "Work in Progress", "Not Started", "Review", "Issue"];
+  const isOngoingMonthly = (p: any) => p.pricingModel === "Monthly" || p.status === "Ongoing";
 
-  const ongoingCount = projects.filter(p => ONGOING_STATUSES.includes(p.status)).length;
+  const monthlyCount = projects.filter(p => isOngoingMonthly(p) && p.status !== "Completed" && p.status !== "Cancelled").length;
+  const onetimeCount = projects.filter(p => !isOngoingMonthly(p) && p.status !== "Completed" && p.status !== "Cancelled").length;
   const completedCount = projects.filter(p => p.status === "Completed").length;
   const onHoldCount = projects.filter(p => ["On Hold", "Cancelled"].includes(p.status)).length;
 
@@ -102,8 +103,10 @@ export default function ProjectsPage() {
       p.client?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     let matchesCategory = true;
-    if (projectCategory === "ongoing") {
-      matchesCategory = ONGOING_STATUSES.includes(p.status);
+    if (projectCategory === "monthly") {
+      matchesCategory = isOngoingMonthly(p) && p.status !== "Completed" && p.status !== "Cancelled";
+    } else if (projectCategory === "onetime") {
+      matchesCategory = !isOngoingMonthly(p) && p.status !== "Completed" && p.status !== "Cancelled";
     } else if (projectCategory === "completed") {
       matchesCategory = p.status === "Completed";
     } else if (projectCategory === "on_hold") {
@@ -142,7 +145,7 @@ export default function ProjectsPage() {
           <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
             {isDeveloper 
               ? "Track your assigned deliverable board, milestone statuses, and deadlines." 
-              : "Track project deliverables, Kanban board, budgets, and flagged project issues."}
+              : "Track project deliverables, Kanban board, monthly retainers, and flagged project issues."}
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
@@ -204,19 +207,34 @@ export default function ProjectsPage() {
           All Projects ({projects.length})
         </button>
         <button
-          onClick={() => { setProjectCategory("ongoing"); setFilterStatus(""); }}
+          onClick={() => { setProjectCategory("monthly"); setFilterStatus(""); }}
           className="crm-btn"
           style={{
             padding: "0.5rem 1rem",
             fontSize: "0.875rem",
             fontWeight: 600,
             borderRadius: "8px",
-            backgroundColor: projectCategory === "ongoing" ? "var(--primary-color)" : "var(--bg-secondary)",
-            color: projectCategory === "ongoing" ? "#ffffff" : "var(--text-secondary)",
+            backgroundColor: projectCategory === "monthly" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: projectCategory === "monthly" ? "#ffffff" : "var(--text-secondary)",
             border: "1px solid var(--border-primary)"
           }}
         >
-          ⚡ Ongoing Projects ({ongoingCount})
+          🔄 Ongoing / Monthly Retainers ({monthlyCount})
+        </button>
+        <button
+          onClick={() => { setProjectCategory("onetime"); setFilterStatus(""); }}
+          className="crm-btn"
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            borderRadius: "8px",
+            backgroundColor: projectCategory === "onetime" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: projectCategory === "onetime" ? "#ffffff" : "var(--text-secondary)",
+            border: "1px solid var(--border-primary)"
+          }}
+        >
+          📦 One-Time Milestone Projects ({onetimeCount})
         </button>
         <button
           onClick={() => { setProjectCategory("completed"); setFilterStatus(""); }}
@@ -598,9 +616,10 @@ export default function ProjectsPage() {
                       <td>
                         <div style={{ fontWeight: 600 }}>
                           {new Intl.NumberFormat("en-US", { style: "currency", currency: p.currency || "INR", maximumFractionDigits: 0 }).format(p.finalBudget)}
+                          {p.pricingModel === "Monthly" && <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 400 }}> /mo</span>}
                         </div>
                         <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
-                          {p.pricingModel === "Hourly" ? `Hourly (${p.hourlyRate ? `${p.currency || "INR"} ${p.hourlyRate}/hr` : ""})` : "Fixed Price"}
+                          {p.pricingModel === "Monthly" ? "🔄 Monthly Retainer" : p.pricingModel === "Hourly" ? `Hourly (${p.hourlyRate ? `${p.currency || "INR"} ${p.hourlyRate}/hr` : ""})` : "📦 One-Time Fixed"}
                         </div>
                       </td>
                     )}
