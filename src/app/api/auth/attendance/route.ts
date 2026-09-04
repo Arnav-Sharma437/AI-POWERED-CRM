@@ -93,64 +93,6 @@ export async function GET(request: Request) {
       };
     });
 
-    // Process all chronological logs per user
-    const chronologicalLogs = [...attendanceLogs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    // Group logs by user and date
-    const userDayMap: Record<string, Record<string, { date: string; dateStr: string; dayName: string; clockIn: string | null; clockOut: string | null; location: string; minutes: number }>> = {};
-
-    chronologicalLogs.forEach(log => {
-      const uId = log.userId;
-      if (!userSummaryMap[uId]) return;
-
-      const logDate = new Date(log.timestamp);
-      const dateKey = logDate.toISOString().split("T")[0];
-
-      if (!userDayMap[uId]) userDayMap[uId] = {};
-      if (!userDayMap[uId][dateKey]) {
-        userDayMap[uId][dateKey] = {
-          date: dateKey,
-          dateStr: logDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-          dayName: logDate.toLocaleDateString("en-IN", { weekday: "short" }),
-          clockIn: null,
-          clockOut: null,
-          location: log.location,
-          minutes: 0
-        };
-      }
-
-      const dayRecord = userDayMap[uId][dateKey];
-      const isToday = logDate >= today;
-      const uSummary = userSummaryMap[uId];
-
-      if (log.action === "CLOCK_IN") {
-        if (!dayRecord.clockIn) dayRecord.clockIn = log.timestamp;
-        dayRecord.location = log.location;
-        if (isToday) {
-          uSummary.isCurrentlyWorking = true;
-          uSummary.currentLocation = log.location;
-          if (!uSummary.firstClockIn) uSummary.firstClockIn = log.timestamp;
-          uSummary.sessions.push({ clockIn: log.timestamp, clockOut: null, location: log.location });
-        }
-      } else if (log.action === "CLOCK_OUT") {
-        dayRecord.clockOut = log.timestamp;
-        if (dayRecord.clockIn) {
-          const diffMs = new Date(log.timestamp).getTime() - new Date(dayRecord.clockIn).getTime();
-          dayRecord.minutes += Math.max(0, Math.round(diffMs / 60000));
-        }
-        if (isToday) {
-          uSummary.isCurrentlyWorking = false;
-          uSummary.lastClockOut = log.timestamp;
-          const openSession = uSummary.sessions[uSummary.sessions.length - 1];
-          if (openSession && !openSession.clockOut) {
-            openSession.clockOut = log.timestamp;
-            const durationMs = new Date(log.timestamp).getTime() - new Date(openSession.clockIn).getTime();
-            uSummary.totalWorkedMinutes += Math.max(0, Math.round(durationMs / 60000));
-          }
-        }
-      }
-    });
-
     // Official Calendar Holidays for 2026/Company
     const officialHolidays2026 = [
       { date: "2026-01-26", name: "Republic Day" },
@@ -165,7 +107,6 @@ export async function GET(request: Request) {
       { date: "2026-12-25", name: "Christmas" }
     ];
 
-    // Check ongoing live sessions and compute weekly & accurate present/absent stats
     const now = Date.now();
     const startOfWeek = new Date();
     const currentDay = startOfWeek.getDay(); // 0 is Sun, 1 is Mon...
@@ -201,60 +142,146 @@ export async function GET(request: Request) {
     }
     if (elapsedWorkingDaysThisWeek === 0) elapsedWorkingDaysThisWeek = 1;
 
-    Object.values(userSummaryMap).forEach(u => {
-      if (u.isCurrentlyWorking) {
-        const openSession = u.sessions[u.sessions.length - 1];
-        if (openSession && !openSession.clockIn) {
-          // fallback
-        } else if (openSession && !openSession.clockOut) {
-          const liveMs = now - new Date(openSession.clockIn).getTime();
-          u.totalWorkedMinutes += Math.max(0, Math.round(liveMs / 60000));
+    // Sort all chronological logs ascending
+    const chronologicalLogs = [...attendanceLogs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    // Process attendance per user cleanly with paired sessions
+    const todayKey = today.toISOString().split("T")[0];
+
+    allUsers.forEach(u => {
+      const uLogs = chronologicalLogs.filter(l => l.userId === u.id);
+      const dayMap: Record<string, { date: string; dateStr: string; dayName: string; clockIn: string | null; clockOut: string | null; location: string; minutes: number }> = {};
+      
+      let currentClockInTime: Date | null = null;
+      let currentClockInLocation = "Office";
+
+      uLogs.forEach(log => {
+        const logTime = new Date(log.timestamp);
+        const dateKey = logTime.toISOString().split("T")[0];
+
+        if (!dayMap[dateKey]) {
+          dayMap[dateKey] = {
+            date: dateKey,
+            dateStr: logTime.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+            dayName: logTime.toLocaleDateString("en-IN", { weekday: "short" }),
+            clockIn: null,
+            clockOut: null,
+            location: log.location || "Office",
+            minutes: 0
+          };
         }
-      }
 
-      // Compute total lifetime and weekly worked minutes
-      const userDays = userDayMap[u.userId] ? Object.values(userDayMap[u.userId]) : [];
-      let lifetimeMins = 0;
-      let weeklyMins = 0;
-      let monthDaysPresent = 0;
-      let weekDaysPresent = 0;
+        const dayRec = dayMap[dateKey];
 
-      userDays.forEach(d => {
-        lifetimeMins += d.minutes;
-        const dDate = new Date(d.date);
-        dDate.setHours(0, 0, 0, 0);
+        if (log.action === "CLOCK_IN") {
+          if (currentClockInTime) {
+            // Previous session was unclosed
+            const prevDateKey = currentClockInTime.toISOString().split("T")[0];
+            if (prevDateKey !== dateKey) {
+              if (dayMap[prevDateKey] && dayMap[prevDateKey].minutes === 0) {
+                dayMap[prevDateKey].minutes = 480; // Default 8 hours for unclosed past days
+              }
+            }
+          }
+          currentClockInTime = logTime;
+          currentClockInLocation = log.location || "Office";
+          if (!dayRec.clockIn) {
+            dayRec.clockIn = log.timestamp;
+          }
+          dayRec.location = currentClockInLocation;
+        } else if (log.action === "CLOCK_OUT") {
+          dayRec.clockOut = log.timestamp;
+          if (currentClockInTime) {
+            let sessionMinutes = Math.round((logTime.getTime() - currentClockInTime.getTime()) / 60000);
+            if (sessionMinutes > 720) sessionMinutes = 480; // Cap to 8 hours if abnormal
+            if (sessionMinutes < 0) sessionMinutes = 0;
 
-        if (dDate >= startOfWeek) {
-          weeklyMins += d.minutes;
-          weekDaysPresent++;
-        }
-        if (dDate >= startOfMonth) {
-          monthDaysPresent++;
+            const sessionDateKey = currentClockInTime.toISOString().split("T")[0];
+            if (dayMap[sessionDateKey]) {
+              dayMap[sessionDateKey].minutes += sessionMinutes;
+            } else {
+              dayRec.minutes += sessionMinutes;
+            }
+            currentClockInTime = null;
+          }
         }
       });
 
-      // If user is currently working today and it's this week, ensure today's live minutes are included in weekly minutes
-      if (u.isCurrentlyWorking) {
-        // Find if today was already in userDays
-        const todayKey = today.toISOString().split("T")[0];
-        const todayInUserDays = userDayMap[u.userId]?.[todayKey];
-        if (!todayInUserDays) {
-          weeklyMins += u.totalWorkedMinutes;
-          lifetimeMins += u.totalWorkedMinutes;
+      // Handle ongoing live session
+      let isWorkingNow = false;
+      let liveTodayMinutes = 0;
+
+      if (currentClockInTime) {
+        const inDate = new Date(currentClockInTime);
+        const inDateKey = inDate.toISOString().split("T")[0];
+
+        if (inDateKey === todayKey) {
+          isWorkingNow = true;
+          const liveDiff = Math.max(0, Math.round((now - inDate.getTime()) / 60000));
+          liveTodayMinutes = Math.min(liveDiff, 720); // Cap live session to 12h max
+          if (!dayMap[todayKey]) {
+            dayMap[todayKey] = {
+              date: todayKey,
+              dateStr: inDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+              dayName: inDate.toLocaleDateString("en-IN", { weekday: "short" }),
+              clockIn: inDate.toISOString(),
+              clockOut: null,
+              location: currentClockInLocation,
+              minutes: 0
+            };
+          }
+        } else {
+          if (dayMap[inDateKey] && dayMap[inDateKey].minutes === 0) {
+            dayMap[inDateKey].minutes = 480;
+          }
         }
       }
 
-      u.totalLifetimeWorkedMinutes = lifetimeMins;
-      u.totalWeeklyWorkedMinutes = weeklyMins;
-      u.totalDaysPresent = userDays.length;
-      u.thisMonthDaysPresent = monthDaysPresent;
-      u.thisWeekDaysPresent = weekDaysPresent;
+      // Compute total minutes accurately
+      const userDaysList = Object.values(dayMap);
+      let todayTotalMinutes = (dayMap[todayKey]?.minutes || 0) + liveTodayMinutes;
+      let weeklyTotalMinutes = 0;
+      let lifetimeTotalMinutes = 0;
+      let thisWeekDaysCount = 0;
+      let thisMonthDaysCount = 0;
 
-      // Realistic leave calculation: Only elapsed business days this month minus days present this month
-      u.totalDaysOnLeave = Math.max(0, elapsedWorkingDaysThisMonth - monthDaysPresent);
-      u.weeklyDaysOnLeave = Math.max(0, elapsedWorkingDaysThisWeek - weekDaysPresent);
+      userDaysList.forEach(d => {
+        const dDate = new Date(d.date);
+        dDate.setHours(0, 0, 0, 0);
 
-      u.history = userDays.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        let dMins = d.minutes;
+        if (d.date === todayKey) {
+          dMins += liveTodayMinutes;
+        }
+
+        lifetimeTotalMinutes += dMins;
+
+        if (dDate >= startOfWeek) {
+          weeklyTotalMinutes += dMins;
+          thisWeekDaysCount++;
+        }
+        if (dDate >= startOfMonth) {
+          thisMonthDaysCount++;
+        }
+      });
+
+      const uSummary = userSummaryMap[u.id];
+      if (uSummary) {
+        uSummary.isCurrentlyWorking = isWorkingNow;
+        uSummary.currentLocation = currentClockInLocation;
+        uSummary.firstClockIn = dayMap[todayKey]?.clockIn || null;
+        uSummary.lastClockOut = dayMap[todayKey]?.clockOut || null;
+        uSummary.totalWorkedMinutes = todayTotalMinutes;
+        uSummary.totalWeeklyWorkedMinutes = weeklyTotalMinutes;
+        uSummary.totalLifetimeWorkedMinutes = lifetimeTotalMinutes;
+        uSummary.totalDaysPresent = userDaysList.length;
+        uSummary.thisMonthDaysPresent = thisMonthDaysCount;
+        uSummary.thisWeekDaysPresent = thisWeekDaysCount;
+
+        uSummary.totalDaysOnLeave = Math.max(0, elapsedWorkingDaysThisMonth - thisMonthDaysCount);
+        uSummary.weeklyDaysOnLeave = Math.max(0, elapsedWorkingDaysThisWeek - thisWeekDaysCount);
+        uSummary.history = userDaysList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      }
     });
 
     return NextResponse.json({
