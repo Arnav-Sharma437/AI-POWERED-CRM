@@ -58,11 +58,18 @@ export async function GET(request: Request) {
 
     // Map logs into structured attendance records
     const attendanceLogs = rawActivities.map(act => {
-      const isStart = act.notes.includes("started workday") || act.notes.includes("workday session") || act.notes.includes("logged in from");
-      const isClockOut = act.notes.includes("clocked out") || act.notes.includes("finished workday");
+      let action = "OTHER";
+      const notes = (act.notes || "").toLowerCase();
+      
+      if (notes.includes("clocked out") || notes.includes("finished workday") || notes.includes("clock out") || notes.includes("ended workday")) {
+        action = "CLOCK_OUT";
+      } else if (notes.includes("started workday") || notes.includes("started work") || notes.includes("clocked in") || notes.includes("clock in")) {
+        action = "CLOCK_IN";
+      }
+
       let location = "Office";
-      if (act.notes.includes("from Home") || act.notes.includes("Home")) location = "Home";
-      else if (act.notes.includes("from Office") || act.notes.includes("Office")) location = "Office";
+      if (act.notes?.includes("from Home") || act.notes?.includes("Home")) location = "Home";
+      else if (act.notes?.includes("from Office") || act.notes?.includes("Office")) location = "Office";
 
       return {
         id: act.id,
@@ -70,11 +77,11 @@ export async function GET(request: Request) {
         userId: act.userId,
         userName: act.user?.name || "Team Member",
         userEmail: act.user?.email || "",
-        action: isStart ? "CLOCK_IN" : isClockOut ? "CLOCK_OUT" : "OTHER",
+        action,
         location,
         notes: act.notes
       };
-    });
+    }).filter(a => a.action === "CLOCK_IN" || a.action === "CLOCK_OUT");
 
     // Compute comprehensive summary per user
     const today = new Date();
@@ -215,30 +222,17 @@ export async function GET(request: Request) {
         }
       });
 
-      // Determine real live status directly from the latest logged action
-      const latestLog = uLogs.length > 0 ? uLogs[uLogs.length - 1] : null;
-      const isWorkingNow = latestLog?.action === "CLOCK_IN";
+      // User is ONLY active/working if they clocked in TODAY and their latest log today is CLOCK_IN
+      const todayLogs = uLogs.filter(l => getLocalDateKey(new Date(l.timestamp)) === todayKey);
+      const latestTodayLog = todayLogs.length > 0 ? todayLogs[todayLogs.length - 1] : null;
+      const isWorkingNow = latestTodayLog?.action === "CLOCK_IN";
       let liveTodayMinutes = 0;
 
-      if (isWorkingNow && latestLog) {
-        currentClockInLocation = latestLog.location || "Office";
-        const inDate = new Date(latestLog.timestamp);
-        const inDateKey = getLocalDateKey(inDate);
-
+      if (isWorkingNow && latestTodayLog) {
+        currentClockInLocation = latestTodayLog.location || "Office";
+        const inDate = new Date(latestTodayLog.timestamp);
         const liveDiff = Math.max(0, Math.round((now - inDate.getTime()) / 60000));
         liveTodayMinutes = Math.min(liveDiff, 720); // Cap live session to 12h max
-
-        if (!dayMap[inDateKey]) {
-          dayMap[inDateKey] = {
-            date: inDateKey,
-            dateStr: inDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-            dayName: inDate.toLocaleDateString("en-IN", { weekday: "short" }),
-            clockIn: inDate.toISOString(),
-            clockOut: null,
-            location: currentClockInLocation,
-            minutes: 0
-          };
-        }
       }
 
       // Compute total minutes accurately
@@ -272,8 +266,8 @@ export async function GET(request: Request) {
       const uSummary = userSummaryMap[u.id];
       if (uSummary) {
         uSummary.isCurrentlyWorking = isWorkingNow;
-        uSummary.currentLocation = currentClockInLocation;
-        uSummary.firstClockIn = dayMap[todayKey]?.clockIn || (isWorkingNow && latestLog ? latestLog.timestamp : null);
+        uSummary.currentLocation = isWorkingNow ? currentClockInLocation : (dayMap[todayKey]?.location || "Office");
+        uSummary.firstClockIn = dayMap[todayKey]?.clockIn || null;
         uSummary.lastClockOut = dayMap[todayKey]?.clockOut || null;
         uSummary.totalWorkedMinutes = todayTotalMinutes;
         uSummary.totalWeeklyWorkedMinutes = weeklyTotalMinutes;

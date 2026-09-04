@@ -357,8 +357,12 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-                {myAttendanceSummary?.firstClockIn ? (
-                  <>First login today at <strong>{new Date(myAttendanceSummary.firstClockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong> from {myAttendanceSummary.currentLocation || "Office"}</>
+                {myAttendanceSummary?.isCurrentlyWorking && myAttendanceSummary?.firstClockIn ? (
+                  <>Clocked in today at <strong>{new Date(myAttendanceSummary.firstClockIn).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</strong> from {myAttendanceSummary.currentLocation || "Office"}</>
+                ) : myAttendanceSummary?.lastClockOut ? (
+                  <>Clocked out at <strong>{new Date(myAttendanceSummary.lastClockOut).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</strong>. Click the clock button on topbar to resume work.</>
+                ) : myAttendanceSummary?.firstClockIn ? (
+                  <>Logged in today at <strong>{new Date(myAttendanceSummary.firstClockIn).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</strong> from {myAttendanceSummary.currentLocation || "Office"}</>
                 ) : (
                   <>You haven't clocked in today yet. Click the clock button on topbar to start your session.</>
                 )}
@@ -497,10 +501,10 @@ export default function DashboardPage() {
                         </div>
                       </td>
                       <td style={{ padding: "0.75rem 0.6rem", color: "var(--text-secondary)", fontSize: "0.75rem" }}>
-                        {u.firstClockIn ? new Date(u.firstClockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
+                        {u.firstClockIn ? new Date(u.firstClockIn).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
                       </td>
                       <td style={{ padding: "0.75rem 0.6rem", color: "var(--text-secondary)", fontSize: "0.75rem" }}>
-                        {u.isCurrentlyWorking ? <span style={{ color: "#10b981", fontWeight: 500 }}>Active Now</span> : u.lastClockOut ? new Date(u.lastClockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
+                        {u.isCurrentlyWorking ? <span style={{ color: "#10b981", fontWeight: 500 }}>Active Now</span> : u.lastClockOut ? new Date(u.lastClockOut).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
                       </td>
                       <td style={{ padding: "0.75rem 0.6rem", textAlign: "right", fontWeight: 600, color: "var(--text-primary)", fontSize: "0.8125rem" }}>
                         {formatMinutes(u.totalWorkedMinutes)}
