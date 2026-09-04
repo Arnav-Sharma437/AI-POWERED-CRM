@@ -90,6 +90,9 @@ export default function CreateInvoicePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  // Invoice Type: GST vs Non-GST (Without GST)
+  const [invoiceType, setInvoiceType] = useState<"GST" | "NON_GST">("GST");
+
   // Company / Issuer Info (Defaults matching Zoho screenshot)
   const [companyName, setCompanyName] = useState("Pixxelu Digital Technology");
   const [companyAddress, setCompanyAddress] = useState("Building no 256, Dharamshala\nkangra Himachal Pradesh 176215\nIndia");
@@ -141,6 +144,25 @@ export default function CreateInvoicePage() {
       amount: 15000
     }
   ]);
+
+  const handleInvoiceTypeChange = (type: "GST" | "NON_GST") => {
+    setInvoiceType(type);
+    if (type === "NON_GST") {
+      setGstTreatment("Without GST (Non-Taxable / Exempted)");
+      setItems(prev => prev.map(item => ({
+        ...item,
+        taxName: "Non-Taxable [0%]",
+        taxRate: 0
+      })));
+    } else {
+      setGstTreatment("Registered Business - Regular");
+      setItems(prev => prev.map(item => ({
+        ...item,
+        taxName: "IGST18 [18%]",
+        taxRate: 18
+      })));
+    }
+  };
 
   useEffect(() => {
     async function init() {
@@ -220,8 +242,8 @@ export default function CreateInvoicePage() {
         sacCode: "998314",
         quantity: 1,
         rate: 0,
-        taxName: "IGST18 [18%]",
-        taxRate: 18,
+        taxName: invoiceType === "NON_GST" ? "Non-Taxable [0%]" : "IGST18 [18%]",
+        taxRate: invoiceType === "NON_GST" ? 0 : 18,
         amount: 0
       }
     ]);
@@ -361,33 +383,73 @@ export default function CreateInvoicePage() {
 
       <form onSubmit={(e) => handleSubmit(e, false)} className="crm-card" style={{ padding: "2.5rem", border: "1px solid var(--border-primary)", backgroundColor: "var(--bg-secondary)", borderRadius: "12px", boxShadow: "var(--shadow-md)" }}>
         
-        {/* Title & Currency Bar */}
+        {/* Title, Invoice Type & Currency Bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid var(--border-primary)", paddingBottom: "1.25rem", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <FileText size={28} color="var(--primary-color)" />
             <div>
               <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-                Create Official Tax Invoice
+                {invoiceType === "GST" ? "Create Official Tax Invoice" : "Create Invoice (Without GST)"}
               </h1>
               <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
-                Professional GST & multi-currency billing statement
+                {invoiceType === "GST" ? "GST-compliant tax invoice with IGST/CGST breakdown" : "Commercial billing statement without GST / tax additions"}
               </span>
             </div>
           </div>
 
-          {/* Currency Selector */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--text-primary)" }}>Currency:</span>
-            <select
-              className="crm-select"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              style={{ width: "220px", fontWeight: 700 }}
-            >
-              {CURRENCIES.map(curr => (
-                <option key={curr.code} value={curr.code}>{curr.label}</option>
-              ))}
-            </select>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+            {/* Invoice Type Toggle: With GST vs Without GST */}
+            <div style={{ display: "flex", backgroundColor: "var(--bg-primary)", padding: "3px", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+              <button
+                type="button"
+                onClick={() => handleInvoiceTypeChange("GST")}
+                style={{
+                  padding: "0.45rem 0.85rem",
+                  fontSize: "0.8125rem",
+                  fontWeight: 700,
+                  borderRadius: "6px",
+                  border: "none",
+                  backgroundColor: invoiceType === "GST" ? "var(--primary-color)" : "transparent",
+                  color: invoiceType === "GST" ? "#ffffff" : "var(--text-secondary)",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                📑 With GST (Tax Invoice)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInvoiceTypeChange("NON_GST")}
+                style={{
+                  padding: "0.45rem 0.85rem",
+                  fontSize: "0.8125rem",
+                  fontWeight: 700,
+                  borderRadius: "6px",
+                  border: "none",
+                  backgroundColor: invoiceType === "NON_GST" ? "var(--primary-color)" : "transparent",
+                  color: invoiceType === "NON_GST" ? "#ffffff" : "var(--text-secondary)",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                📄 Without GST (Non-GST)
+              </button>
+            </div>
+
+            {/* Currency Selector */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--text-primary)" }}>Currency:</span>
+              <select
+                className="crm-select"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                style={{ width: "200px", fontWeight: 700 }}
+              >
+                {CURRENCIES.map(curr => (
+                  <option key={curr.code} value={curr.code}>{curr.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -634,8 +696,13 @@ export default function CreateInvoicePage() {
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-              Itemized Deliverables & Tax Breakdown
+              {invoiceType === "GST" ? "Itemized Deliverables & Tax Breakdown" : "Itemized Deliverables & Pricing (Without GST)"}
             </h3>
+            {invoiceType === "NON_GST" && (
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary-color)", backgroundColor: "var(--bg-primary)", padding: "0.2rem 0.6rem", borderRadius: "6px", border: "1px solid var(--border-primary)" }}>
+                Tax Free / 0% GST Mode
+              </span>
+            )}
           </div>
 
           <div style={{ border: "1px solid var(--border-primary)", borderRadius: "8px", overflow: "hidden", backgroundColor: "var(--bg-primary)" }}>
@@ -643,11 +710,13 @@ export default function CreateInvoicePage() {
               <thead>
                 <tr style={{ backgroundColor: "var(--bg-secondary)", borderBottom: "1px solid var(--border-primary)", color: "var(--text-secondary)", textAlign: "left" }}>
                   <th style={{ padding: "0.75rem 1rem", width: "5%" }}>#</th>
-                  <th style={{ padding: "0.75rem 1rem", width: "40%" }}>DESCRIPTION</th>
+                  <th style={{ padding: "0.75rem 1rem", width: invoiceType === "GST" ? "38%" : "50%" }}>DESCRIPTION</th>
                   <th style={{ padding: "0.75rem 0.5rem", width: "10%", textAlign: "center" }}>QTY</th>
-                  <th style={{ padding: "0.75rem 0.5rem", width: "15%", textAlign: "right" }}>RATE ({currObj.symbol})</th>
-                  <th style={{ padding: "0.75rem 0.5rem", width: "15%", textAlign: "center" }}>TAX (IGST)</th>
-                  <th style={{ padding: "0.75rem 1rem", width: "15%", textAlign: "right" }}>AMOUNT ({currObj.symbol})</th>
+                  <th style={{ padding: "0.75rem 0.5rem", width: invoiceType === "GST" ? "15%" : "18%", textAlign: "right" }}>RATE ({currObj.symbol})</th>
+                  {invoiceType === "GST" && (
+                    <th style={{ padding: "0.75rem 0.5rem", width: "17%", textAlign: "center" }}>TAX (IGST/GST)</th>
+                  )}
+                  <th style={{ padding: "0.75rem 1rem", width: invoiceType === "GST" ? "15%" : "17%", textAlign: "right" }}>AMOUNT ({currObj.symbol})</th>
                 </tr>
               </thead>
               <tbody>
@@ -702,18 +771,20 @@ export default function CreateInvoicePage() {
                       />
                     </td>
 
-                    <td style={{ padding: "1rem 0.5rem" }}>
-                      <select 
-                        className="crm-select"
-                        value={item.taxName}
-                        onChange={(e) => handleItemChange(idx, "taxName", e.target.value)}
-                        style={{ fontSize: "0.8125rem" }}
-                      >
-                        {TAX_RATES.map(tax => (
-                          <option key={tax.name} value={tax.name}>{tax.label}</option>
-                        ))}
-                      </select>
-                    </td>
+                    {invoiceType === "GST" && (
+                      <td style={{ padding: "1rem 0.5rem" }}>
+                        <select 
+                          className="crm-select"
+                          value={item.taxName}
+                          onChange={(e) => handleItemChange(idx, "taxName", e.target.value)}
+                          style={{ fontSize: "0.8125rem" }}
+                        >
+                          {TAX_RATES.map(tax => (
+                            <option key={tax.name} value={tax.name}>{tax.label}</option>
+                          ))}
+                        </select>
+                      </td>
+                    )}
 
                     <td style={{ padding: "1rem", textAlign: "right" }}>
                       <div style={{ fontWeight: 400, fontSize: "0.95rem", color: "var(--text-primary)" }}>
@@ -822,12 +893,19 @@ export default function CreateInvoicePage() {
               </span>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
-              <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}>Total Tax (GST)</span>
-              <span style={{ fontWeight: 400, color: "#10b981" }}>
-                +{currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(taxTotal)}
-              </span>
-            </div>
+            {invoiceType === "GST" ? (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
+                <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}>Total Tax (GST)</span>
+                <span style={{ fontWeight: 400, color: "#10b981" }}>
+                  +{currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(taxTotal)}
+                </span>
+              </div>
+            ) : (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.85rem", color: "var(--text-tertiary)" }}>
+                <span>Tax Rate</span>
+                <span>0.00% (Without GST)</span>
+              </div>
+            )}
 
             <div style={{ borderTop: "2px solid var(--border-primary)", paddingTop: "1rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "1.1rem", fontWeight: 400, color: "var(--text-primary)" }}>Total</span>

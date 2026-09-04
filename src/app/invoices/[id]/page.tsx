@@ -98,6 +98,11 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
 
   const clientDisplayName = invoice.customerName || invoice.client?.company || invoice.client?.name || "TECHPHOSIS PRIVATE LIMITED";
 
+  const isWithoutGst = (invoice.taxTotal === 0 && (parseFloat(invoice.subtotal) || 0) > 0) ||
+    invoice.gstTreatment?.toLowerCase().includes("without gst") ||
+    invoice.gstTreatment?.toLowerCase().includes("non-gst") ||
+    (invoice.items && invoice.items.length > 0 && invoice.items.every((it: any) => !it.taxRate || it.taxRate === 0));
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#f1f5f9", padding: "2rem 1rem", fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif" }}>
       <div style={{ maxWidth: "1050px", margin: "0 auto" }}>
@@ -131,7 +136,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
             </div>
             <div>
               <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>
-                Official Tax Invoice #{invoice.invoiceNumber}
+                {isWithoutGst ? "Official Commercial Invoice" : "Official Tax Invoice"} #{invoice.invoiceNumber}
               </div>
               <div style={{ fontSize: "12px", color: "#64748b" }}>
                 Issued by {invoice.companyName || "Pixxelu Digital Technology"}
@@ -189,7 +194,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        {/* Clean Zoho Architecture Tax Invoice Paper */}
+        {/* Clean Zoho Architecture Tax / Commercial Invoice Paper */}
         <div 
           id="printable-invoice"
           style={{
@@ -206,7 +211,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
           }}
         >
           
-          {/* Header: Logo & Company Address on Left, TAX INVOICE Title on Right */}
+          {/* Header: Logo & Company Address on Left, Invoice Title on Right */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem" }}>
             <div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
               {/* Pixxelu Logo / Brand Name */}
@@ -244,8 +249,13 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
 
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: "2rem", fontWeight: 800, color: "#1f2937", letterSpacing: "0.02em", textTransform: "uppercase" }}>
-                TAX INVOICE
+                {isWithoutGst ? "INVOICE" : "TAX INVOICE"}
               </div>
+              {isWithoutGst && (
+                <div style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>
+                  COMMERCIAL BILL
+                </div>
+              )}
             </div>
           </div>
 
@@ -307,9 +317,11 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                 {invoice.customerEmail || invoice.client?.email || ""}
               </div>
             )}
-            <div style={{ fontWeight: 400, color: "#000000", marginTop: "4px" }}>
-              GSTIN {invoice.gstin || "06AAKCT4257D1ZC"}
-            </div>
+            {invoice.gstin && (
+              <div style={{ fontWeight: 400, color: "#000000", marginTop: "4px" }}>
+                GSTIN {invoice.gstin}
+              </div>
+            )}
           </div>
 
           {/* Items Table (Bordered, exact Zoho structure) */}
@@ -317,11 +329,13 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
             <thead>
               <tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #9ca3af", textAlign: "left" }}>
                 <th style={{ padding: "8px 10px", width: "5%", borderRight: "1px solid #9ca3af", textAlign: "center", fontWeight: 400, color: "#000000" }}>#</th>
-                <th style={{ padding: "8px 12px", width: "45%", borderRight: "1px solid #9ca3af", fontWeight: 400, color: "#000000" }}>Description</th>
+                <th style={{ padding: "8px 12px", width: isWithoutGst ? "55%" : "45%", borderRight: "1px solid #9ca3af", fontWeight: 400, color: "#000000" }}>Description</th>
                 <th style={{ padding: "8px 10px", width: "10%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>Qty</th>
-                <th style={{ padding: "8px 10px", width: "15%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>Rate</th>
-                <th style={{ padding: "8px 10px", width: "12%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>IGST</th>
-                <th style={{ padding: "8px 12px", width: "13%", textAlign: "right", fontWeight: 400, color: "#000000" }}>Amount</th>
+                <th style={{ padding: "8px 10px", width: isWithoutGst ? "15%" : "15%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>Rate</th>
+                {!isWithoutGst && (
+                  <th style={{ padding: "8px 10px", width: "12%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>IGST</th>
+                )}
+                <th style={{ padding: "8px 12px", width: isWithoutGst ? "15%" : "13%", textAlign: "right", fontWeight: 400, color: "#000000" }}>Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -346,9 +360,11 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                     <td style={{ padding: "10px", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400 }}>
                       {formatNumber(item.rate)}
                     </td>
-                    <td style={{ padding: "10px", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400 }}>
-                      {formatNumber(lineTax)}
-                    </td>
+                    {!isWithoutGst && (
+                      <td style={{ padding: "10px", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400 }}>
+                        {formatNumber(lineTax)}
+                      </td>
+                    )}
                     <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 400 }}>
                       {formatNumber(item.amount)}
                     </td>

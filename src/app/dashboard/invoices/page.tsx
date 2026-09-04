@@ -280,22 +280,39 @@ export default function InvoicesListPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredInvoices.map((inv) => (
-                  <tr key={inv.id} style={{ borderBottom: "1px solid var(--border-primary)", transition: "background 0.15s" }}>
-                    <td style={{ padding: "1rem", fontWeight: 400, color: "var(--primary-color)" }}>
-                      <span 
-                        onClick={() => router.push(`/dashboard/invoices/${inv.id}`)}
-                        style={{ cursor: "pointer", textDecoration: "underline" }}
-                      >
-                        {inv.invoiceNumber}
-                      </span>
-                    </td>
-                    <td style={{ padding: "1rem" }}>
-                      <div style={{ fontWeight: 400, color: "var(--text-primary)" }}>{inv.client?.name || "Client"}</div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                        {inv.client?.company ? `${inv.client.company} • ` : ""}{inv.gstin || "No GSTIN"}
-                      </div>
-                    </td>
+                {filteredInvoices.map((inv) => {
+                  const isWithoutGst = (inv.taxTotal === 0 && (parseFloat(inv.subtotal) || 0) > 0) ||
+                    inv.gstTreatment?.toLowerCase().includes("without gst") ||
+                    inv.gstTreatment?.toLowerCase().includes("non-gst");
+                  
+                  return (
+                    <tr key={inv.id} style={{ borderBottom: "1px solid var(--border-primary)", transition: "background 0.15s" }}>
+                      <td style={{ padding: "1rem", fontWeight: 400, color: "var(--primary-color)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                          <span 
+                            onClick={() => router.push(`/dashboard/invoices/${inv.id}`)}
+                            style={{ cursor: "pointer", textDecoration: "underline" }}
+                          >
+                            {inv.invoiceNumber}
+                          </span>
+                          <span style={{ 
+                            fontSize: "0.65rem", 
+                            padding: "0.1rem 0.4rem", 
+                            borderRadius: "4px", 
+                            backgroundColor: isWithoutGst ? "rgba(100, 116, 139, 0.12)" : "rgba(99, 102, 241, 0.12)", 
+                            color: isWithoutGst ? "#64748b" : "var(--primary-color)", 
+                            fontWeight: 600 
+                          }}>
+                            {isWithoutGst ? "Without GST" : "GST"}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "1rem" }}>
+                        <div style={{ fontWeight: 400, color: "var(--text-primary)" }}>{inv.customerName || inv.client?.name || "Client"}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                          {inv.customerCompany || inv.client?.company ? `${inv.customerCompany || inv.client?.company} • ` : ""}{inv.gstin || "No GSTIN"}
+                        </div>
+                      </td>
                     <td style={{ padding: "1rem", color: "var(--text-secondary)" }}>
                       {new Date(inv.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
                     </td>
@@ -343,7 +360,8 @@ export default function InvoicesListPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
