@@ -15,6 +15,21 @@ export async function POST(request: Request) {
         userId: session.userId
       }).catch((e: any) => console.error("Error logging logout activity:", e));
 
+      // 1b. Real-time broadcast to all connected CRM clients
+      try {
+        const { chatEmitter } = await import("@/lib/events");
+        chatEmitter.emit("crm_update", {
+          entity: "attendance",
+          action: "logout",
+          userId: session.userId,
+          userName: session.name,
+          roleName: session.roleName || "Team Member",
+          timestamp: new Date().toISOString()
+        });
+      } catch (sseErr) {
+        console.error("Failed to emit logout SSE event:", sseErr);
+      }
+
       // 2. Dispatch email to Super Admins
       try {
         const allUsers = await listUsers();

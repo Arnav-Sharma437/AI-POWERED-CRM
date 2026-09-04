@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { mockDb } from "@/lib/mockData";
 import { chatEmitter } from "@/lib/events";
 
+import { userHeartbeatMap } from "./heartbeat/route";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
@@ -20,16 +22,34 @@ export async function GET(request: Request) {
 
     await checkDbConnection();
 
+    // Helper for reliable local Indian date string (YYYY-MM-DD)
+    const getLocalDateKey = (d: Date | string | number) => {
+      try {
+        const date = typeof d === "string" || typeof d === "number" ? new Date(d) : d;
+        if (isNaN(date.getTime())) return new Date().toISOString().split("T")[0];
+        return new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Kolkata",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit"
+        }).format(date);
+      } catch {
+        return new Date().toISOString().split("T")[0];
+      }
+    };
+
     // Fetch activities that are attendance/work session logs
     let rawActivities: any[] = [];
     if (isDemoMode()) {
       rawActivities = mockDb.activities.filter(a => 
         a.notes && (
-          a.notes.includes("workday session") || 
-          a.notes.includes("clocked out") || 
-          a.notes.includes("finished workday") ||
-          a.notes.includes("started workday") ||
-          a.notes.includes("logged in from")
+          a.notes.toLowerCase().includes("workday") || 
+          a.notes.toLowerCase().includes("clock") || 
+          a.notes.toLowerCase().includes("logged") ||
+          a.notes.toLowerCase().includes("checkpoint") ||
+          a.notes.toLowerCase().includes("disconnect") ||
+          a.notes.toLowerCase().includes("started") ||
+          a.notes.toLowerCase().includes("finished")
         )
       );
       if (targetUserId) {
@@ -38,11 +58,14 @@ export async function GET(request: Request) {
     } else {
       const whereClause: any = {
         OR: [
-          { notes: { contains: "workday session" } },
-          { notes: { contains: "clocked out" } },
-          { notes: { contains: "finished workday" } },
-          { notes: { contains: "started workday" } },
-          { notes: { contains: "logged in from" } }
+          { notes: { contains: "workday" } },
+          { notes: { contains: "clock" } },
+          { notes: { contains: "Clock" } },
+          { notes: { contains: "logged" } },
+          { notes: { contains: "checkpoint" } },
+          { notes: { contains: "disconnect" } },
+          { notes: { contains: "started" } },
+          { notes: { contains: "finished" } }
         ]
       };
       if (targetUserId) {
@@ -52,7 +75,7 @@ export async function GET(request: Request) {
         where: whereClause,
         include: { user: true },
         orderBy: { timestamp: "desc" },
-        take: 500
+        take: 1000
       });
     }
 
@@ -61,15 +84,33 @@ export async function GET(request: Request) {
       let action = "OTHER";
       const notes = (act.notes || "").toLowerCase();
       
-      if (notes.includes("clocked out") || notes.includes("finished workday") || notes.includes("clock out") || notes.includes("ended workday")) {
+      // Determine CLOCK_OUT / LOGOUT / DISCONNECT
+      if (
+        notes.includes("clocked out") || 
+        notes.includes("finished workday") || 
+        notes.includes("clock out") || 
+        notes.includes("ended workday") || 
+        notes.includes("logged out") || 
+        notes.includes("checkpoint") || 
+        notes.includes("disconnect") || 
+        notes.includes("paused")
+      ) {
         action = "CLOCK_OUT";
-      } else if (notes.includes("started workday") || notes.includes("started work") || notes.includes("clocked in") || notes.includes("clock in")) {
+      } 
+      // Determine CLOCK_IN / LOGIN
+      else if (
+        notes.includes("started workday") || 
+        notes.includes("started work") || 
+        notes.includes("clocked in") || 
+        notes.includes("clock in") || 
+        notes.includes("logged in")
+      ) {
         action = "CLOCK_IN";
       }
 
       let location = "Office";
-      if (act.notes?.includes("from Home") || act.notes?.includes("Home")) location = "Home";
-      else if (act.notes?.includes("from Office") || act.notes?.includes("Office")) location = "Office";
+      if (notes.includes("from home") || notes.includes("home")) location = "Home";
+      else if (notes.includes("from office") || notes.includes("office")) location = "Office";
 
       return {
         id: act.id,
@@ -108,14 +149,6 @@ export async function GET(request: Request) {
         sessions: [] as any[]
       };
     });
-
-    // Helper for reliable local date string (YYYY-MM-DD)
-    const getLocalDateKey = (d: Date) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
 
     // Official Calendar Holidays for 2026/Company
     const officialHolidays2026 = [
@@ -186,8 +219,8 @@ export async function GET(request: Request) {
         if (!dayMap[dateKey]) {
           dayMap[dateKey] = {
             date: dateKey,
-            dateStr: logTime.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-            dayName: logTime.toLocaleDateString("en-IN", { weekday: "short" }),
+            dateStr: logTime.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }),
+            dayName: logTime.toLocaleDateString("en-IN", { weekday: "short", timeZone: "Asia/Kolkata" }),
             clockIn: null,
             clockOut: null,
             location: log.location || "Office",
@@ -222,12 +255,21 @@ export async function GET(request: Request) {
         }
       });
 
-      // User is ONLY active/working if they clocked in TODAY and their latest log today is CLOCK_IN
+      // User is active/working if and only if their latest log today is CLOCK_IN
       const todayLogs = uLogs.filter(l => getLocalDateKey(new Date(l.timestamp)) === todayKey);
       const latestTodayLog = todayLogs.length > 0 ? todayLogs[todayLogs.length - 1] : null;
-      const isWorkingNow = latestTodayLog?.action === "CLOCK_IN";
-      let liveTodayMinutes = 0;
+      let isWorkingNow = latestTodayLog?.action === "CLOCK_IN";
 
+      // Heartbeat deadman verification: If user clocked in > 3 minutes ago and hasn't sent a heartbeat for > 3 minutes, they are offline/disconnected
+      if (isWorkingNow && latestTodayLog) {
+        const lastHb = userHeartbeatMap[u.id]?.timestamp;
+        const timeSinceClockIn = now - new Date(latestTodayLog.timestamp).getTime();
+        if (timeSinceClockIn > 180000 && lastHb && (now - lastHb > 180000)) {
+          isWorkingNow = false;
+        }
+      }
+
+      let liveTodayMinutes = 0;
       if (isWorkingNow && latestTodayLog) {
         currentClockInLocation = latestTodayLog.location || "Office";
         const inDate = new Date(latestTodayLog.timestamp);
@@ -271,8 +313,8 @@ export async function GET(request: Request) {
 
         uSummary.isCurrentlyWorking = isWorkingNow;
         uSummary.currentLocation = isWorkingNow ? currentClockInLocation : (dayMap[todayKey]?.location || "Office");
-        uSummary.firstClockIn = dayMap[todayKey]?.clockIn || null;
-        uSummary.lastClockOut = dayMap[todayKey]?.clockOut || null;
+        uSummary.firstClockIn = dayMap[todayKey]?.clockIn || (isWorkingNow && latestTodayLog ? latestTodayLog.timestamp : null);
+        uSummary.lastClockOut = dayMap[todayKey]?.clockOut || (!isWorkingNow && latestTodayLog?.action === "CLOCK_OUT" ? latestTodayLog.timestamp : null);
         uSummary.currentSessionStart = isWorkingNow && latestTodayLog ? latestTodayLog.timestamp : null;
         uSummary.baseWorkedSecondsToday = baseSeconds;
         uSummary.totalWorkedSeconds = totalSeconds;

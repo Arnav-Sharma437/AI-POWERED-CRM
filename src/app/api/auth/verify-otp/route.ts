@@ -57,6 +57,22 @@ export async function POST(request: Request) {
       console.error("Error in login activity logging:", logErr);
     }
 
+    // 1b. Real-time broadcast to all connected CRM clients
+    try {
+      const { chatEmitter } = await import("@/lib/events");
+      chatEmitter.emit("crm_update", {
+        entity: "attendance",
+        action: "login",
+        userId: user.id,
+        userName: user.name,
+        roleName: userRole,
+        workLocation,
+        timestamp: loginTime.toISOString()
+      });
+    } catch (sseErr) {
+      console.error("Error emitting login SSE event:", sseErr);
+    }
+
     // Create session token with location
     const token = await signJWT({
       userId: user.id,

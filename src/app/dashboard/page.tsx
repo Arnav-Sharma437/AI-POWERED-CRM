@@ -115,6 +115,29 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, [triggerRefresh, dateRange, customFrom, customTo]);
 
+  // Periodic background refresh for live attendance (Super Admin Hub) every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const attRes = await fetch(`/api/auth/attendance?_t=${Date.now()}`, { cache: "no-store" });
+        if (attRes.ok) {
+          const attJson = await attRes.json();
+          const attData = {
+            logs: attJson.logs || [],
+            userSummaries: attJson.userSummaries || []
+          };
+          setAttendanceData(attData);
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("crm_attendance_cache", JSON.stringify(attData));
+          }
+        }
+      } catch (e) {
+        // silent
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
