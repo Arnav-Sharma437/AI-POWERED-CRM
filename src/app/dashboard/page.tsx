@@ -371,7 +371,7 @@ export default function DashboardPage() {
               <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600 }}>
                 Total Office / Work Time Today
               </div>
-              <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--primary-color)", fontFamily: "monospace", marginTop: "2px" }}>
+              <div style={{ fontSize: "1.35rem", fontWeight: 400, color: "var(--primary-color)", marginTop: "2px" }}>
                 {formatMinutes(myAttendanceSummary?.totalWorkedMinutes || 0)}
               </div>
             </div>

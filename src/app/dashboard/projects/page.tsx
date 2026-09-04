@@ -38,6 +38,7 @@ export default function ProjectsPage() {
     }
     return true;
   });
+  const [projectCategory, setProjectCategory] = useState<"all" | "ongoing" | "completed" | "on_hold">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
@@ -89,12 +90,28 @@ export default function ProjectsPage() {
     }
   };
 
+  const ONGOING_STATUSES = ["Not Started", "Work in Progress", "Review", "Issue"];
+
+  const ongoingCount = projects.filter(p => ONGOING_STATUSES.includes(p.status)).length;
+  const completedCount = projects.filter(p => p.status === "Completed").length;
+  const onHoldCount = projects.filter(p => ["On Hold", "Cancelled"].includes(p.status)).length;
+
   const filteredProjects = projects.filter(p => {
     const matchesSearch = 
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.client?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      p.client?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    let matchesCategory = true;
+    if (projectCategory === "ongoing") {
+      matchesCategory = ONGOING_STATUSES.includes(p.status);
+    } else if (projectCategory === "completed") {
+      matchesCategory = p.status === "Completed";
+    } else if (projectCategory === "on_hold") {
+      matchesCategory = ["On Hold", "Cancelled"].includes(p.status);
+    }
+
     const matchesStatus = !filterStatus || p.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   return (
@@ -115,7 +132,7 @@ export default function ProjectsPage() {
               borderRadius: "20px",
               border: "1px solid rgba(224, 86, 36, 0.2)"
             }}>
-              Total: {projects.length} {projects.length === 1 ? "Project" : "Projects"}
+              Total: {filteredProjects.length} {filteredProjects.length === 1 ? "Project" : "Projects"}
             </span>
           </div>
           <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "2px" }}>
@@ -163,6 +180,70 @@ export default function ProjectsPage() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Project Category Filter Tabs */}
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", overflowX: "auto", paddingBottom: "0.25rem" }}>
+        <button
+          onClick={() => { setProjectCategory("all"); setFilterStatus(""); }}
+          className="crm-btn"
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            borderRadius: "8px",
+            backgroundColor: projectCategory === "all" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: projectCategory === "all" ? "#ffffff" : "var(--text-secondary)",
+            border: "1px solid var(--border-primary)"
+          }}
+        >
+          All Projects ({projects.length})
+        </button>
+        <button
+          onClick={() => { setProjectCategory("ongoing"); setFilterStatus(""); }}
+          className="crm-btn"
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            borderRadius: "8px",
+            backgroundColor: projectCategory === "ongoing" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: projectCategory === "ongoing" ? "#ffffff" : "var(--text-secondary)",
+            border: "1px solid var(--border-primary)"
+          }}
+        >
+          ⚡ Ongoing Projects ({ongoingCount})
+        </button>
+        <button
+          onClick={() => { setProjectCategory("completed"); setFilterStatus(""); }}
+          className="crm-btn"
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            borderRadius: "8px",
+            backgroundColor: projectCategory === "completed" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: projectCategory === "completed" ? "#ffffff" : "var(--text-secondary)",
+            border: "1px solid var(--border-primary)"
+          }}
+        >
+          ✅ Completed ({completedCount})
+        </button>
+        <button
+          onClick={() => { setProjectCategory("on_hold"); setFilterStatus(""); }}
+          className="crm-btn"
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            borderRadius: "8px",
+            backgroundColor: projectCategory === "on_hold" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: projectCategory === "on_hold" ? "#ffffff" : "var(--text-secondary)",
+            border: "1px solid var(--border-primary)"
+          }}
+        >
+          ⏸️ On Hold / Flagged ({onHoldCount})
+        </button>
       </div>
 
       {/* Search & Filter Controls */}

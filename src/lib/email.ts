@@ -140,7 +140,7 @@ BDA CRM Team
             password
               ? `<tr>
             <td style="padding: 6px 0; color: #64748b;"><strong>Password:</strong></td>
-            <td style="padding: 6px 0; color: #0f172a; font-family: monospace; font-size: 15px; font-weight: bold; background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; display: inline-block;">${password}</td>
+            <td style="padding: 6px 0; color: #0f172a; font-size: 15px; font-weight: 500; background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; display: inline-block;">${password}</td>
           </tr>`
               : ""
           }
@@ -374,7 +374,7 @@ Please open your CRM dashboard calendar to view the schedule.
   const messageHtml = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 25px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 580px; background-color: #ffffff; color: #1f2937;">
       <div style="border-bottom: 2px solid #6366f1; padding-bottom: 15px; margin-bottom: 20px;">
-        <h2 style="color: #6366f1; margin: 0; font-size: 22px;">NEXUS AI CRM</h2>
+        <h2 style="color: #6366f1; margin: 0; font-size: 22px;">AI POWERED CRM</h2>
         <p style="color: #6b7280; font-size: 14px; margin: 4px 0 0 0;">New Meeting / Discussion Scheduled</p>
       </div>
 
@@ -536,7 +536,7 @@ AI POWERED BDA CRM Security & Attendance
           ${ipAddress ? `
           <tr>
             <td style="padding: 6px 0; color: #64748b;"><strong>IP / Network:</strong></td>
-            <td style="padding: 6px 0; color: #64748b; font-family: monospace;">${ipAddress}</td>
+            <td style="padding: 6px 0; color: #64748b;">${ipAddress}</td>
           </tr>
           ` : ""}
         </table>
@@ -640,7 +640,7 @@ Automated Notification from AI POWERED BDA CRM.
     <div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 580px; margin: 0 auto; color: #1f2937; background-color: #ffffff;">
       <div style="border-bottom: 2px solid #ef4444; padding-bottom: 16px; margin-bottom: 20px;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 20px; font-weight: 800; color: #ef4444; letter-spacing: -0.5px;">NEXUS AI CRM</span>
+          <span style="font-size: 20px; font-weight: 800; color: #ef4444; letter-spacing: -0.5px;">AI POWERED CRM</span>
           <span style="background-color: #fee2e2; color: #b91c1c; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
             CLOCK OUT NOTIFICATION
           </span>
@@ -791,8 +791,8 @@ ${senderOrg}
         ${item.description ? `<div style="font-size: 12px; color: #64748b; margin-top: 2px;">${item.description}</div>` : ""}
       </td>
       <td style="padding: 12px 10px; font-size: 14px; text-align: center; color: #475569;">${item.quantity}</td>
-      <td style="padding: 12px 10px; font-size: 14px; text-align: right; color: #475569; font-family: monospace;">${currSymbol}${Number(item.rate).toLocaleString()}</td>
-      <td style="padding: 12px 10px; font-size: 14px; text-align: right; font-weight: 700; color: #0f172a; font-family: monospace;">${currSymbol}${Number(item.amount).toLocaleString()}</td>
+      <td style="padding: 12px 10px; font-size: 14px; text-align: right; color: #475569;">${currSymbol}${Number(item.rate).toLocaleString()}</td>
+      <td style="padding: 12px 10px; font-size: 14px; text-align: right; font-weight: 700; color: #0f172a;">${currSymbol}${Number(item.amount).toLocaleString()}</td>
     </tr>
   `).join("");
 
@@ -830,7 +830,7 @@ ${senderOrg}
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
               <td style="padding: 4px 0; color: #64748b; font-size: 13px;">Invoice Number:</td>
-              <td style="padding: 4px 0; text-align: right; font-weight: 700; color: #1e293b; font-family: monospace;">${invoiceNumber}</td>
+              <td style="padding: 4px 0; text-align: right; font-weight: 700; color: #1e293b;">${invoiceNumber}</td>
             </tr>
             <tr>
               <td style="padding: 4px 0; color: #64748b; font-size: 13px;">Due Date:</td>
@@ -838,7 +838,7 @@ ${senderOrg}
             </tr>
             <tr style="border-top: 1px dashed #cbd5e1;">
               <td style="padding: 10px 0 0; color: #0f172a; font-size: 15px; font-weight: 700;">Total Amount Due:</td>
-              <td style="padding: 10px 0 0; text-align: right; font-size: 20px; font-weight: 800; color: #2563eb; font-family: monospace;">${formattedTotal}</td>
+              <td style="padding: 10px 0 0; text-align: right; font-size: 20px; font-weight: 800; color: #2563eb;">${formattedTotal}</td>
             </tr>
           </table>
         </div>
@@ -953,7 +953,7 @@ export async function sendDeveloperWeeklyAttendanceEmail(params: DeveloperWeekly
           ${d.location}
         </span>
       </td>
-      <td style="padding: 10px; text-align: right; font-weight: 700; color: #2563eb; font-family: monospace;">${d.durationFormatted}</td>
+      <td style="padding: 10px; text-align: right; font-weight: 700; color: #2563eb;">${d.durationFormatted}</td>
     </tr>
   `).join("");
 
@@ -971,7 +971,7 @@ export async function sendDeveloperWeeklyAttendanceEmail(params: DeveloperWeekly
         <div style="display: flex; gap: 16px; margin: 20px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
           <div style="flex: 1; text-align: center; border-right: 1px solid #e2e8f0;">
             <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Total Time Logged</div>
-            <div style="font-size: 20px; font-weight: 800; color: #4f46e5; margin-top: 4px; font-family: monospace;">${totalWorkedHours}</div>
+            <div style="font-size: 20px; font-weight: 800; color: #4f46e5; margin-top: 4px;">${totalWorkedHours}</div>
           </div>
           <div style="flex: 1; text-align: center;">
             <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Days Present</div>
@@ -1058,7 +1058,7 @@ export async function sendSuperAdminWeeklyTeamAttendanceEmail(params: SuperAdmin
       <td style="padding: 10px; text-align: center; font-size: 12px; color: #475569;">
         ${m.officeVsHome}
       </td>
-      <td style="padding: 10px 12px; text-align: right; font-weight: 800; color: #4f46e5; font-family: monospace;">
+      <td style="padding: 10px 12px; text-align: right; font-weight: 800; color: #4f46e5;">
         ${m.totalHours}
       </td>
     </tr>

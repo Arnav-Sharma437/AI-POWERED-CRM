@@ -1,11 +1,30 @@
 "use client";
 
-import React from "react";
-import { Shield, User, Info, CheckCircle2 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Shield, User, Info, CheckCircle2, Clock, MapPin, Building2, Home } from "lucide-react";
 import { useDashboard } from "../layout";
 
 export default function SettingsPage() {
   const { currentUser } = useDashboard();
+  const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadAttendance() {
+      if (!currentUser?.id) return;
+      try {
+        const res = await fetch(`/api/auth/attendance?userId=${currentUser.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.summary && data.summary[currentUser.id]) {
+            setAttendanceSummary(data.summary[currentUser.id]);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading attendance in settings:", err);
+      }
+    }
+    loadAttendance();
+  }, [currentUser?.id]);
 
   return (
     <div className="crm-container animate-fade-in">
@@ -20,7 +39,7 @@ export default function SettingsPage() {
         {/* Profile Card */}
         {currentUser && (
           <div className="crm-card">
-            <h3 style={styles.cardTitle}>My Profile</h3>
+            <h3 style={styles.cardTitle}>My Profile & Attendance</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
               <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
                 <div style={{ 
@@ -50,7 +69,34 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <span style={{ color: "var(--text-tertiary)" }}>Assigned Division</span>
-                  <div style={{ fontWeight: 500, color: "var(--text-primary)", marginTop: "2px" }}>Business Development Association (BDA)</div>
+                  <div style={{ fontWeight: 500, color: "var(--text-primary)", marginTop: "2px" }}>
+                    {currentUser.roleName === "Developer" ? "Engineering & Development" : "Business Development Association (BDA)"}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-tertiary)" }}>Today's Attendance & Working Hours</span>
+                  <div style={{ 
+                    marginTop: "6px", 
+                    padding: "0.75rem", 
+                    backgroundColor: "var(--bg-primary)", 
+                    borderRadius: "8px", 
+                    border: "1px solid var(--border-primary)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <Clock size={16} style={{ color: "var(--primary-color)" }} />
+                      <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                        {attendanceSummary 
+                          ? `${Math.floor((attendanceSummary.totalWorkedMinutes || 0) / 60)}h ${(attendanceSummary.totalWorkedMinutes || 0) % 60}m logged` 
+                          : "0h 0m logged"}
+                      </span>
+                    </div>
+                    <span className={`badge ${attendanceSummary?.isCurrentlyWorking ? "badge-success" : "badge-secondary"}`}>
+                      {attendanceSummary?.isCurrentlyWorking ? "🟢 Working" : "⚪ Off-duty"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

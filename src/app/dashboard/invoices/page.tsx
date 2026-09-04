@@ -282,7 +282,7 @@ export default function InvoicesListPage() {
               <tbody>
                 {filteredInvoices.map((inv) => (
                   <tr key={inv.id} style={{ borderBottom: "1px solid var(--border-primary)", transition: "background 0.15s" }}>
-                    <td style={{ padding: "1rem", fontWeight: 700, fontFamily: "monospace", color: "var(--primary-color)" }}>
+                    <td style={{ padding: "1rem", fontWeight: 400, color: "var(--primary-color)" }}>
                       <span 
                         onClick={() => router.push(`/dashboard/invoices/${inv.id}`)}
                         style={{ cursor: "pointer", textDecoration: "underline" }}
@@ -291,7 +291,7 @@ export default function InvoicesListPage() {
                       </span>
                     </td>
                     <td style={{ padding: "1rem" }}>
-                      <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{inv.client?.name || "Client"}</div>
+                      <div style={{ fontWeight: 400, color: "var(--text-primary)" }}>{inv.client?.name || "Client"}</div>
                       <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
                         {inv.client?.company ? `${inv.client.company} • ` : ""}{inv.gstin || "No GSTIN"}
                       </div>
@@ -299,13 +299,13 @@ export default function InvoicesListPage() {
                     <td style={{ padding: "1rem", color: "var(--text-secondary)" }}>
                       {new Date(inv.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
                     </td>
-                    <td style={{ padding: "1rem", color: new Date(inv.dueDate).getTime() < Date.now() && inv.status !== "Paid" ? "var(--danger-color)" : "var(--text-secondary)", fontWeight: new Date(inv.dueDate).getTime() < Date.now() && inv.status !== "Paid" ? 700 : 400 }}>
+                    <td style={{ padding: "1rem", color: new Date(inv.dueDate).getTime() < Date.now() && inv.status !== "Paid" ? "var(--danger-color)" : "var(--text-secondary)", fontWeight: 400 }}>
                       {new Date(inv.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
                     </td>
                     <td style={{ padding: "1rem", color: "var(--text-secondary)", fontSize: "0.8125rem" }}>
                       {inv.placeOfSupply}
                     </td>
-                    <td style={{ padding: "1rem", textAlign: "right", fontWeight: 800, color: "var(--text-primary)", fontFamily: "monospace", fontSize: "0.95rem" }}>
+                    <td style={{ padding: "1rem", textAlign: "right", fontWeight: 400, color: "var(--text-primary)", fontSize: "0.95rem" }}>
                       {formatCurrency(inv.totalAmount, inv.currency)}
                     </td>
                     <td style={{ padding: "1rem", textAlign: "center" }}>

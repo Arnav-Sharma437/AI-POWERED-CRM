@@ -241,8 +241,7 @@ export default function ClientsPage() {
                           padding: "2px 8px", 
                           borderRadius: "6px", 
                           fontSize: "0.75rem", 
-                          fontWeight: 800,
-                          fontFamily: "monospace"
+                          fontWeight: 400
                         }}>
                           {clientCurr}
                         </span>
@@ -255,21 +254,21 @@ export default function ClientsPage() {
                           padding: "3px 8px", 
                           borderRadius: "12px", 
                           fontSize: "0.775rem", 
-                          fontWeight: 700 
+                          fontWeight: 400 
                         }}>
                           {client.activeProjects} Active / {client.totalProjects}
                         </span>
                       </td>
 
-                      <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 700, color: "var(--text-primary)", fontFamily: "monospace" }}>
+                      <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 400, color: "var(--text-primary)" }}>
                         {formatClientCurrency(client.totalProjectValue, clientCurr)}
                       </td>
 
-                      <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 700, color: "var(--success-color)", fontFamily: "monospace" }}>
+                      <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 400, color: "var(--success-color)" }}>
                         {formatClientCurrency(client.totalReceived, clientCurr)}
                       </td>
 
-                      <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 800, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", fontFamily: "monospace" }}>
+                      <td style={{ padding: "1rem 1rem", textAlign: "right", fontWeight: 400, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)" }}>
                         {formatClientCurrency(client.totalOutstanding, clientCurr)}
                       </td>
 
@@ -327,8 +326,7 @@ export default function ClientsPage() {
                     padding: "2px 8px", 
                     borderRadius: "6px", 
                     fontSize: "0.75rem", 
-                    fontWeight: 800,
-                    fontFamily: "monospace"
+                    fontWeight: 400
                   }}>
                     {clientCurr}
                   </span>
@@ -358,25 +356,25 @@ export default function ClientsPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", fontSize: "0.8125rem", marginBottom: "1.25rem" }}>
                   <div>
                     <div style={{ color: "var(--text-tertiary)" }}>Total Portfolio</div>
-                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px", fontFamily: "monospace" }}>
+                    <div style={{ fontSize: "1rem", fontWeight: 400, color: "var(--text-primary)", marginTop: "2px" }}>
                       {formatClientCurrency(client.totalProjectValue, clientCurr)}
                     </div>
                   </div>
                   <div>
                     <div style={{ color: "var(--text-tertiary)" }}>Collected</div>
-                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--success-color)", marginTop: "2px", fontFamily: "monospace" }}>
+                    <div style={{ fontSize: "1rem", fontWeight: 400, color: "var(--success-color)", marginTop: "2px" }}>
                       {formatClientCurrency(client.totalReceived, clientCurr)}
                     </div>
                   </div>
                   <div>
                     <div style={{ color: "var(--text-tertiary)" }}>Pending Balance</div>
-                    <div style={{ fontSize: "1rem", fontWeight: 700, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", marginTop: "2px", fontFamily: "monospace" }}>
+                    <div style={{ fontSize: "1rem", fontWeight: 400, color: hasOutstanding ? "var(--warning-color)" : "var(--text-tertiary)", marginTop: "2px" }}>
                       {formatClientCurrency(client.totalOutstanding, clientCurr)}
                     </div>
                   </div>
                   <div>
                     <div style={{ color: "var(--text-tertiary)" }}>Projects</div>
-                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
+                    <div style={{ fontSize: "1rem", fontWeight: 400, color: "var(--text-primary)", marginTop: "2px" }}>
                       {client.activeProjects} Active / {client.totalProjects}
                     </div>
                   </div>

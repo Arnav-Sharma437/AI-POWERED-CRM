@@ -919,10 +919,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div>
                   <div style={{
                     fontSize: "0.875rem",
-                    fontWeight: 700,
+                    fontWeight: 400,
                     color: "var(--text-primary)",
-                    fontFamily: "monospace",
-                    letterSpacing: "0.05em",
+                    letterSpacing: "0.02em",
                     lineHeight: 1.1
                   }}>
                     {currentLiveTime.toLocaleTimeString("en-IN", {
@@ -932,7 +931,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       hour12: true
                     })}
                   </div>
-                  <div style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", fontWeight: 500, lineHeight: 1 }}>
+                  <div style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", fontWeight: 400, lineHeight: 1 }}>
                     {currentLiveTime.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
                   </div>
                 </div>
@@ -2531,31 +2530,35 @@ const modalStyles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
     backdropFilter: "blur(4px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 100,
+    zIndex: 9999,
     padding: "1rem",
+    overflowY: "auto",
   },
   container: {
     width: "100%",
     maxWidth: "560px",
-    maxHeight: "90vh",
+    maxHeight: "min(88vh, 740px)",
     backgroundColor: "var(--bg-secondary)",
     border: "1px solid var(--border-primary)",
     borderRadius: "12px",
     boxShadow: "var(--shadow-lg)",
     display: "flex",
     flexDirection: "column",
+    overflow: "hidden",
+    margin: "auto",
   },
   header: {
-    padding: "1.25rem 1.5rem",
+    padding: "1.15rem 1.5rem",
     borderBottom: "1px solid var(--border-primary)",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    flexShrink: 0,
   },
   title: {
     fontSize: "1.125rem",
@@ -2571,11 +2574,13 @@ const modalStyles: Record<string, React.CSSProperties> = {
     padding: "0 0.5rem",
   },
   body: {
-    padding: "1.5rem",
+    padding: "1.25rem 1.5rem",
     overflowY: "auto",
+    flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: "1.5rem",
+    gap: "1.25rem",
+    maxHeight: "calc(88vh - 130px)",
   },
   label: {
     fontSize: "0.8125rem",
@@ -2588,6 +2593,10 @@ const modalStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "flex-end",
     gap: "0.75rem",
-    marginTop: "1rem",
+    marginTop: "0.5rem",
+    paddingTop: "0.75rem",
+    borderTop: "1px solid var(--border-primary)",
+    flexShrink: 0,
   },
 };
+

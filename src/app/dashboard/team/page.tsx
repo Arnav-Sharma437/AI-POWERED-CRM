@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, User, Shield, CheckCircle2, AlertCircle, Edit, Trash2, ShieldAlert } from "lucide-react";
+import { Search, Plus, User, Shield, CheckCircle2, AlertCircle, Edit, Trash2, ShieldAlert, Clock, Calendar, MapPin, Building2, Home, Activity } from "lucide-react";
 import { useDashboard } from "../layout";
 import AiLoader from "@/components/AiLoader";
 
@@ -18,6 +18,12 @@ export default function TeamPage() {
   // Modals state
   const [activeModal, setActiveModal] = useState<"add" | "edit" | null>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  // Attendance Modal state
+  const [attendanceUser, setAttendanceUser] = useState<any | null>(null);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
+  const [userAttendanceSummary, setUserAttendanceSummary] = useState<any | null>(null);
   
   // Forms state
   const [form, setForm] = useState({
@@ -31,6 +37,27 @@ export default function TeamPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const handleOpenAttendance = async (user: any) => {
+    setAttendanceUser(user);
+    setAttendanceLoading(true);
+    try {
+      const res = await fetch(`/api/auth/attendance?userId=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAttendanceLogs(data.attendance || []);
+        if (data.summary && data.summary[user.id]) {
+          setUserAttendanceSummary(data.summary[user.id]);
+        } else {
+          setUserAttendanceSummary(null);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading user attendance:", err);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -286,6 +313,15 @@ export default function TeamPage() {
                     </td>
                     <td style={{ textAlign: "right" }}>
                       <div style={{ display: "inline-flex", gap: "0.5rem" }}>
+                        <button 
+                          onClick={() => handleOpenAttendance(u)}
+                          className="crm-btn crm-btn-secondary"
+                          style={{ padding: "0.375rem 0.625rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                          title="View Attendance & Working Hours"
+                        >
+                          <Clock size={14} />
+                          <span style={{ fontSize: "0.75rem" }}>Attendance</span>
+                        </button>
                         {(currentUserRole === "Super Admin" || isSelf) && (
                           <button 
                             onClick={() => handleOpenEdit(u)}
@@ -325,6 +361,162 @@ export default function TeamPage() {
         <div style={toastStyles.container}>
           <CheckCircle2 size={16} />
           {toastMessage}
+        </div>
+      )}
+
+      {/* Attendance & Working Hours Modal */}
+      {attendanceUser && (
+        <div style={modalStyles.overlay}>
+          <div style={{ ...modalStyles.container, maxWidth: "560px" }} className="animate-fade-in">
+            <div style={modalStyles.header}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <div style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  backgroundColor: "var(--primary-color)",
+                  color: "#ffffff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: "1rem"
+                }}>
+                  {attendanceUser.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 style={{ ...modalStyles.title, margin: 0 }}>
+                    {attendanceUser.name} &bull; Attendance Profile
+                  </h3>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>
+                    {attendanceUser.email} &bull; <span className="badge badge-info" style={{ fontSize: "0.7rem", padding: "1px 6px" }}>{attendanceUser.roleName || attendanceUser.role?.name || "Member"}</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setAttendanceUser(null)} style={modalStyles.closeBtn}>&times;</button>
+            </div>
+
+            <div style={{ ...modalStyles.body, padding: "1.25rem 1.5rem" }}>
+              {attendanceLoading ? (
+                <div style={{ padding: "2.5rem 0", textAlign: "center" }}>
+                  <AiLoader label="Loading Attendance & Hours History..." sublabel="Fetching check-ins, office logs, and active session hours" />
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  {/* Hours & Status Summary Cards */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                    <div style={{ padding: "1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--text-tertiary)", fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase" }}>
+                        <Clock size={14} style={{ color: "var(--primary-color)" }} />
+                        <span>Today's Work Hours</span>
+                      </div>
+                      <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
+                        {userAttendanceSummary 
+                          ? `${Math.floor((userAttendanceSummary.totalWorkedMinutes || 0) / 60)}h ${(userAttendanceSummary.totalWorkedMinutes || 0) % 60}m`
+                          : "0h 0m"}
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>
+                        {userAttendanceSummary?.isCurrentlyWorking ? "🟢 Session in Progress" : "⚪ Currently Off-duty"}
+                      </div>
+                    </div>
+
+                    <div style={{ padding: "1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--text-tertiary)", fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase" }}>
+                        <MapPin size={14} style={{ color: "#10b981" }} />
+                        <span>Work Location</span>
+                      </div>
+                      <div style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--text-primary)", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                        {userAttendanceSummary?.currentLocation === "Home" ? (
+                          <>
+                            <Home size={16} style={{ color: "#6366f1" }} /> Work from Home
+                          </>
+                        ) : (
+                          <>
+                            <Building2 size={16} style={{ color: "#10b981" }} /> In-Office
+                          </>
+                        )}
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                        {userAttendanceSummary?.firstClockIn 
+                          ? `Clock-in: ${new Date(userAttendanceSummary.firstClockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                          : "No clock-in recorded today"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Attendance Log History */}
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
+                      <h4 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
+                        Recent Attendance Activity & Logs
+                      </h4>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                        {attendanceLogs.length} total events
+                      </span>
+                    </div>
+
+                    {attendanceLogs.length === 0 ? (
+                      <div style={{ padding: "2rem", textAlign: "center", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px dashed var(--border-primary)", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+                        No attendance check-ins or work session logs found for this member yet.
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "240px", overflowY: "auto", paddingRight: "4px" }}>
+                        {attendanceLogs.map((log: any) => (
+                          <div
+                            key={log.id}
+                            style={{
+                              padding: "0.75rem 1rem",
+                              backgroundColor: "var(--bg-primary)",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border-primary)",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center"
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                              <div style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "6px",
+                                backgroundColor: log.action === "CLOCK_IN" ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                                color: log.action === "CLOCK_IN" ? "#10b981" : "var(--danger-color)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}>
+                                <Activity size={14} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                                  {log.notes || (log.action === "CLOCK_IN" ? "Clocked In to Work" : "Clocked Out of Work")}
+                                </div>
+                                <div style={{ fontSize: "0.725rem", color: "var(--text-secondary)", marginTop: "1px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span>{new Date(log.timestamp).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</span>
+                                  <span>&bull;</span>
+                                  <span>{new Date(log.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <span className={`badge ${log.location === "Home" ? "badge-info" : "badge-success"}`} style={{ fontSize: "0.725rem" }}>
+                              {log.location === "Home" ? "🏠 Home" : "🏢 Office"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div style={modalStyles.actions}>
+                <button type="button" onClick={() => setAttendanceUser(null)} className="crm-btn crm-btn-secondary">
+                  Close Profile
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -452,28 +644,35 @@ const modalStyles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
     backdropFilter: "blur(4px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 100,
+    zIndex: 9999,
     padding: "1rem",
+    overflowY: "auto",
   },
   container: {
     width: "100%",
-    maxWidth: "460px",
+    maxWidth: "500px",
+    maxHeight: "min(88vh, 740px)",
     backgroundColor: "var(--bg-secondary)",
     border: "1px solid var(--border-primary)",
     borderRadius: "12px",
     boxShadow: "var(--shadow-lg)",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    margin: "auto",
   },
   header: {
-    padding: "1.25rem 1.5rem",
+    padding: "1.15rem 1.5rem",
     borderBottom: "1px solid var(--border-primary)",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    flexShrink: 0,
   },
   title: {
     fontSize: "1.0625rem",
@@ -488,10 +687,13 @@ const modalStyles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   body: {
-    padding: "1.5rem",
+    padding: "1.25rem 1.5rem",
+    overflowY: "auto",
+    flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: "1.25rem",
+    gap: "1.15rem",
+    maxHeight: "calc(88vh - 130px)",
   },
   label: {
     fontSize: "0.8125rem",
@@ -504,7 +706,10 @@ const modalStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "flex-end",
     gap: "0.75rem",
-    marginTop: "1rem",
+    marginTop: "0.5rem",
+    paddingTop: "0.75rem",
+    borderTop: "1px solid var(--border-primary)",
+    flexShrink: 0,
   },
   errorBox: {
     padding: "0.75rem 1rem",
@@ -519,3 +724,4 @@ const modalStyles: Record<string, React.CSSProperties> = {
     gap: "0.5rem",
   }
 };
+

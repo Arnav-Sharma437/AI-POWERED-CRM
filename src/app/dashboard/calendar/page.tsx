@@ -120,6 +120,28 @@ export default function CalendarPage() {
   const daysArray = Array.from({ length: days }, (_, i) => i + 1);
   const blanksArray = Array.from({ length: firstDayIndex }, (_, i) => i);
 
+// Predefined Gazetted & Sectioned Public Holidays
+const SECTIONED_HOLIDAYS = [
+  { month: 0, day: 1, title: "New Year's Day", type: "Holiday", description: "Global New Year Celebration", kind: "gazetted" },
+  { month: 0, day: 26, title: "Republic Day", type: "Holiday", description: "National Holiday - Republic Day of India", kind: "national" },
+  { month: 2, day: 14, title: "Holi (Festival of Colours)", type: "Holiday", description: "Gazetted Festival Holiday", kind: "gazetted" },
+  { month: 2, day: 31, title: "Id-ul-Fitr (Eid)", type: "Holiday", description: "Gazetted Public Holiday", kind: "gazetted" },
+  { month: 3, day: 14, title: "Dr. Ambedkar Jayanti / Baisakhi", type: "Holiday", description: "Gazetted Public Holiday", kind: "gazetted" },
+  { month: 4, day: 1, title: "May Day / International Workers' Day", type: "Holiday", description: "Public Holiday", kind: "gazetted" },
+  { month: 5, day: 7, title: "Bakrid / Eid al-Adha", type: "Holiday", description: "Gazetted Festival Holiday", kind: "gazetted" },
+  { month: 6, day: 6, title: "Muharram", type: "Holiday", description: "Gazetted Public Holiday", kind: "gazetted" },
+  { month: 7, day: 15, title: "Independence Day", type: "Holiday", description: "National Holiday - Independence Day of India", kind: "national" },
+  { month: 7, day: 27, title: "Raksha Bandhan / Janmashtami", type: "Holiday", description: "Festive Holiday", kind: "gazetted" },
+  { month: 8, day: 5, title: "Milad-un-Nabi (Id-e-Milad)", type: "Holiday", description: "Gazetted Public Holiday", kind: "gazetted" },
+  { month: 9, day: 2, title: "Mahatma Gandhi Jayanti", type: "Holiday", description: "National Holiday - Birthday of Mahatma Gandhi", kind: "national" },
+  { month: 9, day: 20, title: "Dussehra / Vijayadashami", type: "Holiday", description: "Gazetted Festival Holiday", kind: "gazetted" },
+  { month: 10, day: 8, title: "Diwali (Deepavali)", type: "Holiday", description: "Gazetted Festival of Lights", kind: "gazetted" },
+  { month: 10, day: 10, title: "Govardhan Puja / Bhai Dooj", type: "Holiday", description: "Festive Holiday", kind: "gazetted" },
+  { month: 10, day: 24, title: "Guru Nanak Jayanti", type: "Holiday", description: "Gazetted Festival Holiday", kind: "gazetted" },
+  { month: 11, day: 25, title: "Christmas Day", type: "Holiday", description: "Gazetted Public Holiday", kind: "gazetted" },
+  { month: 11, day: 31, title: "New Year's Eve", type: "Holiday", description: "Sectioned Observance / Year End", kind: "gazetted" }
+];
+
   const getEventsForDay = (day: number) => {
     const dayMeetings = filteredMeetings.filter(m => {
       const mDate = new Date(m.startTime);
@@ -147,7 +169,25 @@ export default function CalendarPage() {
       eventKind: "deadline"
     }));
 
-    return [...dayMeetings, ...dayDeadlines];
+    // Find any sectioned / gazetted holidays for this month & day
+    const dayHolidays = SECTIONED_HOLIDAYS.filter(
+      h => h.month === currentDate.getMonth() && h.day === day
+    ).map((h, idx) => {
+      const holidayDate = new Date(currentDate.getFullYear(), h.month, h.day, 9, 0, 0);
+      return {
+        id: `holiday-${h.month}-${h.day}-${idx}`,
+        title: `🎉 ${h.title}`,
+        type: h.type,
+        notes: h.description,
+        startTime: holidayDate.toISOString(),
+        status: "Holiday",
+        eventKind: "holiday",
+        isHoliday: true,
+        kind: h.kind
+      };
+    });
+
+    return [...dayHolidays, ...dayMeetings, ...dayDeadlines];
   };
 
   const handleScheduleGMeetSubmit = async (e: React.FormEvent) => {
@@ -343,13 +383,15 @@ export default function CalendarPage() {
                       onClick={() => setSelectedEvent(m)}
                       style={{
                         ...styles.eventItem,
-                        borderLeftColor: m.eventKind === "deadline" ? "var(--danger-color)" : m.type === "Call" ? "var(--info-color)" : m.type === "Follow-up" ? "var(--warning-color)" : "var(--primary-color)",
-                        backgroundColor: m.eventKind === "deadline" ? "rgba(239, 68, 68, 0.08)" : "var(--bg-primary)"
+                        borderLeftColor: m.isHoliday ? "#f43f5e" : m.eventKind === "deadline" ? "var(--danger-color)" : m.type === "Call" ? "var(--info-color)" : m.type === "Follow-up" ? "var(--warning-color)" : "var(--primary-color)",
+                        backgroundColor: m.isHoliday ? "rgba(244, 63, 94, 0.1)" : m.eventKind === "deadline" ? "rgba(239, 68, 68, 0.08)" : "var(--bg-primary)"
                       }}
                     >
-                      <div style={{ ...styles.eventTitle, fontWeight: m.eventKind === "deadline" ? 600 : 500 }}>{m.title}</div>
+                      <div style={{ ...styles.eventTitle, fontWeight: m.isHoliday || m.eventKind === "deadline" ? 600 : 500, color: m.isHoliday ? "#e11d48" : "inherit" }}>
+                        {m.title}
+                      </div>
                       <div style={styles.eventTime}>
-                        {m.eventKind === "deadline" ? "Target Due" : new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {m.isHoliday ? "Gazetted Holiday" : m.eventKind === "deadline" ? "Target Due" : new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   ))}
@@ -362,10 +404,20 @@ export default function CalendarPage() {
         /* List View */
         <div className="crm-card" style={{ padding: 0 }}>
           {filteredMeetings.length === 0 && filteredProjects.length === 0 ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-tertiary)" }}>No meetings or deadlines scheduled for this filter.</div>
+            <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-tertiary)" }}>No meetings, holidays, or deadlines scheduled for this filter.</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column" }}>
               {[
+                ...SECTIONED_HOLIDAYS.map((h, idx) => ({
+                  id: `holiday-list-${h.month}-${h.day}-${idx}`,
+                  title: `🎉 ${h.title}`,
+                  type: "Official Holiday",
+                  notes: h.description,
+                  startTime: new Date(currentDate.getFullYear(), h.month, h.day, 9, 0, 0).toISOString(),
+                  status: "Holiday",
+                  eventKind: "holiday",
+                  isHoliday: true
+                })),
                 ...filteredMeetings.map(m => ({ ...m, eventKind: "meeting" })),
                 ...filteredProjects.map(p => ({
                   id: `proj-${p.id}`,
@@ -381,14 +433,17 @@ export default function CalendarPage() {
                 <div 
                   key={m.id} 
                   onClick={() => setSelectedEvent(m)}
-                  style={styles.listItem}
+                  style={{
+                    ...styles.listItem,
+                    backgroundColor: m.isHoliday ? "rgba(244, 63, 94, 0.04)" : "transparent"
+                  }}
                 >
                   <div style={styles.listItemTimeCol}>
-                    <CalendarIcon size={16} style={{ color: m.eventKind === "deadline" ? "var(--danger-color)" : "var(--text-tertiary)" }} />
+                    <CalendarIcon size={16} style={{ color: m.isHoliday ? "#f43f5e" : m.eventKind === "deadline" ? "var(--danger-color)" : "var(--text-tertiary)" }} />
                     <div>
-                      <div style={{ fontWeight: 600, color: m.eventKind === "deadline" ? "var(--danger-color)" : "inherit" }}>{new Date(m.startTime).toLocaleDateString()}</div>
+                      <div style={{ fontWeight: 600, color: m.isHoliday ? "#e11d48" : m.eventKind === "deadline" ? "var(--danger-color)" : "inherit" }}>{new Date(m.startTime).toLocaleDateString()}</div>
                       <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                        {m.eventKind === "deadline" ? "Deadline" : new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {m.isHoliday ? "Official Holiday" : m.eventKind === "deadline" ? "Deadline" : new Date(m.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>
@@ -683,8 +738,8 @@ export default function CalendarPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
               <div>
-                <span className={`badge ${selectedEvent.eventKind === "deadline" ? "badge-danger" : selectedEvent.status === "Completed" ? "badge-success" : "badge-primary"}`} style={{ marginBottom: "0.5rem" }}>
-                  {selectedEvent.eventKind === "deadline" ? "Project Target Deadline" : selectedEvent.type}
+                <span className={`badge ${selectedEvent.isHoliday ? "badge-danger" : selectedEvent.eventKind === "deadline" ? "badge-danger" : selectedEvent.status === "Completed" ? "badge-success" : "badge-primary"}`} style={{ marginBottom: "0.5rem", backgroundColor: selectedEvent.isHoliday ? "#f43f5e" : undefined, color: selectedEvent.isHoliday ? "#fff" : undefined }}>
+                  {selectedEvent.isHoliday ? "🎉 Official Gazetted Holiday" : selectedEvent.eventKind === "deadline" ? "Project Target Deadline" : selectedEvent.type}
                 </span>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>{selectedEvent.title}</h3>
               </div>

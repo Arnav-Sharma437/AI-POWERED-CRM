@@ -41,9 +41,10 @@ export default function PaymentsPage() {
     return true;
   });
 
+  const [paymentCategory, setPaymentCategory] = useState<"all" | "ongoing" | "pending" | "settled">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCurrency, setFilterCurrency] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all"); // 'all' | 'pending' | 'settled'
+  const [filterStatus, setFilterStatus] = useState("all"); // 'all' | 'ongoing' | 'pending' | 'settled'
 
   useEffect(() => {
     async function loadProjects() {
@@ -121,6 +122,12 @@ export default function PaymentsPage() {
     }).format(amt);
   };
 
+  const ONGOING_STATUSES = ["Not Started", "Work in Progress", "Review", "Issue"];
+
+  const ongoingCount = projects.filter(p => ONGOING_STATUSES.includes(p.status)).length;
+  const pendingCount = projects.filter(p => (p.pendingAmount || 0) > 0).length;
+  const settledCount = projects.filter(p => (p.pendingAmount || 0) <= 0).length;
+
   // Filter project records
   const filteredProjects = projects.filter(p => {
     const matchesSearch = 
@@ -132,12 +139,24 @@ export default function PaymentsPage() {
     const matchesCurrency = !filterCurrency || curr === filterCurrency;
 
     const isPending = (p.pendingAmount || 0) > 0;
+    const isOngoing = ONGOING_STATUSES.includes(p.status);
+
+    let matchesCategory = true;
+    if (paymentCategory === "ongoing") {
+      matchesCategory = isOngoing;
+    } else if (paymentCategory === "pending") {
+      matchesCategory = isPending;
+    } else if (paymentCategory === "settled") {
+      matchesCategory = !isPending;
+    }
+
     const matchesStatus = 
       filterStatus === "all" ? true :
+      filterStatus === "ongoing" ? isOngoing :
       filterStatus === "pending" ? isPending :
       !isPending;
 
-    return matchesSearch && matchesCurrency && matchesStatus;
+    return matchesSearch && matchesCurrency && matchesCategory && matchesStatus;
   });
 
   // Calculate totals in INR
@@ -177,6 +196,70 @@ export default function PaymentsPage() {
           style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
         >
           <Briefcase size={16} /> View Kanban Board
+        </button>
+      </div>
+
+      {/* Payment Category Filter Tabs */}
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", overflowX: "auto", paddingBottom: "0.25rem" }}>
+        <button
+          onClick={() => { setPaymentCategory("all"); setFilterStatus("all"); }}
+          className="crm-btn"
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            borderRadius: "8px",
+            backgroundColor: paymentCategory === "all" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: paymentCategory === "all" ? "#ffffff" : "var(--text-secondary)",
+            border: "1px solid var(--border-primary)"
+          }}
+        >
+          All Payments ({projects.length})
+        </button>
+        <button
+          onClick={() => { setPaymentCategory("ongoing"); setFilterStatus("all"); }}
+          className="crm-btn"
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            borderRadius: "8px",
+            backgroundColor: paymentCategory === "ongoing" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: paymentCategory === "ongoing" ? "#ffffff" : "var(--text-secondary)",
+            border: "1px solid var(--border-primary)"
+          }}
+        >
+          ⚡ Ongoing Projects Payments ({ongoingCount})
+        </button>
+        <button
+          onClick={() => { setPaymentCategory("pending"); setFilterStatus("all"); }}
+          className="crm-btn"
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            borderRadius: "8px",
+            backgroundColor: paymentCategory === "pending" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: paymentCategory === "pending" ? "#ffffff" : "var(--text-secondary)",
+            border: "1px solid var(--border-primary)"
+          }}
+        >
+          ⏳ Pending Balances ({pendingCount})
+        </button>
+        <button
+          onClick={() => { setPaymentCategory("settled"); setFilterStatus("all"); }}
+          className="crm-btn"
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            borderRadius: "8px",
+            backgroundColor: paymentCategory === "settled" ? "var(--primary-color)" : "var(--bg-secondary)",
+            color: paymentCategory === "settled" ? "#ffffff" : "var(--text-secondary)",
+            border: "1px solid var(--border-primary)"
+          }}
+        >
+          ✅ Fully Settled ({settledCount})
         </button>
       </div>
 
@@ -235,6 +318,7 @@ export default function PaymentsPage() {
             onChange={(e) => setFilterStatus(e.target.value)}
           >
             <option value="all">All Payment Status</option>
+            <option value="ongoing">⚡ Ongoing Projects</option>
             <option value="pending">⏳ Pending Only</option>
             <option value="settled">✓ Fully Settled</option>
           </select>

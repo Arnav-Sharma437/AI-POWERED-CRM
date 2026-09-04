@@ -382,7 +382,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <FileText size={28} color="var(--primary-color)" />
             <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-              Edit Invoice <span style={{ color: "var(--primary-color)", fontFamily: "monospace" }}>{invoiceNumber}</span>
+              Edit Invoice <span style={{ color: "var(--primary-color)" }}>{invoiceNumber}</span>
             </h1>
           </div>
 
@@ -594,7 +594,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
               className="crm-input" 
               value={invoiceNumber}
               disabled
-              style={{ fontWeight: 800, fontFamily: "monospace", marginTop: "4px", opacity: 0.8 }}
+              style={{ fontWeight: 400, marginTop: "4px", opacity: 0.8 }}
             />
           </div>
 
@@ -739,7 +739,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                     </td>
 
                     <td style={{ padding: "1rem", textAlign: "right" }}>
-                      <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--text-primary)", fontFamily: "monospace" }}>
+                      <div style={{ fontWeight: 400, fontSize: "0.95rem", color: "var(--text-primary)" }}>
                         {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.amount)}
                       </div>
                       {items.length > 1 && (
@@ -773,16 +773,16 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
           
           <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             <div style={{ padding: "1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
-              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "4px" }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "4px" }}>
                 Total In Words
               </div>
-              <div style={{ fontWeight: 700, fontStyle: "italic", color: "var(--text-primary)", fontSize: "0.9rem" }}>
+              <div style={{ fontWeight: 400, fontStyle: "italic", color: "var(--text-primary)", fontSize: "0.9rem" }}>
                 {totalInWords}
               </div>
             </div>
 
             <div style={{ padding: "1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", fontWeight: 400, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "8px" }}>
                 <CreditCard size={14} /> Bank Details
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
@@ -803,7 +803,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                     className="crm-input" 
                     value={accountNumber}
                     onChange={(e) => setAccountNumber(e.target.value)}
-                    style={{ fontSize: "0.8125rem", fontFamily: "monospace", fontWeight: 700 }}
+                    style={{ fontSize: "0.8125rem", fontWeight: 400 }}
                   />
                 </div>
               </div>
@@ -814,13 +814,13 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                   className="crm-input" 
                   value={ifscCode}
                   onChange={(e) => setIfscCode(e.target.value)}
-                  style={{ fontSize: "0.8125rem", fontFamily: "monospace", fontWeight: 700 }}
+                  style={{ fontSize: "0.8125rem", fontWeight: 400 }}
                 />
               </div>
             </div>
 
             <div>
-              <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>
+              <label style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--text-secondary)", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>
                 This Invoice Includes
               </label>
               <textarea 
@@ -835,29 +835,29 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
 
           <div style={{ padding: "1.5rem", backgroundColor: "var(--bg-primary)", borderRadius: "10px", border: "1px solid var(--border-primary)", height: "fit-content" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
-              <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Sub Total</span>
-              <span style={{ fontWeight: 700, fontFamily: "monospace" }}>
+              <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}>Sub Total</span>
+              <span style={{ fontWeight: 400 }}>
                 {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(subtotal)}
               </span>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
-              <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Total Tax (GST)</span>
-              <span style={{ fontWeight: 700, color: "#10b981", fontFamily: "monospace" }}>
+              <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}>Total Tax (GST)</span>
+              <span style={{ fontWeight: 400, color: "#10b981" }}>
                 +{currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(taxTotal)}
               </span>
             </div>
 
             <div style={{ borderTop: "2px solid var(--border-primary)", paddingTop: "1rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-primary)" }}>Total</span>
-              <span style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--primary-color)", fontFamily: "monospace" }}>
+              <span style={{ fontSize: "1.1rem", fontWeight: 400, color: "var(--text-primary)" }}>Total</span>
+              <span style={{ fontSize: "1.35rem", fontWeight: 400, color: "var(--primary-color)" }}>
                 {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandTotal)}
               </span>
             </div>
 
             <div style={{ borderTop: "1px dashed var(--border-primary)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(99, 102, 241, 0.08)", padding: "0.75rem", borderRadius: "6px" }}>
-              <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-primary)" }}>Balance Due</span>
-              <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-primary)", fontFamily: "monospace" }}>
+              <span style={{ fontSize: "0.95rem", fontWeight: 400, color: "var(--text-primary)" }}>Balance Due</span>
+              <span style={{ fontSize: "1.2rem", fontWeight: 400, color: "var(--text-primary)" }}>
                 {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandTotal)}
               </span>
             </div>

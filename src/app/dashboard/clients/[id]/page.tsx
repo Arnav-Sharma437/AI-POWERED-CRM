@@ -134,7 +134,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 600, fontSize: "0.875rem", fontFamily: "monospace" }}>
+                      <div style={{ fontWeight: 400, fontSize: "0.875rem" }}>
                         {(p.currency === "USD" ? "$" : p.currency === "EUR" ? "€" : p.currency === "GBP" ? "£" : p.currency === "AED" ? "AED " : "₹") + (p.finalBudget || 0).toLocaleString()}
                       </div>
                       <span className="badge badge-primary" style={{ marginTop: "4px" }}>{p.status}</span>

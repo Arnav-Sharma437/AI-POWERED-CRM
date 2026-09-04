@@ -36,7 +36,7 @@ export async function POST(
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const invoiceUrl = `${appUrl}/dashboard/invoices/${invoice.id}`;
+    const invoiceUrl = `${appUrl}/invoices/${invoice.id}`;
 
     await sendInvoiceEmail({
       recipientEmail: emailToSend,

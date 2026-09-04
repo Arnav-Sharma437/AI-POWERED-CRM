@@ -208,19 +208,19 @@ export default function LandingPage() {
         {/* Live Metrics Showcase Banner */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", padding: "1.5rem", borderRadius: "16px", backgroundColor: "rgba(17, 24, 39, 0.6)", border: "1px solid rgba(255, 255, 255, 0.08)", backdropFilter: "blur(12px)" }}>
           <div style={{ padding: "0.75rem" }}>
-            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#f97316", fontFamily: "monospace" }}>3 Roles</div>
+            <div style={{ fontSize: "2rem", fontWeight: 700, color: "#f97316" }}>3 Roles</div>
             <div style={{ fontSize: "0.8125rem", color: "#94a3b8", marginTop: "4px" }}>Admin, BDA & Developer</div>
           </div>
           <div style={{ padding: "0.75rem", borderLeft: "1px solid rgba(255, 255, 255, 0.08)" }}>
-            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#10b981", fontFamily: "monospace" }}>Real-Time</div>
+            <div style={{ fontSize: "2rem", fontWeight: 700, color: "#10b981" }}>Real-Time</div>
             <div style={{ fontSize: "0.8125rem", color: "#94a3b8", marginTop: "4px" }}>Instant Project Chats</div>
           </div>
           <div style={{ padding: "0.75rem", borderLeft: "1px solid rgba(255, 255, 255, 0.08)" }}>
-            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#38bdf8", fontFamily: "monospace" }}>Global</div>
+            <div style={{ fontSize: "2rem", fontWeight: 700, color: "#38bdf8" }}>Global</div>
             <div style={{ fontSize: "0.8125rem", color: "#94a3b8", marginTop: "4px" }}>USD, EUR, GBP, AED & INR</div>
           </div>
           <div style={{ padding: "0.75rem", borderLeft: "1px solid rgba(255, 255, 255, 0.08)" }}>
-            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#fbbf24", fontFamily: "monospace" }}>Auto Mails</div>
+            <div style={{ fontSize: "2rem", fontWeight: 700, color: "#fbbf24" }}>Auto Mails</div>
             <div style={{ fontSize: "0.8125rem", color: "#94a3b8", marginTop: "4px" }}>Weekly Team Reports</div>
           </div>
         </div>
@@ -369,7 +369,7 @@ export default function LandingPage() {
                 </div>
                 <div style={{ backgroundColor: "#0b0f19", padding: "1rem", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.05)", marginBottom: "1rem" }}>
                   <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Client: Cyberdyne Systems</div>
-                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#f97316", fontFamily: "monospace", marginTop: "4px" }}>₹17,700.00 (IGST 18%)</div>
+                  <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#f97316", marginTop: "4px" }}>₹17,700.00 (IGST 18%)</div>
                   <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "2px" }}>Remittance Info & Amount in Words included</div>
                 </div>
                 <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
