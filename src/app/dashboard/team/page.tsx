@@ -31,6 +31,7 @@ export default function TeamPage() {
     email: "",
     password: "",
     roleName: "Other",
+    avatar: "",
     isActive: true
   });
 
@@ -88,6 +89,7 @@ export default function TeamPage() {
       email: "",
       password: "",
       roleName: "Other",
+      avatar: "",
       isActive: true
     });
     setErrorMessage("");
@@ -101,6 +103,7 @@ export default function TeamPage() {
       email: user.email,
       password: "", // blank password leaves it unchanged
       roleName: user.roleName,
+      avatar: user.avatar || "",
       isActive: user.isActive
     });
     setErrorMessage("");
@@ -271,8 +274,8 @@ export default function TeamPage() {
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                         <div style={{ 
-                          width: "32px", 
-                          height: "32px", 
+                          width: "36px", 
+                          height: "36px", 
                           borderRadius: "50%", 
                           backgroundColor: u.roleName === "Super Admin" ? "var(--danger-light)" : "var(--primary-light)",
                           color: u.roleName === "Super Admin" ? "var(--danger-color)" : "var(--primary-color)",
@@ -280,9 +283,15 @@ export default function TeamPage() {
                           alignItems: "center",
                           justifyContent: "center",
                           fontWeight: 700,
-                          fontSize: "0.875rem"
+                          fontSize: "0.875rem",
+                          overflow: "hidden",
+                          flexShrink: 0
                         }}>
-                          {u.name.charAt(0)}
+                          {u.avatar ? (
+                            <img src={u.avatar} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            u.name.charAt(0)
+                          )}
                         </div>
                         <div>
                           <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>
@@ -371,8 +380,8 @@ export default function TeamPage() {
             <div style={modalStyles.header}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <div style={{
-                  width: "36px",
-                  height: "36px",
+                  width: "42px",
+                  height: "42px",
                   borderRadius: "50%",
                   backgroundColor: "var(--primary-color)",
                   color: "#ffffff",
@@ -380,13 +389,19 @@ export default function TeamPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 700,
-                  fontSize: "1rem"
+                  fontSize: "1.125rem",
+                  overflow: "hidden",
+                  flexShrink: 0
                 }}>
-                  {attendanceUser.name.charAt(0)}
+                  {attendanceUser.avatar ? (
+                    <img src={attendanceUser.avatar} alt={attendanceUser.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    attendanceUser.name.charAt(0)
+                  )}
                 </div>
                 <div>
                   <h3 style={{ ...modalStyles.title, margin: 0 }}>
-                    {attendanceUser.name} &bull; Attendance Profile
+                    {attendanceUser.name} &bull; Attendance & Leave Record
                   </h3>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>
                     {attendanceUser.email} &bull; <span className="badge badge-info" style={{ fontSize: "0.7rem", padding: "1px 6px" }}>{attendanceUser.roleName || attendanceUser.role?.name || "Member"}</span>
@@ -403,43 +418,61 @@ export default function TeamPage() {
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                  {/* Hours & Status Summary Cards */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                    <div style={{ padding: "1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--text-tertiary)", fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase" }}>
-                        <Clock size={14} style={{ color: "var(--primary-color)" }} />
-                        <span>Today's Work Hours</span>
+                  {/* Hours & Status Summary Cards - 4 KPI Metrics */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.65rem" }}>
+                    <div style={{ padding: "0.85rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase" }}>
+                        <Clock size={13} style={{ color: "var(--primary-color)" }} />
+                        <span>Today Hours</span>
                       </div>
-                      <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
                         {userAttendanceSummary 
                           ? `${Math.floor((userAttendanceSummary.totalWorkedMinutes || 0) / 60)}h ${(userAttendanceSummary.totalWorkedMinutes || 0) % 60}m`
                           : "0h 0m"}
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                        {userAttendanceSummary?.isCurrentlyWorking ? "🟢 Session in Progress" : "⚪ Currently Off-duty"}
+                      <div style={{ fontSize: "0.7rem", color: userAttendanceSummary?.isCurrentlyWorking ? "var(--success-color)" : "var(--text-secondary)", marginTop: "2px", fontWeight: 500 }}>
+                        {userAttendanceSummary?.isCurrentlyWorking ? "🟢 Working Now" : "⚪ Off-duty"}
                       </div>
                     </div>
 
-                    <div style={{ padding: "1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--text-tertiary)", fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase" }}>
-                        <MapPin size={14} style={{ color: "#10b981" }} />
-                        <span>Work Location</span>
+                    <div style={{ padding: "0.85rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase" }}>
+                        <Clock size={13} style={{ color: "#3b82f6" }} />
+                        <span>Total Hours</span>
                       </div>
-                      <div style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--text-primary)", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-                        {userAttendanceSummary?.currentLocation === "Home" ? (
-                          <>
-                            <Home size={16} style={{ color: "#6366f1" }} /> Work from Home
-                          </>
-                        ) : (
-                          <>
-                            <Building2 size={16} style={{ color: "#10b981" }} /> In-Office
-                          </>
-                        )}
+                      <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
+                        {userAttendanceSummary 
+                          ? `${Math.floor((userAttendanceSummary.totalLifetimeWorkedMinutes || userAttendanceSummary.totalWorkedMinutes || 0) / 60)}h ${((userAttendanceSummary.totalLifetimeWorkedMinutes || userAttendanceSummary.totalWorkedMinutes || 0) % 60)}m`
+                          : "0h 0m"}
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-                        {userAttendanceSummary?.firstClockIn 
-                          ? `Clock-in: ${new Date(userAttendanceSummary.firstClockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                          : "No clock-in recorded today"}
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                        Logged Lifetime
+                      </div>
+                    </div>
+
+                    <div style={{ padding: "0.85rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase" }}>
+                        <CheckCircle2 size={13} style={{ color: "#10b981" }} />
+                        <span>Days Present</span>
+                      </div>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#10b981", marginTop: "4px" }}>
+                        {userAttendanceSummary?.totalDaysPresent || (attendanceLogs.length > 0 ? 1 : 0)} Days
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                        Attended Work
+                      </div>
+                    </div>
+
+                    <div style={{ padding: "0.85rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase" }}>
+                        <Calendar size={13} style={{ color: "var(--danger-color)" }} />
+                        <span>Leaves (Chutti)</span>
+                      </div>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--danger-color)", marginTop: "4px" }}>
+                        {userAttendanceSummary?.totalDaysOnLeave !== undefined ? userAttendanceSummary.totalDaysOnLeave : 0} Days
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                        Past 30 Days
                       </div>
                     </div>
                   </div>
@@ -448,10 +481,10 @@ export default function TeamPage() {
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
                       <h4 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
-                        Recent Attendance Activity & Logs
+                        Recent Attendance Activity & Clock Logs
                       </h4>
                       <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                        {attendanceLogs.length} total events
+                        {attendanceLogs.length} events
                       </span>
                     </div>
 
@@ -538,6 +571,62 @@ export default function TeamPage() {
                   <span>{errorMessage}</span>
                 </div>
               )}
+
+              {/* Profile Photo Upload */}
+              <div>
+                <label style={modalStyles.label}>Profile Photo (Optional)</label>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <div style={{
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--primary-light)",
+                    color: "var(--primary-color)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.25rem",
+                    fontWeight: "bold",
+                    overflow: "hidden",
+                    border: "1px solid var(--border-primary)",
+                    flexShrink: 0
+                  }}>
+                    {form.avatar ? (
+                      <img src={form.avatar} alt="Avatar preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      (form.name || "U").charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (evt) => {
+                            if (evt.target?.result) {
+                              setForm(prev => ({ ...prev, avatar: evt.target?.result as string }));
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}
+                    />
+                    {form.avatar && (
+                      <button 
+                        type="button" 
+                        onClick={() => setForm(prev => ({ ...prev, avatar: "" }))} 
+                        style={{ background: "none", border: "none", color: "var(--danger-color)", fontSize: "0.725rem", cursor: "pointer", textAlign: "left", padding: 0 }}
+                      >
+                        Remove Photo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               <div>
                 <label style={modalStyles.label}>Full Name</label>

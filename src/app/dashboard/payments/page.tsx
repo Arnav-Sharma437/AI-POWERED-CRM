@@ -155,10 +155,11 @@ export default function PaymentsPage() {
 
     const matchesStatus = 
       filterStatus === "all" ? true :
-      filterStatus === "monthly" ? isMonthly :
-      filterStatus === "onetime" ? !isMonthly :
+      (filterStatus === "ongoing" || filterStatus === "monthly") ? (isMonthly || p.status === "Ongoing") :
+      filterStatus === "onetime" ? (!isMonthly && p.status !== "Ongoing") :
       filterStatus === "pending" ? isPending :
-      !isPending;
+      filterStatus === "settled" ? !isPending :
+      true;
 
     return matchesSearch && matchesCurrency && matchesCategory && matchesStatus;
   });

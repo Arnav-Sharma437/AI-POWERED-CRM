@@ -12,6 +12,7 @@ export interface User {
   email: string;
   passwordHash: string; // bcrypt hash for 'password123'
   roleId: string;
+  avatar?: string | null;
   isActive?: boolean;
   isTrashed?: boolean;
   createdAt: Date;

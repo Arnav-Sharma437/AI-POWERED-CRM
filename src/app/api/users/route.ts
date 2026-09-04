@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     const currentUserRole = allUsers.find(u => u.id === currentUserDecoded.userId)?.roleName;
 
     const body = await request.json();
-    const { name, email, password, roleName, isActive } = body;
+    const { name, email, password, roleName, isActive, avatar } = body;
 
     if (!name || !email || !password || !roleName) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
@@ -73,6 +73,7 @@ export async function POST(request: Request) {
         email: cleanEmail,
         passwordHash,
         roleId: role.id,
+        avatar: avatar || null,
         isActive: isActive !== false
       },
       include: {
@@ -104,6 +105,7 @@ export async function POST(request: Request) {
         name: newUser.name,
         email: newUser.email,
         roleName: newUser.role.name,
+        avatar: newUser.avatar,
         isActive: newUser.isActive
       }
     });

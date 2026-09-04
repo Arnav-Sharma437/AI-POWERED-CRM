@@ -48,6 +48,7 @@ export async function loginUser(email: string, passwordPlain: string): Promise<U
         email: user.email,
         passwordHash: user.passwordHash,
         roleId: user.roleId,
+        avatar: user.avatar || undefined,
         createdAt: user.createdAt
       } : null;
     } catch {
@@ -88,6 +89,7 @@ export async function listUsers(): Promise<(User & { roleName?: string })[]> {
       email: u.email,
       passwordHash: u.passwordHash,
       roleId: u.roleId,
+      avatar: u.avatar || undefined,
       createdAt: u.createdAt,
       roleName: u.role.name,
       isActive: u.isActive,
@@ -727,7 +729,7 @@ export async function listProjects(includeTrashed = false, userContext?: { userI
             members: {
               include: {
                 user: {
-                  select: { id: true, name: true, email: true, role: { select: { name: true } } }
+                  select: { id: true, name: true, email: true, avatar: true, role: { select: { name: true } } }
                 }
               }
             }
@@ -771,7 +773,8 @@ export async function listProjects(includeTrashed = false, userContext?: { userI
                 assignedDevs.push({
                   id: m.user.id,
                   name: m.user.name,
-                  email: m.user.email
+                  email: m.user.email,
+                  avatar: m.user.avatar
                 });
               }
             }

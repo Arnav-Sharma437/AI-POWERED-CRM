@@ -20,6 +20,7 @@ export async function GET(request: Request) {
         email: session.email,
         roleId: session.roleId,
         roleName: matched?.roleName || "BDA",
+        avatar: matched?.avatar,
         workLocation: session.workLocation || "Office"
       }
     });

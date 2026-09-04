@@ -793,8 +793,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div style={{ ...sidebarStyles.footer, padding: isSidebarCollapsed ? "1rem 0.5rem" : "1.5rem" }}>
             {currentUser && (
               <div style={{ ...sidebarStyles.userCard, justifyContent: isSidebarCollapsed ? "center" : "flex-start" }} title={`${currentUser.name} (${currentUser.roleName})`}>
-                <div style={sidebarStyles.avatar}>
-                  {currentUser.name.charAt(0)}
+                <div style={{ ...sidebarStyles.avatar, overflow: "hidden", padding: 0 }}>
+                  {currentUser.avatar ? (
+                    <img 
+                      src={currentUser.avatar} 
+                      alt={currentUser.name} 
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} 
+                    />
+                  ) : (
+                    currentUser.name.charAt(0)
+                  )}
                 </div>
                 {!isSidebarCollapsed && (
                   <div style={sidebarStyles.userInfo}>
@@ -1113,15 +1121,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {currentUser && (
                 <div style={{ position: "relative" }}>
                   <button onClick={() => setShowProfileMenu(!showProfileMenu)} style={topbarStyles.profileArea}>
-                    <div style={topbarStyles.profileAvatar}>
-                      {currentUser.name.charAt(0)}
+                    <div style={{ ...topbarStyles.profileAvatar, overflow: "hidden", padding: 0 }}>
+                      {currentUser.avatar ? (
+                        <img 
+                          src={currentUser.avatar} 
+                          alt={currentUser.name} 
+                          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} 
+                        />
+                      ) : (
+                        currentUser.name.charAt(0)
+                      )}
                     </div>
                   </button>
                   {showProfileMenu && (
                     <div style={topbarStyles.profileMenu}>
-                      <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid var(--border-primary)" }}>
-                        <div style={{ fontWeight: 600 }}>{currentUser.name}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{currentUser.email}</div>
+                      <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid var(--border-primary)", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "var(--primary-light)", color: "var(--primary-color)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, overflow: "hidden", flexShrink: 0 }}>
+                          {currentUser.avatar ? (
+                            <img src={currentUser.avatar} alt={currentUser.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            currentUser.name.charAt(0)
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{currentUser.name}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{currentUser.email}</div>
+                        </div>
                       </div>
                       <button onClick={() => { router.push("/dashboard/settings"); setShowProfileMenu(false); }} style={topbarStyles.profileMenuItem}><Settings size={14} /> Profile Settings</button>
                       <button onClick={() => { router.push("/"); setShowProfileMenu(false); }} style={topbarStyles.profileMenuItem}><Sparkles size={14} /> Product Showcase</button>

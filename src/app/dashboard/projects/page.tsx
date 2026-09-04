@@ -10,7 +10,8 @@ import { useDashboard } from "../layout";
 import AiLoader from "@/components/AiLoader";
 
 const KANBAN_STAGES = [
-  { id: "Ongoing", label: "⚡ Ongoing", color: "var(--primary-color)" },
+  { id: "Ongoing", label: "⚡ Ongoing Retainers", color: "#8b5cf6" },
+  { id: "Work in Progress", label: "🔨 Work in Progress", color: "var(--primary-color)" },
   { id: "Not Started", label: "Not Started", color: "var(--text-tertiary)" },
   { id: "Review", label: "Review / QA", color: "var(--info-color)" },
   { id: "Issue", label: "Flagged / Issue", color: "var(--danger-color)" },
@@ -308,7 +309,7 @@ export default function ProjectsPage() {
               Board Columns:
             </span>
             {KANBAN_STAGES.map((s) => {
-              const count = filteredProjects.filter(p => s.id === "Ongoing" ? (p.status === "Ongoing" || p.status === "Work in Progress") : p.status === s.id).length;
+              const count = filteredProjects.filter(p => p.status === s.id).length;
               return (
                 <button
                   key={s.id}
@@ -360,7 +361,7 @@ export default function ProjectsPage() {
           }}
         >
           {KANBAN_STAGES.map((stage) => {
-            const stageProjects = filteredProjects.filter(p => stage.id === "Ongoing" ? (p.status === "Ongoing" || p.status === "Work in Progress") : p.status === stage.id);
+            const stageProjects = filteredProjects.filter(p => p.status === stage.id);
             return (
               <div 
                 id={`kanban-stage-${stage.id}`}
@@ -522,8 +523,16 @@ export default function ProjectsPage() {
                                     key={dev.id}
                                     className="dev-avatar-pill"
                                   >
-                                    <div className="dev-avatar-circle">
-                                      {dev.name?.charAt(0).toUpperCase()}
+                                    <div className="dev-avatar-circle" style={{ overflow: "hidden", padding: 0 }}>
+                                      {dev.avatar ? (
+                                        <img 
+                                          src={dev.avatar} 
+                                          alt={dev.name} 
+                                          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} 
+                                        />
+                                      ) : (
+                                        dev.name?.charAt(0).toUpperCase()
+                                      )}
                                     </div>
                                     <span className="dev-avatar-name">
                                       {dev.name}

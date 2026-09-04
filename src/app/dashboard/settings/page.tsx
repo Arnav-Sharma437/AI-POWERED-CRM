@@ -5,8 +5,11 @@ import { Shield, User, Info, CheckCircle2, Clock, MapPin, Building2, Home } from
 import { useDashboard } from "../layout";
 
 export default function SettingsPage() {
-  const { currentUser } = useDashboard();
+  const { currentUser, setTriggerRefresh } = useDashboard();
   const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState("");
 
   useEffect(() => {
     async function loadAttendance() {
@@ -26,6 +29,39 @@ export default function SettingsPage() {
     loadAttendance();
   }, [currentUser?.id]);
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser?.id) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const dataUrl = evt.target?.result as string;
+      setAvatarPreview(dataUrl);
+      setUploadingAvatar(true);
+      try {
+        const res = await fetch(`/api/users/${currentUser.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ avatar: dataUrl })
+        });
+        if (res.ok) {
+          setSaveSuccess("Profile photo updated successfully!");
+          setTimeout(() => setSaveSuccess(""), 4000);
+          setTriggerRefresh((prev: number) => prev + 1);
+        } else {
+          alert("Failed to update profile photo");
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setUploadingAvatar(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const currentAvatar = avatarPreview || currentUser?.avatar;
+
   return (
     <div className="crm-container animate-fade-in">
       <div style={{ marginBottom: "2rem" }}>
@@ -41,26 +77,62 @@ export default function SettingsPage() {
           <div className="crm-card">
             <h3 style={styles.cardTitle}>My Profile & Attendance</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-              <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-                <div style={{ 
-                  width: "56px", 
-                  height: "56px", 
-                  borderRadius: "50%", 
-                  backgroundColor: "var(--primary-color)", 
-                  color: "#ffffff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "1.5rem",
-                  fontWeight: "bold"
-                }}>
-                  {currentUser.name.charAt(0)}
+              <div style={{ display: "flex", gap: "1.25rem", alignItems: "center" }}>
+                <div style={{ position: "relative" }}>
+                  <div style={{ 
+                    width: "68px", 
+                    height: "68px", 
+                    borderRadius: "50%", 
+                    backgroundColor: "var(--primary-color)", 
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.6rem",
+                    fontWeight: "bold",
+                    overflow: "hidden",
+                    border: "2px solid var(--border-primary)",
+                    flexShrink: 0
+                  }}>
+                    {currentAvatar ? (
+                      <img src={currentAvatar} alt={currentUser.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      currentUser.name.charAt(0)
+                    )}
+                  </div>
                 </div>
-                <div>
+
+                <div style={{ flex: 1 }}>
                   <h4 style={{ fontSize: "1.125rem", fontWeight: 600 }}>{currentUser.name}</h4>
                   <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>{currentUser.email}</div>
+                  <div style={{ marginTop: "0.5rem" }}>
+                    <label style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      color: "var(--primary-color)",
+                      backgroundColor: "var(--primary-light)",
+                      padding: "0.3rem 0.65rem",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      display: "inline-block"
+                    }}>
+                      {uploadingAvatar ? "Updating Photo..." : "📷 Change Profile Photo"}
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleAvatarChange} 
+                        style={{ display: "none" }} 
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
+
+              {saveSuccess && (
+                <div style={{ padding: "0.5rem 0.75rem", backgroundColor: "var(--success-light)", color: "var(--success-text)", borderRadius: "6px", fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <CheckCircle2 size={15} /> {saveSuccess}
+                </div>
+              )}
 
               <div style={{ borderTop: "1px solid var(--border-primary)", paddingTop: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.875rem" }}>
                 <div>
@@ -73,29 +145,50 @@ export default function SettingsPage() {
                     {currentUser.roleName === "Developer" ? "Engineering & Development" : "Business Development Association (BDA)"}
                   </div>
                 </div>
-                <div>
-                  <span style={{ color: "var(--text-tertiary)" }}>Today's Attendance & Working Hours</span>
-                  <div style={{ 
-                    marginTop: "6px", 
-                    padding: "0.75rem", 
-                    backgroundColor: "var(--bg-primary)", 
-                    borderRadius: "8px", 
-                    border: "1px solid var(--border-primary)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <Clock size={16} style={{ color: "var(--primary-color)" }} />
-                      <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
-                        {attendanceSummary 
-                          ? `${Math.floor((attendanceSummary.totalWorkedMinutes || 0) / 60)}h ${(attendanceSummary.totalWorkedMinutes || 0) % 60}m logged` 
-                          : "0h 0m logged"}
-                      </span>
+
+                {/* 4 Attendance KPI Metrics */}
+                <div style={{ marginTop: "0.5rem" }}>
+                  <span style={{ color: "var(--text-tertiary)", fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase" }}>My Attendance & Hours Summary</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "0.5rem" }}>
+                    <div style={{ padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600 }}>TODAY HOURS</div>
+                      <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
+                        {attendanceSummary ? `${Math.floor((attendanceSummary.totalWorkedMinutes || 0) / 60)}h ${(attendanceSummary.totalWorkedMinutes || 0) % 60}m` : "0h 0m"}
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: attendanceSummary?.isCurrentlyWorking ? "var(--success-color)" : "var(--text-secondary)", marginTop: "1px" }}>
+                        {attendanceSummary?.isCurrentlyWorking ? "🟢 Working" : "⚪ Off-duty"}
+                      </div>
                     </div>
-                    <span className={`badge ${attendanceSummary?.isCurrentlyWorking ? "badge-success" : "badge-secondary"}`}>
-                      {attendanceSummary?.isCurrentlyWorking ? "🟢 Working" : "⚪ Off-duty"}
-                    </span>
+
+                    <div style={{ padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600 }}>LIFETIME HOURS</div>
+                      <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
+                        {attendanceSummary ? `${Math.floor((attendanceSummary.totalLifetimeWorkedMinutes || attendanceSummary.totalWorkedMinutes || 0) / 60)}h ${((attendanceSummary.totalLifetimeWorkedMinutes || attendanceSummary.totalWorkedMinutes || 0) % 60)}m` : "0h 0m"}
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
+                        Total Logged
+                      </div>
+                    </div>
+
+                    <div style={{ padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600 }}>DAYS PRESENT</div>
+                      <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#10b981", marginTop: "2px" }}>
+                        {attendanceSummary?.totalDaysPresent || 0} Days
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
+                        Attended Work
+                      </div>
+                    </div>
+
+                    <div style={{ padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
+                      <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600 }}>LEAVES (CHUTTI)</div>
+                      <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--danger-color)", marginTop: "2px" }}>
+                        {attendanceSummary?.totalDaysOnLeave || 0} Days
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
+                        Past 30 Days
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

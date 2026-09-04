@@ -23,9 +23,9 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, email, roleName, isActive, password } = body;
+    const { name, email, roleName, isActive, password, avatar } = body;
 
-    // Validation: Only Super Admin can modify team members (or a user editing their own profile name/password)
+    // Validation: Only Super Admin can modify team members (or a user editing their own profile name/password/avatar)
     const isSelf = currentUserDecoded.userId === id;
     if (currentUserRole !== "Super Admin" && !isSelf) {
       return NextResponse.json({ error: "Only Super Admin users can modify team members" }, { status: 403 });
@@ -39,6 +39,7 @@ export async function PUT(
     const updateData: any = {};
 
     if (name) updateData.name = name;
+    if (avatar !== undefined) updateData.avatar = avatar;
     if (email) {
       const cleanEmail = email.trim().toLowerCase();
       // Ensure email uniqueness
@@ -77,6 +78,7 @@ export async function PUT(
         name: updatedUser.name,
         email: updatedUser.email,
         roleName: updatedUser.role.name,
+        avatar: updatedUser.avatar,
         isActive: updatedUser.isActive
       }
     });
