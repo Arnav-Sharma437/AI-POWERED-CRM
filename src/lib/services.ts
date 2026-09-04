@@ -2089,19 +2089,59 @@ export async function getNextInvoiceNumber(): Promise<string> {
   await checkDbConnection();
 
   if (isMockMode) {
-    const count = mockDb.invoices.length + 88;
-    return `PI-${String(count).padStart(6, "0")}`;
+    let nextNum = mockDb.invoices.length + 88;
+    let candidate = `PI-${String(nextNum).padStart(6, "0")}`;
+    while (mockDb.invoices.some(i => i.invoiceNumber === candidate)) {
+      nextNum++;
+      candidate = `PI-${String(nextNum).padStart(6, "0")}`;
+    }
+    return candidate;
   } else {
-    const count = await prisma.invoice.count();
-    const nextNum = count + 88;
-    return `PI-${String(nextNum).padStart(6, "0")}`;
+    const allInvoices = await prisma.invoice.findMany({
+      select: { invoiceNumber: true },
+      orderBy: { createdAt: "desc" },
+      take: 200
+    });
+
+    let highestNum = 88;
+    for (const inv of allInvoices) {
+      if (inv.invoiceNumber && inv.invoiceNumber.startsWith("PI-")) {
+        const numPart = parseInt(inv.invoiceNumber.replace("PI-", ""), 10);
+        if (!isNaN(numPart) && numPart >= highestNum) {
+          highestNum = numPart + 1;
+        }
+      }
+    }
+
+    let candidate = `PI-${String(highestNum).padStart(6, "0")}`;
+    let exists = await prisma.invoice.findFirst({ where: { invoiceNumber: candidate } });
+    while (exists) {
+      highestNum++;
+      candidate = `PI-${String(highestNum).padStart(6, "0")}`;
+      exists = await prisma.invoice.findFirst({ where: { invoiceNumber: candidate } });
+    }
+
+    return candidate;
   }
 }
 
 export async function createInvoice(data: any, userId: string): Promise<any> {
   await checkDbConnection();
 
-  const invoiceNumber = data.invoiceNumber || await getNextInvoiceNumber();
+  let invoiceNumber = data.invoiceNumber?.trim();
+  if (!invoiceNumber) {
+    invoiceNumber = await getNextInvoiceNumber();
+  } else if (!isMockMode) {
+    const existing = await prisma.invoice.findFirst({ where: { invoiceNumber } });
+    if (existing) {
+      invoiceNumber = await getNextInvoiceNumber();
+    }
+  } else if (isMockMode) {
+    if (mockDb.invoices.some(i => i.invoiceNumber === invoiceNumber)) {
+      invoiceNumber = await getNextInvoiceNumber();
+    }
+  }
+
   const items = data.items && Array.isArray(data.items) ? data.items : [];
 
   let subtotal = 0;

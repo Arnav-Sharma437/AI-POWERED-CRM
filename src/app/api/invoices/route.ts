@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth";
-import { listInvoices, createInvoice } from "@/lib/services";
+import { listInvoices, createInvoice, getNextInvoiceNumber } from "@/lib/services";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,7 @@ export async function GET(request: Request) {
     const search = searchParams.get("search") || undefined;
 
     const invoices = await listInvoices({ status, clientId, search });
+    const nextInvoiceNumber = await getNextInvoiceNumber();
 
     // Calculate invoice stats
     const totalInvoiced = invoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       invoices,
+      nextInvoiceNumber,
       stats: {
         totalCount: invoices.length,
         totalInvoiced,

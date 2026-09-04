@@ -154,8 +154,12 @@ export default function CreateInvoicePage() {
         const res = await fetch("/api/invoices");
         if (res.ok) {
           const data = await res.json();
-          const count = (data.invoices?.length || 0) + 88;
-          setInvoiceNumber(`PI-${String(count).padStart(6, "0")}`);
+          if (data.nextInvoiceNumber) {
+            setInvoiceNumber(data.nextInvoiceNumber);
+          } else {
+            const count = (data.invoices?.length || 0) + 88;
+            setInvoiceNumber(`PI-${String(count).padStart(6, "0")}`);
+          }
         }
         if (clientsList && clientsList.length > 0) {
           setSelectedClientId(clientsList[0].id);

@@ -475,6 +475,35 @@ export default function PaymentsPage() {
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr style={{ backgroundColor: "var(--bg-tertiary)", borderTop: "2px solid var(--border-primary)" }}>
+                <td colSpan={3} style={{ padding: "0.85rem 1rem", color: "var(--text-primary)", fontSize: "0.8125rem", fontWeight: 700 }}>
+                  Grand Total ({filteredProjects.length} {filteredProjects.length === 1 ? "Record" : "Records"})
+                </td>
+                <td style={{ textAlign: "right", padding: "0.85rem 1rem", fontSize: "0.875rem", color: "var(--text-primary)" }}>
+                  <div style={{ fontWeight: 700 }}>{formatInr(totalContractInr)}</div>
+                  <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", fontWeight: 400 }}>Total Budget (INR)</div>
+                </td>
+                <td style={{ textAlign: "right", padding: "0.85rem 1rem", fontSize: "0.875rem", color: "#10b981" }}>
+                  <div style={{ fontWeight: 700 }}>{formatInr(totalReceivedInr)}</div>
+                  <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", fontWeight: 400 }}>Total Received (INR)</div>
+                </td>
+                <td style={{ textAlign: "right", padding: "0.85rem 1rem", fontSize: "0.875rem", color: totalPendingInr > 0 ? "#ef4444" : "var(--text-tertiary)" }}>
+                  <div style={{ fontWeight: 700 }}>{formatInr(totalPendingInr)}</div>
+                  <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", fontWeight: 400 }}>Total Pending (INR)</div>
+                </td>
+                <td style={{ textAlign: "right", padding: "0.85rem 1rem", fontSize: "0.875rem", color: totalPendingInr > 0 ? "#ef4444" : "var(--text-tertiary)" }}>
+                  <div style={{ fontWeight: 700 }}>{formatInr(totalPendingInr)}</div>
+                  <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", fontWeight: 400 }}>Pending in INR</div>
+                </td>
+                <td style={{ textAlign: "center", padding: "0.85rem 1rem", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                  {settledCount} Settled
+                </td>
+                <td style={{ textAlign: "right", padding: "0.85rem 1rem", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                  {pendingCount} Pending
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
