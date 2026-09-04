@@ -388,6 +388,7 @@ model Invoice {
   bankName           String?       @default("Bank of Baroda")
   accountNumber      String?       @default("10520200000277")
   ifscCode           String?       @default("BARB0DHAKAN")
+  swiftCode          String?       @default("BARBINBBXXX")
   accountHolder      String?       @default("Pixxelu Digital Technology")
   
   // Notes & Footer

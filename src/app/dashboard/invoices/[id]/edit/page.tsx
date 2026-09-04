@@ -10,78 +10,13 @@ import {
 import { useDashboard } from "../../../layout";
 import AiLoader from "@/components/AiLoader";
 
-const INDIAN_STATES = [
-  "Haryana (06)",
-  "Delhi (07)",
-  "Punjab (03)",
-  "Himachal Pradesh (02)",
-  "Chandigarh (04)",
-  "Uttar Pradesh (09)",
-  "Rajasthan (08)",
-  "Maharashtra (27)",
-  "Karnataka (29)",
-  "Tamil Nadu (33)",
-  "Telangana (36)",
-  "Gujarat (24)",
-  "West Bengal (19)",
-  "Uttarakhand (05)",
-  "Bihar (10)",
-  "Madhya Pradesh (23)",
-  "Kerala (32)",
-  "Andhra Pradesh (37)",
-  "Odisha (21)",
-  "Overseas / Non-Resident (96)"
-];
-
-const CURRENCIES = [
-  { code: "INR", symbol: "₹", label: "INR (₹) - Indian Rupee" },
-  { code: "USD", symbol: "$", label: "USD ($) - US Dollar" },
-  { code: "EUR", symbol: "€", label: "EUR (€) - Euro" },
-  { code: "GBP", symbol: "£", label: "GBP (£) - British Pound" },
-  { code: "AED", symbol: "AED", label: "AED (د.إ) - UAE Dirham" },
-  { code: "CAD", symbol: "CA$", label: "CAD ($) - Canadian Dollar" },
-  { code: "AUD", symbol: "AU$", label: "AUD ($) - Australian Dollar" }
-];
-
-const TAX_RATES = [
-  { label: "IGST18 [18%]", rate: 18, name: "IGST18 [18%]" },
-  { label: "CGST9 + SGST9 [18%]", rate: 18, name: "CGST9 + SGST9 [18%]" },
-  { label: "IGST12 [12%]", rate: 12, name: "IGST12 [12%]" },
-  { label: "CGST6 + SGST6 [12%]", rate: 12, name: "CGST6 + SGST6 [12%]" },
-  { label: "IGST5 [5%]", rate: 5, name: "IGST5 [5%]" },
-  { label: "CGST2.5 + SGST2.5 [5%]", rate: 5, name: "CGST2.5 + SGST2.5 [5%]" },
-  { label: "Non-Taxable [0%]", rate: 0, name: "Non-Taxable [0%]" }
-];
-
-function numberToWordsINR(amount: number): string {
-  const rounded = Math.round(amount);
-  if (rounded === 0) return "Zero Rupees Only";
-
-  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
-  function inWords(num: number): string {
-    const numStr = num.toString();
-    if (numStr.length > 9) return numStr;
-    const n = ('000000000' + numStr).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-    if (!n) return '';
-    let str = '';
-    const c1 = parseInt(n[1], 10);
-    const c2 = parseInt(n[2], 10);
-    const c3 = parseInt(n[3], 10);
-    const c4 = parseInt(n[4], 10);
-    const c5 = parseInt(n[5], 10);
-
-    str += (c1 !== 0) ? (a[c1] || b[parseInt(n[1][0], 10)] + ' ' + a[parseInt(n[1][1], 10)]) + ' Crore ' : '';
-    str += (c2 !== 0) ? (a[c2] || b[parseInt(n[2][0], 10)] + ' ' + a[parseInt(n[2][1], 10)]) + ' Lakh ' : '';
-    str += (c3 !== 0) ? (a[c3] || b[parseInt(n[3][0], 10)] + ' ' + a[parseInt(n[3][1], 10)]) + ' Thousand ' : '';
-    str += (c4 !== 0) ? (a[c4] || b[parseInt(n[4][0], 10)] + ' ' + a[parseInt(n[4][1], 10)]) + ' Hundred ' : '';
-    str += (c5 !== 0) ? ((str !== '') ? 'and ' : '') + (a[c5] || b[parseInt(n[5][0], 10)] + ' ' + a[parseInt(n[5][1], 10)]) : '';
-    return str.trim();
-  }
-
-  return `Indian Rupee ${inWords(rounded)} Only`;
-}
+import { 
+  COUNTRIES_AND_REGIONS, 
+  ALL_COUNTRY_OPTIONS, 
+  INVOICE_CURRENCIES, 
+  INVOICE_TAX_RATES, 
+  formatTotalInWords 
+} from "@/lib/invoiceUtils";
 
 export default function EditInvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -126,6 +61,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
   const [bankName, setBankName] = useState("Bank of Baroda");
   const [accountNumber, setAccountNumber] = useState("10520200000277");
   const [ifscCode, setIfscCode] = useState("BARB0DHAKAN");
+  const [swiftCode, setSwiftCode] = useState("BARBINBBXXX");
 
   // Notes & Breakdown
   const [invoiceIncludes, setInvoiceIncludes] = useState("");
@@ -206,6 +142,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
           if (inv.bankName) setBankName(inv.bankName);
           if (inv.accountNumber) setAccountNumber(inv.accountNumber);
           if (inv.ifscCode) setIfscCode(inv.ifscCode);
+          if (inv.swiftCode) setSwiftCode(inv.swiftCode);
           if (inv.invoiceIncludes) setInvoiceIncludes(inv.invoiceIncludes);
 
           setCustomerNotes(inv.customerNotes || "");
@@ -220,6 +157,27 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     }
     loadInvoice();
   }, [id, currentUser]);
+
+  const handlePlaceOfSupplyChange = (val: string) => {
+    setPlaceOfSupply(val);
+    const matched = ALL_COUNTRY_OPTIONS.find(o => o.label === val || val.includes(o.name) || val.includes(o.code));
+    if (matched) {
+      if (matched.isInternational) {
+        if (currency === "INR" && matched.defaultCurrency) {
+          setCurrency(matched.defaultCurrency);
+        }
+        setInvoiceType("NON_GST");
+        setGstTreatment("Export of Services (Zero-Rated / Without GST)");
+        setItems(prev => prev.map(item => ({
+          ...item,
+          taxName: "Non-Taxable [0%]",
+          taxRate: 0
+        })));
+      } else {
+        setGstTreatment("Registered Business - Regular");
+      }
+    }
+  };
 
   const handleTermsChange = (term: string) => {
     setPaymentTerms(term);
@@ -249,7 +207,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     }
 
     if (field === "taxName") {
-      const match = TAX_RATES.find(t => t.name === val);
+      const match = INVOICE_TAX_RATES.find(t => t.name === val);
       if (match) {
         updated[index].taxRate = match.rate;
       }
@@ -287,7 +245,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     return sum + (lineAmt * rate) / 100;
   }, 0);
   const grandTotal = subtotal + taxTotal;
-  const totalInWords = numberToWordsINR(grandTotal);
+  const totalInWords = formatTotalInWords(grandTotal, currency);
 
   const selectedClient = clientsList.find(c => c.id === selectedClientId);
 
@@ -331,6 +289,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
         bankName,
         accountNumber,
         ifscCode,
+        swiftCode,
         accountHolder: companyName,
         invoiceIncludes,
         customerNotes,
@@ -391,7 +350,8 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const currObj = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
+  const currObj = INVOICE_CURRENCIES.find(c => c.code === currency) || INVOICE_CURRENCIES[0];
+  const matchedCountry = ALL_COUNTRY_OPTIONS.find(o => o.label === placeOfSupply || o.name === placeOfSupply || placeOfSupply.includes(o.name) || placeOfSupply.includes(o.code));
 
   return (
     <div className="crm-container animate-fade-in" style={{ maxWidth: "1180px", margin: "0 auto", paddingBottom: "5rem" }}>
@@ -415,7 +375,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                 Edit Invoice <span style={{ color: "var(--primary-color)" }}>{invoiceNumber}</span>
               </h1>
               <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
-                {invoiceType === "GST" ? "Tax Invoice (With GST calculation)" : "Commercial Invoice (Without GST)"}
+                {invoiceType === "GST" ? "Tax Invoice (With GST calculation)" : "Commercial Invoice (Without GST / International)"}
               </span>
             </div>
           </div>
@@ -455,7 +415,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                   transition: "all 0.2s ease"
                 }}
               >
-                📄 Without GST
+                📄 Without GST / Export
               </button>
             </div>
 
@@ -465,9 +425,9 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                 className="crm-select"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                style={{ width: "200px", fontWeight: 700 }}
+                style={{ width: "230px", fontWeight: 700 }}
               >
-                {CURRENCIES.map(curr => (
+                {INVOICE_CURRENCIES.map(curr => (
                   <option key={curr.code} value={curr.code}>{curr.label}</option>
                 ))}
               </select>
@@ -638,7 +598,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                 <input 
                   type="text" 
                   className="crm-input" 
-                  placeholder="GSTIN"
+                  placeholder={matchedCountry ? `${matchedCountry.taxIdLabel}` : "GSTIN / Tax ID"}
                   value={gstin}
                   onChange={(e) => setGstin(e.target.value)}
                   style={{ fontSize: "0.8125rem", fontWeight: 700 }}
@@ -646,11 +606,15 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                 <select 
                   className="crm-select"
                   value={placeOfSupply}
-                  onChange={(e) => setPlaceOfSupply(e.target.value)}
-                  style={{ fontSize: "0.8125rem" }}
+                  onChange={(e) => handlePlaceOfSupplyChange(e.target.value)}
+                  style={{ fontSize: "0.8125rem", fontWeight: 600 }}
                 >
-                  {INDIAN_STATES.map(st => (
-                    <option key={st} value={st}>{st}</option>
+                  {COUNTRIES_AND_REGIONS.map(group => (
+                    <optgroup key={group.group} label={group.group}>
+                      {group.options.map(opt => (
+                        <option key={opt.code + opt.name} value={opt.label}>{opt.label}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
@@ -733,7 +697,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>
-              {invoiceType === "GST" ? "Itemized Deliverables & Tax Breakdown" : "Itemized Deliverables & Pricing (Without GST)"}
+              {invoiceType === "GST" ? "Itemized Deliverables & Tax Breakdown" : "Itemized Deliverables & Pricing (Without GST / Export)"}
             </h3>
             {invoiceType === "NON_GST" && (
               <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--primary-color)", backgroundColor: "var(--bg-primary)", padding: "0.2rem 0.6rem", borderRadius: "6px", border: "1px solid var(--border-primary)" }}>
@@ -773,7 +737,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                       />
                       <textarea 
                         className="crm-textarea" 
-                        rows={2}
+                        rows={2} 
                         value={item.description}
                         onChange={(e) => handleItemChange(idx, "description", e.target.value)}
                         style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}
@@ -814,7 +778,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                           onChange={(e) => handleItemChange(idx, "taxName", e.target.value)}
                           style={{ fontSize: "0.8125rem" }}
                         >
-                          {TAX_RATES.map(tax => (
+                          {INVOICE_TAX_RATES.map(tax => (
                             <option key={tax.name} value={tax.name}>{tax.label}</option>
                           ))}
                         </select>
@@ -823,7 +787,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
 
                     <td style={{ padding: "1rem", textAlign: "right" }}>
                       <div style={{ fontWeight: 400, fontSize: "0.95rem", color: "var(--text-primary)" }}>
-                        {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.amount)}
+                        {currObj.symbol}{new Intl.NumberFormat(currObj.locale || "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.amount)}
                       </div>
                       {items.length > 1 && (
                         <button 
@@ -866,7 +830,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
 
             <div style={{ padding: "1rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", fontWeight: 400, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "8px" }}>
-                <CreditCard size={14} /> Bank Details
+                <CreditCard size={14} /> Bank & Remittance Account (Domestic & International)
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
                 <div>
@@ -889,16 +853,27 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                     style={{ fontSize: "0.8125rem", fontWeight: 400 }}
                   />
                 </div>
-              </div>
-              <div style={{ marginTop: "0.5rem" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>IFSC Code</label>
-                <input 
-                  type="text" 
-                  className="crm-input" 
-                  value={ifscCode}
-                  onChange={(e) => setIfscCode(e.target.value)}
-                  style={{ fontSize: "0.8125rem", fontWeight: 400 }}
-                />
+                <div>
+                  <label style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>IFSC Code (Domestic)</label>
+                  <input 
+                    type="text" 
+                    className="crm-input" 
+                    value={ifscCode}
+                    onChange={(e) => setIfscCode(e.target.value)}
+                    style={{ fontSize: "0.8125rem", fontWeight: 400 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>SWIFT / BIC Code (International Wire)</label>
+                  <input 
+                    type="text" 
+                    className="crm-input" 
+                    value={swiftCode}
+                    onChange={(e) => setSwiftCode(e.target.value)}
+                    placeholder="e.g. BARBINBBXXX"
+                    style={{ fontSize: "0.8125rem", fontWeight: 400 }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -920,7 +895,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
               <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}>Sub Total</span>
               <span style={{ fontWeight: 400 }}>
-                {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(subtotal)}
+                {currObj.symbol}{new Intl.NumberFormat(currObj.locale || "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(subtotal)}
               </span>
             </div>
 
@@ -928,7 +903,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
                 <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}>Total Tax (GST)</span>
                 <span style={{ fontWeight: 400, color: "#10b981" }}>
-                  +{currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(taxTotal)}
+                  +{currObj.symbol}{new Intl.NumberFormat(currObj.locale || "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(taxTotal)}
                 </span>
               </div>
             ) : (
@@ -941,14 +916,14 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
             <div style={{ borderTop: "2px solid var(--border-primary)", paddingTop: "1rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "1.1rem", fontWeight: 400, color: "var(--text-primary)" }}>Total</span>
               <span style={{ fontSize: "1.35rem", fontWeight: 400, color: "var(--primary-color)" }}>
-                {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandTotal)}
+                {currObj.symbol}{new Intl.NumberFormat(currObj.locale || "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandTotal)}
               </span>
             </div>
 
             <div style={{ borderTop: "1px dashed var(--border-primary)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(99, 102, 241, 0.08)", padding: "0.75rem", borderRadius: "6px" }}>
               <span style={{ fontSize: "0.95rem", fontWeight: 400, color: "var(--text-primary)" }}>Balance Due</span>
               <span style={{ fontSize: "1.2rem", fontWeight: 400, color: "var(--text-primary)" }}>
-                {currObj.symbol}{new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandTotal)}
+                {currObj.symbol}{new Intl.NumberFormat(currObj.locale || "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(grandTotal)}
               </span>
             </div>
           </div>

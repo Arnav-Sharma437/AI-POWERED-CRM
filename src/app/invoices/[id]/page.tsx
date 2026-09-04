@@ -6,16 +6,7 @@ import {
   Clock, Building2, Loader2, FileCheck
 } from "lucide-react";
 import AiLoader from "@/components/AiLoader";
-
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  INR: "₹",
-  USD: "$",
-  EUR: "€",
-  GBP: "£",
-  AED: "AED ",
-  CAD: "CA$",
-  AUD: "AU$"
-};
+import { INVOICE_CURRENCIES } from "@/lib/invoiceUtils";
 
 export default function PublicInvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -87,10 +78,11 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const currSymbol = CURRENCY_SYMBOLS[invoice.currency || "INR"] || "₹";
+  const currObj = INVOICE_CURRENCIES.find(c => c.code === invoice.currency) || INVOICE_CURRENCIES[0];
+  const currSymbol = currObj.symbol;
 
   const formatNumber = (val: number) => {
-    return new Intl.NumberFormat("en-IN", {
+    return new Intl.NumberFormat(currObj.locale || "en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(val || 0);
@@ -319,7 +311,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
             )}
             {invoice.gstin && (
               <div style={{ fontWeight: 400, color: "#000000", marginTop: "4px" }}>
-                GSTIN {invoice.gstin}
+                {isWithoutGst || (invoice.currency && invoice.currency !== "INR") ? `Tax ID / Reg No: ${invoice.gstin}` : `GSTIN: ${invoice.gstin}`}
               </div>
             )}
           </div>
@@ -331,11 +323,11 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                 <th style={{ padding: "8px 10px", width: "5%", borderRight: "1px solid #9ca3af", textAlign: "center", fontWeight: 400, color: "#000000" }}>#</th>
                 <th style={{ padding: "8px 12px", width: isWithoutGst ? "55%" : "45%", borderRight: "1px solid #9ca3af", fontWeight: 400, color: "#000000" }}>Description</th>
                 <th style={{ padding: "8px 10px", width: "10%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>Qty</th>
-                <th style={{ padding: "8px 10px", width: isWithoutGst ? "15%" : "15%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>Rate</th>
+                <th style={{ padding: "8px 10px", width: isWithoutGst ? "15%" : "15%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>Rate ({currSymbol})</th>
                 {!isWithoutGst && (
                   <th style={{ padding: "8px 10px", width: "12%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>IGST</th>
                 )}
-                <th style={{ padding: "8px 12px", width: isWithoutGst ? "15%" : "13%", textAlign: "right", fontWeight: 400, color: "#000000" }}>Amount</th>
+                <th style={{ padding: "8px 12px", width: isWithoutGst ? "15%" : "13%", textAlign: "right", fontWeight: 400, color: "#000000" }}>Amount ({currSymbol})</th>
               </tr>
             </thead>
             <tbody>
@@ -405,8 +397,9 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
               <div style={{ fontSize: "11.5px", lineHeight: 1.4, borderTop: "1px dashed #d1d5db", paddingTop: "0.75rem" }}>
                 <div><strong>Bank Name :</strong> {invoice.bankName || "Bank of Baroda"}</div>
                 <div><strong>Account Number :</strong> <span style={{ fontWeight: 400 }}>{invoice.accountNumber || "10520200000277"}</span></div>
-                <div><strong>IFSC Code :</strong> <span style={{ fontWeight: 400 }}>{invoice.ifscCode || "BARB0DHAKAN"}</span></div>
-                <div><strong>Pan Card :</strong> <span style={{ fontWeight: 400 }}>{invoice.companyPan || "ABBFP9262H"}</span></div>
+                {invoice.ifscCode && <div><strong>IFSC Code :</strong> <span style={{ fontWeight: 400 }}>{invoice.ifscCode}</span></div>}
+                {invoice.swiftCode && <div><strong>SWIFT / BIC Code :</strong> <span style={{ fontWeight: 400 }}>{invoice.swiftCode}</span></div>}
+                {invoice.companyPan && <div><strong>PAN :</strong> <span style={{ fontWeight: 400 }}>{invoice.companyPan}</span></div>}
               </div>
 
             </div>
