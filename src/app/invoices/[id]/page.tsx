@@ -204,27 +204,29 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
         >
           
           {/* Header: Logo & Company Address on Left, Invoice Title on Right */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.75rem" }}>
             <div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
               {/* Pixxelu Logo / Brand Name */}
               <div>
-                <div style={{ fontSize: "1.5rem", fontWeight: 900, letterSpacing: "2px", color: "#000000", textTransform: "uppercase", lineHeight: 1 }}>
-                  PIXXELU
-                </div>
-                <div style={{ fontSize: "0.6rem", letterSpacing: "3px", color: "#6b7280", textTransform: "uppercase", marginTop: "2px" }}>
+                <img 
+                  src="/pixxelu-logo.png" 
+                  alt="Pixxelu" 
+                  style={{ height: "36px", objectFit: "contain", display: "block" }} 
+                />
+                <div style={{ fontSize: "8.5px", letterSpacing: "1.5px", color: "#6b7280", textTransform: "uppercase", marginTop: "3px", fontWeight: 600 }}>
                   DIGITAL TECHNOLOGY
                 </div>
               </div>
 
               {/* Company Info */}
-              <div style={{ fontSize: "12px", color: "#111827", lineHeight: 1.35 }}>
-                <div style={{ fontWeight: 800, fontSize: "14px", color: "#000000", marginBottom: "3px" }}>
+              <div style={{ fontSize: "11px", color: "#111827", lineHeight: 1.35 }}>
+                <div style={{ fontWeight: 700, fontSize: "13px", color: "#000000", marginBottom: "2px" }}>
                   {invoice.companyName || "Pixxelu Digital Technology"}
                 </div>
                 <div style={{ whiteSpace: "pre-line", color: "#374151" }}>
                   {invoice.companyAddress || "Building no 256, Dharamshala\nkangra Himachal Pradesh 176215\nIndia"}
                 </div>
-                <div style={{ marginTop: "3px", color: "#374151" }}>
+                <div style={{ marginTop: "2px", color: "#374151" }}>
                   {invoice.companyPhone || "9218000707"}
                 </div>
                 <div style={{ color: "#374151" }}>
@@ -233,18 +235,18 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                 <div style={{ color: "#374151" }}>
                   {invoice.companyWebsite || "www.pixxelu.com"}
                 </div>
-                <div style={{ fontWeight: 700, marginTop: "2px", color: "#000000" }}>
+                <div style={{ fontWeight: 600, marginTop: "2px", color: "#000000" }}>
                   GSTIN: {invoice.companyGstin || "02ABBFP9262H1ZA"}
                 </div>
               </div>
             </div>
 
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "2rem", fontWeight: 800, color: "#1f2937", letterSpacing: "0.02em", textTransform: "uppercase" }}>
+              <div style={{ fontSize: "1.85rem", fontWeight: 800, color: "#1f2937", letterSpacing: "0.02em", textTransform: "uppercase" }}>
                 {isWithoutGst ? "INVOICE" : "TAX INVOICE"}
               </div>
               {isWithoutGst && (
-                <div style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>
+                <div style={{ fontSize: "10px", color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>
                   COMMERCIAL BILL
                 </div>
               )}
@@ -252,27 +254,27 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Invoice Metadata Box (2-column bordered table matching Zoho) */}
-          <div style={{ border: "1px solid #9ca3af", marginBottom: "1.5rem" }}>
+          <div style={{ border: "1px solid #9ca3af", marginBottom: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr" }}>
               
               {/* Left Col: Invoice#, Dates & Terms */}
-              <div style={{ padding: "0.6rem 0.85rem", borderRight: "1px solid #9ca3af", fontSize: "12px" }}>
+              <div style={{ padding: "0.5rem 0.75rem", borderRight: "1px solid #9ca3af", fontSize: "11px" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <tbody>
                     <tr>
-                      <td style={{ width: "110px", color: "#374151", padding: "2px 0", fontWeight: 400 }}>#</td>
+                      <td style={{ width: "100px", color: "#4b5563", padding: "1.5px 0", fontWeight: 400 }}>#</td>
                       <td style={{ fontWeight: 400, color: "#000000" }}>: {invoice.invoiceNumber}</td>
                     </tr>
                     <tr>
-                      <td style={{ color: "#374151", padding: "2px 0", fontWeight: 400 }}>Invoice Date</td>
+                      <td style={{ color: "#4b5563", padding: "1.5px 0", fontWeight: 400 }}>Invoice Date</td>
                       <td style={{ fontWeight: 400, color: "#000000" }}>: {new Date(invoice.invoiceDate).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}</td>
                     </tr>
                     <tr>
-                      <td style={{ color: "#374151", padding: "2px 0", fontWeight: 400 }}>Terms</td>
+                      <td style={{ color: "#4b5563", padding: "1.5px 0", fontWeight: 400 }}>Terms</td>
                       <td style={{ fontWeight: 400, color: "#000000" }}>: {invoice.paymentTerms}</td>
                     </tr>
                     <tr>
-                      <td style={{ color: "#374151", padding: "2px 0", fontWeight: 400 }}>Due Date</td>
+                      <td style={{ color: "#4b5563", padding: "1.5px 0", fontWeight: 400 }}>Due Date</td>
                       <td style={{ fontWeight: 400, color: "#000000" }}>: {new Date(invoice.dueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}</td>
                     </tr>
                   </tbody>
@@ -280,11 +282,11 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
               </div>
 
               {/* Right Col: Place of Supply */}
-              <div style={{ padding: "0.6rem 0.85rem", fontSize: "12px" }}>
+              <div style={{ padding: "0.5rem 0.75rem", fontSize: "11px" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <tbody>
                     <tr>
-                      <td style={{ width: "120px", color: "#374151", padding: "2px 0", fontWeight: 400 }}>Place Of Supply</td>
+                      <td style={{ width: "110px", color: "#4b5563", padding: "1.5px 0", fontWeight: 400 }}>Place Of Supply</td>
                       <td style={{ fontWeight: 400, color: "#000000" }}>: {invoice.placeOfSupply || "Haryana (06)"}</td>
                     </tr>
                   </tbody>
@@ -295,8 +297,8 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Customer Address Details (TECHPHOSIS PRIVATE LIMITED) */}
-          <div style={{ marginBottom: "1.75rem", fontSize: "12px", lineHeight: 1.4 }}>
-            <div style={{ fontWeight: 400, fontSize: "13px", color: "#000000", textTransform: "uppercase", marginBottom: "3px" }}>
+          <div style={{ marginBottom: "1.5rem", fontSize: "11px", lineHeight: 1.35 }}>
+            <div style={{ fontWeight: 600, fontSize: "12px", color: "#000000", textTransform: "uppercase", marginBottom: "2px" }}>
               {clientDisplayName}
             </div>
             {invoice.customerAddress ? (
@@ -310,24 +312,24 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
               </div>
             )}
             {invoice.gstin && (
-              <div style={{ fontWeight: 400, color: "#000000", marginTop: "4px" }}>
+              <div style={{ fontWeight: 400, color: "#000000", marginTop: "3px" }}>
                 {isWithoutGst || (invoice.currency && invoice.currency !== "INR") ? `Tax ID / Reg No: ${invoice.gstin}` : `GSTIN: ${invoice.gstin}`}
               </div>
             )}
           </div>
 
-          {/* Items Table (Bordered, exact Zoho structure) */}
-          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #9ca3af", marginBottom: "0", fontSize: "12px" }}>
+          {/* Items Table (Bordered, exact Zoho structure with BOLD Headers) */}
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #9ca3af", marginBottom: "0", fontSize: "11px" }}>
             <thead>
               <tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #9ca3af", textAlign: "left" }}>
-                <th style={{ padding: "8px 10px", width: "5%", borderRight: "1px solid #9ca3af", textAlign: "center", fontWeight: 400, color: "#000000" }}>#</th>
-                <th style={{ padding: "8px 12px", width: isWithoutGst ? "55%" : "45%", borderRight: "1px solid #9ca3af", fontWeight: 400, color: "#000000" }}>Description</th>
-                <th style={{ padding: "8px 10px", width: "10%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>Qty</th>
-                <th style={{ padding: "8px 10px", width: isWithoutGst ? "15%" : "15%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>Rate ({currSymbol})</th>
+                <th style={{ padding: "7px 10px", width: "5%", borderRight: "1px solid #9ca3af", textAlign: "center", fontWeight: 700, color: "#000000" }}>#</th>
+                <th style={{ padding: "7px 12px", width: isWithoutGst ? "55%" : "45%", borderRight: "1px solid #9ca3af", fontWeight: 700, color: "#000000" }}>Description</th>
+                <th style={{ padding: "7px 10px", width: "10%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 700, color: "#000000" }}>Qty</th>
+                <th style={{ padding: "7px 10px", width: isWithoutGst ? "15%" : "15%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 700, color: "#000000" }}>Rate ({currSymbol})</th>
                 {!isWithoutGst && (
-                  <th style={{ padding: "8px 10px", width: "12%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400, color: "#000000" }}>IGST</th>
+                  <th style={{ padding: "7px 10px", width: "12%", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 700, color: "#000000" }}>IGST</th>
                 )}
-                <th style={{ padding: "8px 12px", width: isWithoutGst ? "15%" : "13%", textAlign: "right", fontWeight: 400, color: "#000000" }}>Amount ({currSymbol})</th>
+                <th style={{ padding: "7px 12px", width: isWithoutGst ? "15%" : "13%", textAlign: "right", fontWeight: 700, color: "#000000" }}>Amount ({currSymbol})</th>
               </tr>
             </thead>
             <tbody>
@@ -335,29 +337,29 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                 const lineTax = ((parseFloat(item.amount) || 0) * (parseFloat(item.taxRate) || 18)) / 100;
                 return (
                   <tr key={item.id || idx} style={{ borderBottom: "1px solid #9ca3af", verticalAlign: "top" }}>
-                    <td style={{ padding: "10px", borderRight: "1px solid #9ca3af", textAlign: "center", fontWeight: 400 }}>
+                    <td style={{ padding: "8px 10px", borderRight: "1px solid #9ca3af", textAlign: "center", fontWeight: 400 }}>
                       {idx + 1}
                     </td>
-                    <td style={{ padding: "10px 12px", borderRight: "1px solid #9ca3af" }}>
+                    <td style={{ padding: "8px 12px", borderRight: "1px solid #9ca3af" }}>
                       <div style={{ fontWeight: 400, color: "#000000" }}>{item.itemDetails}</div>
                       {item.description && (
-                        <div style={{ fontSize: "11px", color: "#4b5563", marginTop: "4px", whiteSpace: "pre-line", lineHeight: 1.35 }}>
+                        <div style={{ fontSize: "10.5px", color: "#4b5563", marginTop: "3px", whiteSpace: "pre-line", lineHeight: 1.35 }}>
                           {item.description}
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: "10px", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400 }}>
+                    <td style={{ padding: "8px 10px", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400 }}>
                       {formatNumber(item.quantity)}
                     </td>
-                    <td style={{ padding: "10px", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400 }}>
+                    <td style={{ padding: "8px 10px", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400 }}>
                       {formatNumber(item.rate)}
                     </td>
                     {!isWithoutGst && (
-                      <td style={{ padding: "10px", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400 }}>
+                      <td style={{ padding: "8px 10px", borderRight: "1px solid #9ca3af", textAlign: "right", fontWeight: 400 }}>
                         {formatNumber(lineTax)}
                       </td>
                     )}
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 400 }}>
+                    <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 400 }}>
                       {formatNumber(item.amount)}
                     </td>
                   </tr>
@@ -367,34 +369,34 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
           </table>
 
           {/* Lower Grid: Notes & Bank on Left, Totals & Signatory on Right */}
-          <div style={{ border: "1px solid #9ca3af", borderTop: "none", display: "grid", gridTemplateColumns: "1.4fr 1fr", fontSize: "12px" }}>
+          <div style={{ border: "1px solid #9ca3af", borderTop: "none", display: "grid", gridTemplateColumns: "1.4fr 1fr", fontSize: "11px" }}>
             
             {/* Left Column */}
-            <div style={{ padding: "1rem", borderRight: "1px solid #9ca3af" }}>
+            <div style={{ padding: "0.85rem", borderRight: "1px solid #9ca3af" }}>
               
               {/* Total In Words */}
-              <div style={{ marginBottom: "1rem" }}>
-                <div style={{ fontSize: "11px", color: "#6b7280", fontWeight: 400 }}>Total In Words</div>
-                <div style={{ fontWeight: 400, fontStyle: "italic", color: "#000000", marginTop: "2px" }}>
+              <div style={{ marginBottom: "0.85rem" }}>
+                <div style={{ fontSize: "10.5px", color: "#6b7280", fontWeight: 400 }}>Total In Words</div>
+                <div style={{ fontWeight: 400, fontStyle: "italic", color: "#000000", marginTop: "1px" }}>
                   {invoice.totalInWords || "Indian Rupee Seventeen Thousand Seven Hundred Only"}
                 </div>
               </div>
 
               {/* This invoice includes bullet points */}
-              <div style={{ marginBottom: "1rem", fontSize: "11px", color: "#374151" }}>
-                <div style={{ fontWeight: 400, color: "#000000", marginBottom: "4px" }}>This invoice includes:</div>
-                <div style={{ whiteSpace: "pre-line", lineHeight: 1.4 }}>
+              <div style={{ marginBottom: "0.85rem", fontSize: "10.5px", color: "#374151" }}>
+                <div style={{ fontWeight: 400, color: "#000000", marginBottom: "3px" }}>This invoice includes:</div>
+                <div style={{ whiteSpace: "pre-line", lineHeight: 1.35 }}>
                   {invoice.invoiceIncludes || "• Remaining payment for the original approved project.\n• Additional charges for the expanded scope of work requested during project execution."}
                 </div>
               </div>
 
               {/* Thank you note */}
-              <div style={{ marginBottom: "1rem", fontWeight: 400, color: "#111827" }}>
+              <div style={{ marginBottom: "0.85rem", fontWeight: 400, color: "#111827" }}>
                 {invoice.customerNotes || "Thank you for your business."}
               </div>
 
               {/* Bank details */}
-              <div style={{ fontSize: "11.5px", lineHeight: 1.4, borderTop: "1px dashed #d1d5db", paddingTop: "0.75rem" }}>
+              <div style={{ fontSize: "11px", lineHeight: 1.4, borderTop: "1px dashed #d1d5db", paddingTop: "0.65rem" }}>
                 <div><strong>Bank Name :</strong> {invoice.bankName || "Bank of Baroda"}</div>
                 <div><strong>Account Number :</strong> <span style={{ fontWeight: 400 }}>{invoice.accountNumber || "10520200000277"}</span></div>
                 {invoice.ifscCode && <div><strong>IFSC Code :</strong> <span style={{ fontWeight: 400 }}>{invoice.ifscCode}</span></div>}
@@ -409,23 +411,23 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
               
               {/* Totals Table */}
               <div>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
                   <tbody>
                     <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={{ padding: "8px 12px", color: "#374151", fontWeight: 400, textAlign: "right" }}>Sub Total</td>
-                      <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 400 }}>
+                      <td style={{ padding: "7px 12px", color: "#4b5563", fontWeight: 400, textAlign: "right" }}>Sub Total</td>
+                      <td style={{ padding: "7px 12px", textAlign: "right", fontWeight: 400 }}>
                         {formatNumber(invoice.subtotal)}
                       </td>
                     </tr>
                     <tr style={{ borderBottom: "1px solid #9ca3af" }}>
-                      <td style={{ padding: "8px 12px", color: "#374151", fontWeight: 400, textAlign: "right" }}>Total</td>
-                      <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 400, color: "#000000" }}>
+                      <td style={{ padding: "7px 12px", color: "#4b5563", fontWeight: 400, textAlign: "right" }}>Total</td>
+                      <td style={{ padding: "7px 12px", textAlign: "right", fontWeight: 400, color: "#000000" }}>
                         {currSymbol}{formatNumber(invoice.totalAmount)}
                       </td>
                     </tr>
                     <tr style={{ borderBottom: "1px solid #9ca3af", backgroundColor: "#f9fafb" }}>
-                      <td style={{ padding: "10px 12px", fontWeight: 400, textAlign: "right", color: "#000000" }}>Balance Due</td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 400, color: "#000000", fontSize: "13px" }}>
+                      <td style={{ padding: "8px 12px", fontWeight: 600, textAlign: "right", color: "#000000" }}>Balance Due</td>
+                      <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 600, color: "#000000", fontSize: "12px" }}>
                         {currSymbol}{formatNumber(invoice.totalAmount)}
                       </td>
                     </tr>
@@ -433,21 +435,13 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                 </table>
               </div>
 
-              {/* Signature Area */}
-              <div style={{ padding: "1rem 1.25rem 0.5rem", textAlign: "center" }}>
-                <div style={{ fontSize: "11px", color: "#374151", fontStyle: "italic", marginBottom: "4px" }}>
-                  For {invoice.companyName || "Pixxelu Digital Technology"}
-                </div>
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "4px 0" }}>
-                  <img 
-                    src="/signature.png" 
-                    alt="Authorized Signature" 
-                    style={{ maxHeight: "65px", maxWidth: "180px", objectFit: "contain", display: "block" }} 
-                  />
-                </div>
-                <div style={{ fontSize: "11px", fontWeight: 700, color: "#000000", marginTop: "2px" }}>
-                  Partner
-                </div>
+              {/* Signature Area (Clean Stamp without duplicate text) */}
+              <div style={{ padding: "0.75rem 1rem", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100px" }}>
+                <img 
+                  src="/signature.png" 
+                  alt="Authorized Signature & Stamp" 
+                  style={{ maxHeight: "85px", maxWidth: "210px", objectFit: "contain", display: "block" }} 
+                />
               </div>
 
             </div>
