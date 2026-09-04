@@ -555,13 +555,26 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </span>
             )}
             {project.status && (
-              <span className="badge" style={{ 
-                backgroundColor: project.status === "Completed" ? "rgba(16, 185, 129, 0.15)" : project.status === "Issue" ? "rgba(239, 68, 68, 0.15)" : "rgba(99, 102, 241, 0.15)",
-                color: project.status === "Completed" ? "#10b981" : project.status === "Issue" ? "var(--danger-color)" : "var(--primary-color)",
-                fontWeight: 700
-              }}>
-                Status: {project.status}
-              </span>
+              <button 
+                onClick={() => {
+                  setStatusForm(prev => ({ ...prev, status: project.status || "Ongoing" }));
+                  setActiveModal("status");
+                }}
+                className="badge" 
+                style={{ 
+                  backgroundColor: project.status === "Completed" ? "rgba(16, 185, 129, 0.15)" : project.status === "Issue" ? "rgba(239, 68, 68, 0.15)" : "rgba(99, 102, 241, 0.15)",
+                  color: project.status === "Completed" ? "#10b981" : project.status === "Issue" ? "var(--danger-color)" : "var(--primary-color)",
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}
+                title="Click to change project status"
+              >
+                Status: {project.status === "Work in Progress" ? "⚡ Ongoing" : project.status} &bull; Edit
+              </button>
             )}
           </div>
           <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--text-primary)", margin: 0 }}>{project.name}</h2>
@@ -1664,6 +1677,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       value={statusForm.status}
                       onChange={(e) => setStatusForm(prev => ({ ...prev, status: e.target.value }))}
                     >
+                      <option value="Ongoing">⚡ Ongoing (In Progress)</option>
                       <option value="Not Started">Not Started</option>
                       <option value="Work in Progress">Work in Progress</option>
                       <option value="On Hold">On Hold</option>

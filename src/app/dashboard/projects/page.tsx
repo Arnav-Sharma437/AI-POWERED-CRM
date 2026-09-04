@@ -10,8 +10,8 @@ import { useDashboard } from "../layout";
 import AiLoader from "@/components/AiLoader";
 
 const KANBAN_STAGES = [
+  { id: "Ongoing", label: "⚡ Ongoing", color: "var(--primary-color)" },
   { id: "Not Started", label: "Not Started", color: "var(--text-tertiary)" },
-  { id: "Work in Progress", label: "In Progress", color: "var(--primary-color)" },
   { id: "Review", label: "Review / QA", color: "var(--info-color)" },
   { id: "Issue", label: "Flagged / Issue", color: "var(--danger-color)" },
   { id: "Completed", label: "Completed", color: "var(--success-color)" },
@@ -90,7 +90,7 @@ export default function ProjectsPage() {
     }
   };
 
-  const ONGOING_STATUSES = ["Not Started", "Work in Progress", "Review", "Issue"];
+  const ONGOING_STATUSES = ["Ongoing", "Work in Progress", "Not Started", "Review", "Issue"];
 
   const ongoingCount = projects.filter(p => ONGOING_STATUSES.includes(p.status)).length;
   const completedCount = projects.filter(p => p.status === "Completed").length;
@@ -110,7 +110,11 @@ export default function ProjectsPage() {
       matchesCategory = ["On Hold", "Cancelled"].includes(p.status);
     }
 
-    const matchesStatus = !filterStatus || p.status === filterStatus;
+    const matchesStatus = 
+      !filterStatus ? true :
+      filterStatus === "Ongoing" ? (p.status === "Ongoing" || p.status === "Work in Progress") :
+      p.status === filterStatus;
+
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -268,6 +272,7 @@ export default function ProjectsPage() {
             onChange={(e) => setFilterStatus(e.target.value)}
           >
             <option value="">All Statuses</option>
+            <option value="Ongoing">⚡ Ongoing</option>
             <option value="Not Started">Not Started</option>
             <option value="Work in Progress">Work in Progress</option>
             <option value="Review">Review</option>
@@ -285,7 +290,7 @@ export default function ProjectsPage() {
               Board Columns:
             </span>
             {KANBAN_STAGES.map((s) => {
-              const count = filteredProjects.filter(p => p.status === s.id).length;
+              const count = filteredProjects.filter(p => s.id === "Ongoing" ? (p.status === "Ongoing" || p.status === "Work in Progress") : p.status === s.id).length;
               return (
                 <button
                   key={s.id}
@@ -337,7 +342,7 @@ export default function ProjectsPage() {
           }}
         >
           {KANBAN_STAGES.map((stage) => {
-            const stageProjects = filteredProjects.filter(p => p.status === stage.id);
+            const stageProjects = filteredProjects.filter(p => stage.id === "Ongoing" ? (p.status === "Ongoing" || p.status === "Work in Progress") : p.status === stage.id);
             return (
               <div 
                 id={`kanban-stage-${stage.id}`}
@@ -551,13 +556,39 @@ export default function ProjectsPage() {
                     </td>
                     <td>{p.client?.name}</td>
                     <td>
-                      <span className={`badge ${
-                        p.status === "Completed" ? "badge-success" : 
-                        p.status === "Issue" ? "badge-danger" :
-                        p.status === "Work in Progress" ? "badge-info" : "badge-primary"
-                      }`}>
-                        {p.status}
-                      </span>
+                      <select
+                        className="crm-select"
+                        value={p.status === "Work in Progress" ? "Ongoing" : p.status}
+                        onChange={(e) => handleStatusChange(p.id, e.target.value)}
+                        style={{
+                          fontSize: "0.75rem",
+                          padding: "0.25rem 0.5rem",
+                          height: "auto",
+                          width: "auto",
+                          minWidth: "135px",
+                          fontWeight: 600,
+                          borderRadius: "6px",
+                          backgroundColor: 
+                            p.status === "Completed" ? "rgba(16, 185, 129, 0.12)" :
+                            p.status === "Ongoing" || p.status === "Work in Progress" ? "rgba(99, 102, 241, 0.12)" :
+                            p.status === "Issue" ? "rgba(239, 68, 68, 0.12)" : "var(--bg-secondary)",
+                          color:
+                            p.status === "Completed" ? "#10b981" :
+                            p.status === "Ongoing" || p.status === "Work in Progress" ? "var(--primary-color)" :
+                            p.status === "Issue" ? "var(--danger-color)" : "var(--text-primary)",
+                          border: "1px solid var(--border-primary)",
+                          cursor: "pointer"
+                        }}
+                      >
+                        <option value="Ongoing">⚡ Ongoing</option>
+                        <option value="Not Started">Not Started</option>
+                        <option value="Work in Progress">Work in Progress</option>
+                        <option value="Review">Review</option>
+                        <option value="Issue">Flagged Issue</option>
+                        <option value="Completed">Completed</option>
+                        <option value="On Hold">On Hold</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
                       {p.status === "Issue" && (
                         <AlertCircle size={12} style={{ marginLeft: "4px", color: "var(--danger-color)", display: "inline" }} />
                       )}

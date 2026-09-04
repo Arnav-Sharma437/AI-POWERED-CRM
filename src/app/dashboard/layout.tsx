@@ -117,6 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [projectForm, setProjectForm] = useState({ 
     name: "", 
     clientId: "", 
+    status: "Ongoing",
     source: "Upwork", 
     platform: "Upwork",
     platformAccountId: "Rakesh",
@@ -595,6 +596,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setProjectForm({ 
         name: "", 
         clientId: "", 
+        status: "Ongoing",
         source: "Upwork (Rakesh)", 
         platform: "Upwork",
         platformAccountId: "Rakesh",
@@ -1519,7 +1521,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       )}
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem" }}>
                       <div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
                           <label style={modalStyles.label}>Select Client</label>
@@ -1561,6 +1563,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <option value="Mobile App">Mobile App</option>
                           <option value="Custom Software">Custom Software</option>
                           <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={modalStyles.label}>Project Status</label>
+                        <select 
+                          className="crm-select"
+                          value={projectForm.status}
+                          onChange={(e) => setProjectForm(prev => ({ ...prev, status: e.target.value }))}
+                        >
+                          <option value="Ongoing">⚡ Ongoing</option>
+                          <option value="Not Started">Not Started</option>
+                          <option value="Work in Progress">Work in Progress</option>
+                          <option value="Review">Review</option>
+                          <option value="Completed">Completed</option>
+                          <option value="On Hold">On Hold</option>
                         </select>
                       </div>
                     </div>
