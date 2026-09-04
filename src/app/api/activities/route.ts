@@ -27,10 +27,19 @@ export async function POST(request: Request) {
     await checkDbConnection();
 
     if (isDemoMode()) {
+      const user = mockDb.users.find(u => u.id === session.userId);
       const activity = {
         id: `act-${Date.now()}`,
         timestamp: new Date(),
         userId: session.userId,
+        user: {
+          id: session.userId,
+          name: session.name,
+          email: session.email,
+          avatar: user?.avatar || null,
+          roleName: session.roleName,
+          role: { name: session.roleName }
+        },
         type: body.type || "Note",
         notes: body.notes,
         leadId: body.leadId,
@@ -48,8 +57,58 @@ export async function POST(request: Request) {
           leadId: body.leadId || null,
           projectId: body.projectId || null,
           clientId: body.clientId || null
+        },
+        include: {
+          user: {
+            include: { role: true }
+          }
         }
       });
+
+      // Notify project team if this is a project daily update
+      if (body.projectId) {
+        try {
+          const project = await prisma.project.findUnique({
+            where: { id: body.projectId },
+            include: {
+              conversations: {
+                include: {
+                  members: true
+                }
+              }
+            }
+          });
+
+          if (project) {
+            const memberIds = new Set<string>();
+            if (project.primaryBdaId && project.primaryBdaId !== session.userId) {
+              memberIds.add(project.primaryBdaId);
+            }
+            project.conversations.forEach(c => {
+              c.members.forEach(m => {
+                if (m.userId !== session.userId) {
+                  memberIds.add(m.userId);
+                }
+              });
+            });
+
+            for (const recipientId of Array.from(memberIds)) {
+              await prisma.notification.create({
+                data: {
+                  title: `New Project Update: ${project.name}`,
+                  message: `${session.name} (${session.roleName}) posted a new work update on "${project.name}": "${body.notes.slice(0, 75)}${body.notes.length > 75 ? '...' : ''}"`,
+                  type: "Project",
+                  userId: recipientId,
+                  linkUrl: `/dashboard/projects/${project.id}`
+                }
+              });
+            }
+          }
+        } catch (notifErr) {
+          console.error("Failed to dispatch project update notifications:", notifErr);
+        }
+      }
+
       return NextResponse.json({ success: true, activity });
     }
   } catch (error: any) {

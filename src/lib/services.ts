@@ -847,7 +847,7 @@ export async function getProjectById(id: string, userContext?: { userId: string;
         primaryBda: true,
         payments: isDeveloper ? false : { orderBy: { paymentDate: "desc" } },
         ownershipHistory: isDeveloper ? false : { include: { newBda: true }, orderBy: { takeoverDate: "desc" } },
-        activities: { include: { user: true }, orderBy: { timestamp: "desc" } },
+        activities: { include: { user: { include: { role: true } } }, orderBy: { timestamp: "desc" } },
         attachments: { include: { uploadedBy: true } },
         conversations: {
           include: {

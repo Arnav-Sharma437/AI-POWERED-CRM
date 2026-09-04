@@ -43,6 +43,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   // Activity Timeline State
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [timelineForm, setTimelineForm] = useState({ type: "Note", notes: "" });
+  const [dailyUpdateText, setDailyUpdateText] = useState("");
+  const [dailyUpdateType, setDailyUpdateType] = useState("⚡ Daily Progress");
+  const [postingDailyUpdate, setPostingDailyUpdate] = useState(false);
 
   // Deadline Update State
   const [deadlineForm, setDeadlineForm] = useState({ deadlineDate: "", deadlineTime: "18:00" });
@@ -388,6 +391,63 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       if (!res.ok) {
         const errData = await res.json();
         alert(errData.error || "Failed to delete message");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handlePostDailyUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dailyUpdateText.trim()) return;
+    setPostingDailyUpdate(true);
+    try {
+      const res = await fetch("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: id,
+          clientId: project?.clientId,
+          type: dailyUpdateType,
+          notes: dailyUpdateText.trim()
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDailyUpdateText("");
+        setToastMessage("Daily work update posted successfully!");
+        setTimeout(() => setToastMessage(""), 3500);
+        if (data.activity) {
+          setProject((prev: any) => ({
+            ...prev,
+            activities: [data.activity, ...(prev?.activities || [])]
+          }));
+        }
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Failed to post daily update");
+      }
+    } catch (err) {
+      console.error("Failed to post daily update:", err);
+    } finally {
+      setPostingDailyUpdate(false);
+    }
+  };
+
+  const handleDeleteActivity = async (actId: string) => {
+    if (!confirm("Are you sure you want to delete this update?")) return;
+    try {
+      const res = await fetch(`/api/activities/${actId}`, { method: "DELETE" });
+      if (res.ok) {
+        setProject((prev: any) => ({
+          ...prev,
+          activities: (prev?.activities || []).filter((a: any) => a.id !== actId)
+        }));
+        setToastMessage("Update deleted successfully");
+        setTimeout(() => setToastMessage(""), 3000);
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Failed to delete update");
       }
     } catch (err) {
       console.error(err);
@@ -1021,59 +1081,244 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
           )}
 
-          {/* Activity Log */}
-          <div className="crm-card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 700, textTransform: "uppercase", marginBottom: 0 }}>Project timeline & logs</h3>
-              <button 
-                type="button"
-                onClick={() => {
-                  setTimelineForm({ type: "Note", notes: "" });
-                  setActiveModal("timeline");
-                }}
-                style={{ border: "none", background: "none", color: "var(--primary-color)", fontSize: "0.775rem", fontWeight: 600, cursor: "pointer" }}
-              >
-                + Add Note / Update
-              </button>
+          {/* Daily Work Updates & Collaboration Feed (BDA & Developers) */}
+          <div className="crm-card" style={{ border: "1px solid var(--border-primary)", borderRadius: "12px", padding: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--border-primary)", paddingBottom: "0.75rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <FileText size={18} style={{ color: "var(--primary-color)" }} />
+                <div>
+                  <h3 style={{ fontSize: "0.9375rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
+                    Daily Work Updates & Progress Timeline
+                  </h3>
+                  <div style={{ fontSize: "0.725rem", color: "var(--text-secondary)", marginTop: "1px" }}>
+                    BDA & Developers daily task logs, milestone notes, and client communication feed
+                  </div>
+                </div>
+              </div>
+
+              <span style={{
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                backgroundColor: "var(--primary-light)",
+                color: "var(--primary-color)",
+                padding: "0.2rem 0.6rem",
+                borderRadius: "12px",
+                border: "1px solid rgba(224, 86, 36, 0.2)"
+              }}>
+                {(project.activities || []).length} {project.activities?.length === 1 ? "Update" : "Updates"}
+              </span>
             </div>
 
-            {(!project.activities || project.activities.length === 0) ? (
-              <div style={{ padding: "1.25rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.8125rem" }}>
-                No activity logs recorded yet.
-              </div>
-            ) : (
-              <>
-                <div style={timelineStyles.timeline}>
-                  {(showAllActivities ? project.activities : project.activities.slice(0, 3)).map((act: any) => (
-                    <div key={act.id} style={timelineStyles.timelineItem}>
-                      <div style={timelineStyles.timelineDot} />
-                      <div style={timelineStyles.timelineContent}>
-                        <div style={{ fontSize: "0.8125rem", color: "var(--text-primary)" }}>
-                          <strong>{act.user?.name || "System"}</strong>: {act.notes}
-                        </div>
-                        <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
-                          {new Date(act.timestamp).toLocaleString()} • {act.type}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+            {/* Quick Post Update Box */}
+            <form onSubmit={handlePostDailyUpdate} style={{ backgroundColor: "var(--bg-primary)", padding: "0.85rem", borderRadius: "10px", border: "1px solid var(--border-primary)", marginBottom: "1.25rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <div style={{
+                    width: "26px",
+                    height: "26px",
+                    borderRadius: "50%",
+                    backgroundColor: currentUser?.roleName === "Developer" ? "rgba(59, 130, 246, 0.2)" : "var(--primary-light)",
+                    color: currentUser?.roleName === "Developer" ? "#3b82f6" : "var(--primary-color)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    overflow: "hidden",
+                    flexShrink: 0
+                  }}>
+                    {currentUser?.avatar ? (
+                      <img src={currentUser.avatar} alt={currentUser.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      currentUser?.name?.charAt(0) || "U"
+                    )}
+                  </div>
+                  <span style={{ fontSize: "0.775rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                    Post Daily Update as <span style={{ color: "var(--primary-color)" }}>{currentUser?.name || "Member"}</span> ({currentUser?.roleName || "BDA / Dev"})
+                  </span>
                 </div>
 
-                {project.activities.length > 3 && (
-                  <div style={{ marginTop: "0.75rem", textAlign: "center", borderTop: "1px solid var(--border-primary)", paddingTop: "0.5rem" }}>
+                {/* Quick Type Selection Pills */}
+                <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
+                  {[
+                    { id: "⚡ Daily Progress", label: "⚡ Daily Progress" },
+                    { id: currentUser?.roleName === "Developer" ? "🔨 Dev Work" : "📌 BDA Update", label: currentUser?.roleName === "Developer" ? "🔨 Dev Work" : "📌 BDA Update" },
+                    { id: "🚀 Milestone Done", label: "🚀 Milestone Done" },
+                    { id: "⚠️ Blocker / Flag", label: "⚠️ Blocker" }
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setDailyUpdateType(t.id)}
+                      style={{
+                        padding: "0.15rem 0.5rem",
+                        borderRadius: "12px",
+                        fontSize: "0.68rem",
+                        fontWeight: 600,
+                        border: dailyUpdateType === t.id ? "1px solid var(--primary-color)" : "1px solid var(--border-primary)",
+                        backgroundColor: dailyUpdateType === t.id ? "var(--primary-light)" : "var(--bg-secondary)",
+                        color: dailyUpdateType === t.id ? "var(--primary-color)" : "var(--text-secondary)",
+                        cursor: "pointer"
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <textarea 
+                className="crm-textarea"
+                rows={2}
+                placeholder={currentUser?.roleName === "Developer" 
+                  ? "Share today's progress... (e.g. Completed navbar & responsive home page, linked API endpoints, next is testing)" 
+                  : "Share today's BDA update... (e.g. Discussed revisions with client, approved next deliverable deadline)"}
+                value={dailyUpdateText}
+                onChange={(e) => setDailyUpdateText(e.target.value)}
+                style={{ fontSize: "0.8125rem", resize: "vertical", minHeight: "55px", marginBottom: "0.5rem", width: "100%" }}
+              />
+
+              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+                <button 
+                  type="submit"
+                  disabled={postingDailyUpdate || !dailyUpdateText.trim()}
+                  className="crm-btn crm-btn-primary"
+                  style={{ padding: "0.35rem 0.85rem", fontSize: "0.775rem", gap: "0.35rem" }}
+                >
+                  <Send size={13} />
+                  {postingDailyUpdate ? "Posting..." : "Share Daily Update"}
+                </button>
+              </div>
+            </form>
+
+            {/* Updates Feed */}
+            {(!project.activities || project.activities.length === 0) ? (
+              <div style={{ padding: "2rem 1rem", textAlign: "center", color: "var(--text-tertiary)", fontSize: "0.8125rem", border: "1px dashed var(--border-primary)", borderRadius: "8px" }}>
+                No daily updates posted yet. BDA and assigned Developers can share daily work logs above!
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {(showAllActivities ? project.activities : project.activities.slice(0, 5)).map((act: any) => {
+                  const isDev = act.user?.role?.name === "Developer" || act.user?.roleName === "Developer";
+                  const isBda = act.user?.role?.name === "BDA" || act.user?.roleName === "BDA";
+                  const isSuperAdmin = act.user?.role?.name === "Super Admin" || act.user?.roleName === "Super Admin";
+                  const canDelete = currentUser?.roleName === "Super Admin" || currentUser?.id === act.userId || currentUser?.id === act.user?.id;
+
+                  const actDate = new Date(act.timestamp);
+                  const isToday = new Date().toDateString() === actDate.toDateString();
+                  const formattedDate = isToday 
+                    ? `Today at ${actDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
+                    : `${actDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} at ${actDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+                  return (
+                    <div 
+                      key={act.id} 
+                      style={{
+                        padding: "0.85rem 1rem",
+                        backgroundColor: "var(--bg-primary)",
+                        borderRadius: "10px",
+                        border: isDev ? "1px solid rgba(59, 130, 246, 0.25)" : isBda ? "1px solid rgba(224, 86, 36, 0.25)" : "1px solid var(--border-primary)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.45rem",
+                        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)"
+                      }}
+                    >
+                      {/* Author Header */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                          <div style={{
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "50%",
+                            backgroundColor: isDev ? "rgba(59, 130, 246, 0.15)" : isBda ? "var(--primary-light)" : "var(--bg-tertiary)",
+                            color: isDev ? "#3b82f6" : isBda ? "var(--primary-color)" : "var(--text-primary)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontWeight: 700,
+                            fontSize: "0.8125rem",
+                            overflow: "hidden",
+                            flexShrink: 0
+                          }}>
+                            {act.user?.avatar ? (
+                              <img src={act.user.avatar} alt={act.user?.name || "User"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              (act.user?.name || "U").charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                              <span style={{ fontWeight: 600, fontSize: "0.8125rem", color: "var(--text-primary)" }}>
+                                {act.user?.name || "Team Member"}
+                              </span>
+                              <span style={{
+                                fontSize: "0.65rem",
+                                fontWeight: 700,
+                                padding: "1px 6px",
+                                borderRadius: "4px",
+                                backgroundColor: isDev ? "rgba(59, 130, 246, 0.12)" : isBda ? "rgba(224, 86, 36, 0.12)" : isSuperAdmin ? "rgba(239, 68, 68, 0.12)" : "var(--bg-tertiary)",
+                                color: isDev ? "#3b82f6" : isBda ? "var(--primary-color)" : isSuperAdmin ? "var(--danger-color)" : "var(--text-secondary)"
+                              }}>
+                                {act.user?.role?.name || act.user?.roleName || (isDev ? "Developer" : isBda ? "BDA Manager" : "Member")}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
+                              {formattedDate}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                          {act.type && (
+                            <span style={{
+                              fontSize: "0.68rem",
+                              fontWeight: 600,
+                              padding: "2px 7px",
+                              borderRadius: "6px",
+                              backgroundColor: "var(--bg-secondary)",
+                              color: "var(--text-secondary)",
+                              border: "1px solid var(--border-primary)"
+                            }}>
+                              {act.type}
+                            </span>
+                          )}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteActivity(act.id)}
+                              style={{ border: "none", background: "none", color: "var(--text-tertiary)", cursor: "pointer", padding: "2px" }}
+                              title="Delete update"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Update Content Note */}
+                      <div style={{ fontSize: "0.8125rem", color: "var(--text-primary)", lineHeight: 1.45, whiteSpace: "pre-line", paddingLeft: "2.6rem" }}>
+                        {act.notes}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {project.activities.length > 5 && (
+                  <div style={{ textAlign: "center", borderTop: "1px solid var(--border-primary)", paddingTop: "0.65rem", marginTop: "0.25rem" }}>
                     <button 
                       type="button"
                       onClick={() => setShowAllActivities(!showAllActivities)}
                       className="crm-btn crm-btn-secondary"
-                      style={{ fontSize: "0.75rem", padding: "3px 10px", width: "100%", justifyContent: "center" }}
+                      style={{ fontSize: "0.75rem", padding: "4px 12px", width: "100%", justifyContent: "center" }}
                     >
                       {showAllActivities 
-                        ? `Show Less (Collapse)` 
-                        : `Show More (${project.activities.length - 3} older updates)`}
+                        ? `Show Less (Collapse Timeline)` 
+                        : `Show All Updates (${project.activities.length} total entries)`}
                     </button>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>
