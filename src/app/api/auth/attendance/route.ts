@@ -151,8 +151,56 @@ export async function GET(request: Request) {
       }
     });
 
-    // Check ongoing live sessions
+    // Official Calendar Holidays for 2026/Company
+    const officialHolidays2026 = [
+      { date: "2026-01-26", name: "Republic Day" },
+      { date: "2026-03-04", name: "Holi" },
+      { date: "2026-03-21", name: "Eid-ul-Fitr" },
+      { date: "2026-04-14", name: "Dr. Ambedkar Jayanti" },
+      { date: "2026-05-01", name: "May Day / Labour Day" },
+      { date: "2026-08-15", name: "Independence Day" },
+      { date: "2026-10-02", name: "Gandhi Jayanti" },
+      { date: "2026-10-20", name: "Dussehra" },
+      { date: "2026-11-08", name: "Diwali" },
+      { date: "2026-12-25", name: "Christmas" }
+    ];
+
+    // Check ongoing live sessions and compute weekly & accurate present/absent stats
     const now = Date.now();
+    const startOfWeek = new Date();
+    const currentDay = startOfWeek.getDay(); // 0 is Sun, 1 is Mon...
+    const diffToMonday = startOfWeek.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
+    startOfWeek.setDate(diffToMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    // Calculate business days elapsed this month up to today (excluding weekends and official holidays)
+    let elapsedWorkingDaysThisMonth = 0;
+    const holidayDateSet = new Set(officialHolidays2026.map(h => h.date));
+
+    for (let d = new Date(startOfMonth); d <= today; d.setDate(d.getDate() + 1)) {
+      const dayOfWeek = d.getDay();
+      const dateStr = d.toISOString().split("T")[0];
+      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayDateSet.has(dateStr)) {
+        elapsedWorkingDaysThisMonth++;
+      }
+    }
+    if (elapsedWorkingDaysThisMonth === 0) elapsedWorkingDaysThisMonth = 1;
+
+    // Calculate business days elapsed this week up to today
+    let elapsedWorkingDaysThisWeek = 0;
+    for (let d = new Date(startOfWeek); d <= today; d.setDate(d.getDate() + 1)) {
+      const dayOfWeek = d.getDay();
+      const dateStr = d.toISOString().split("T")[0];
+      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayDateSet.has(dateStr)) {
+        elapsedWorkingDaysThisWeek++;
+      }
+    }
+    if (elapsedWorkingDaysThisWeek === 0) elapsedWorkingDaysThisWeek = 1;
+
     Object.values(userSummaryMap).forEach(u => {
       if (u.isCurrentlyWorking) {
         const openSession = u.sessions[u.sessions.length - 1];
@@ -164,25 +212,47 @@ export async function GET(request: Request) {
         }
       }
 
-      // Compute total lifetime worked minutes and history
+      // Compute total lifetime and weekly worked minutes
       const userDays = userDayMap[u.userId] ? Object.values(userDayMap[u.userId]) : [];
       let lifetimeMins = 0;
+      let weeklyMins = 0;
+      let monthDaysPresent = 0;
+      let weekDaysPresent = 0;
+
       userDays.forEach(d => {
         lifetimeMins += d.minutes;
-      });
-      u.totalLifetimeWorkedMinutes = lifetimeMins;
-      u.totalDaysPresent = userDays.length;
+        const dDate = new Date(d.date);
+        dDate.setHours(0, 0, 0, 0);
 
-      // Estimate working days in past 30 days vs present days to calculate leaves
-      const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
-      let workDaysCount = 0;
-      for (let d = new Date(thirtyDaysAgo); d <= new Date(); d.setDate(d.getDate() + 1)) {
-        const dayOfWeek = d.getDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Mon-Fri
-          workDaysCount++;
+        if (dDate >= startOfWeek) {
+          weeklyMins += d.minutes;
+          weekDaysPresent++;
+        }
+        if (dDate >= startOfMonth) {
+          monthDaysPresent++;
+        }
+      });
+
+      // If user is currently working today and it's this week, ensure today's live minutes are included in weekly minutes
+      if (u.isCurrentlyWorking) {
+        // Find if today was already in userDays
+        const todayKey = today.toISOString().split("T")[0];
+        const todayInUserDays = userDayMap[u.userId]?.[todayKey];
+        if (!todayInUserDays) {
+          weeklyMins += u.totalWorkedMinutes;
+          lifetimeMins += u.totalWorkedMinutes;
         }
       }
-      u.totalDaysOnLeave = Math.max(0, workDaysCount - u.totalDaysPresent);
+
+      u.totalLifetimeWorkedMinutes = lifetimeMins;
+      u.totalWeeklyWorkedMinutes = weeklyMins;
+      u.totalDaysPresent = userDays.length;
+      u.thisMonthDaysPresent = monthDaysPresent;
+      u.thisWeekDaysPresent = weekDaysPresent;
+
+      // Realistic leave calculation: Only elapsed business days this month minus days present this month
+      u.totalDaysOnLeave = Math.max(0, elapsedWorkingDaysThisMonth - monthDaysPresent);
+      u.weeklyDaysOnLeave = Math.max(0, elapsedWorkingDaysThisWeek - weekDaysPresent);
 
       u.history = userDays.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     });
@@ -193,6 +263,7 @@ export async function GET(request: Request) {
       attendance: attendanceLogs,
       summary: userSummaryMap,
       userSummaries: Object.values(userSummaryMap),
+      officialHolidays: officialHolidays2026,
       currentUserId: session.userId,
       isSuperAdmin: session.roleName === "Super Admin"
     });

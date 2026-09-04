@@ -438,15 +438,15 @@ export default function TeamPage() {
                     <div style={{ padding: "0.85rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase" }}>
                         <Clock size={13} style={{ color: "#3b82f6" }} />
-                        <span>Total Hours</span>
+                        <span>This Week Hours</span>
                       </div>
                       <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "4px" }}>
                         {userAttendanceSummary 
-                          ? `${Math.floor((userAttendanceSummary.totalLifetimeWorkedMinutes || userAttendanceSummary.totalWorkedMinutes || 0) / 60)}h ${((userAttendanceSummary.totalLifetimeWorkedMinutes || userAttendanceSummary.totalWorkedMinutes || 0) % 60)}m`
+                          ? `${Math.floor((userAttendanceSummary.totalWeeklyWorkedMinutes || 0) / 60)}h ${(userAttendanceSummary.totalWeeklyWorkedMinutes || 0) % 60}m`
                           : "0h 0m"}
                       </div>
                       <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
-                        Logged Lifetime
+                        Mon – Today
                       </div>
                     </div>
 
@@ -459,7 +459,7 @@ export default function TeamPage() {
                         {userAttendanceSummary?.totalDaysPresent || (attendanceLogs.length > 0 ? 1 : 0)} Days
                       </div>
                       <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
-                        Attended Work
+                        {userAttendanceSummary?.thisMonthDaysPresent ?? userAttendanceSummary?.totalDaysPresent ?? 0} this month
                       </div>
                     </div>
 
@@ -472,7 +472,7 @@ export default function TeamPage() {
                         {userAttendanceSummary?.totalDaysOnLeave !== undefined ? userAttendanceSummary.totalDaysOnLeave : 0} Days
                       </div>
                       <div style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
-                        Past 30 Days
+                        This Month
                       </div>
                     </div>
                   </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Shield, User, Info, CheckCircle2, Clock, MapPin, Building2, Home } from "lucide-react";
+import { Shield, User, Info, CheckCircle2, Clock, MapPin, Building2, Home, Calendar, X } from "lucide-react";
 import { useDashboard } from "../layout";
 
 export default function SettingsPage() {
@@ -10,6 +10,9 @@ export default function SettingsPage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState("");
+
+  const [officialHolidays, setOfficialHolidays] = useState<any[]>([]);
+  const [showHolidayModal, setShowHolidayModal] = useState(false);
 
   useEffect(() => {
     async function loadAttendance() {
@@ -20,6 +23,9 @@ export default function SettingsPage() {
           const data = await res.json();
           if (data.summary && data.summary[currentUser.id]) {
             setAttendanceSummary(data.summary[currentUser.id]);
+          }
+          if (data.officialHolidays) {
+            setOfficialHolidays(data.officialHolidays);
           }
         }
       } catch (err) {
@@ -148,7 +154,29 @@ export default function SettingsPage() {
 
                 {/* 4 Attendance KPI Metrics */}
                 <div style={{ marginTop: "0.5rem" }}>
-                  <span style={{ color: "var(--text-tertiary)", fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase" }}>My Attendance & Hours Summary</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "var(--text-tertiary)", fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase" }}>My Attendance & Hours Summary</span>
+                    <button 
+                      type="button" 
+                      onClick={() => setShowHolidayModal(true)}
+                      style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: "0.3rem", 
+                        background: "none", 
+                        border: "none", 
+                        color: "var(--primary-color)", 
+                        fontSize: "0.72rem", 
+                        fontWeight: 600, 
+                        cursor: "pointer",
+                        padding: "2px 6px",
+                        borderRadius: "4px"
+                      }}
+                    >
+                      <Calendar size={12} />
+                      <span>Holiday Calendar</span>
+                    </button>
+                  </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "0.5rem" }}>
                     <div style={{ padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
                       <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600 }}>TODAY HOURS</div>
@@ -161,12 +189,12 @@ export default function SettingsPage() {
                     </div>
 
                     <div style={{ padding: "0.75rem", backgroundColor: "var(--bg-primary)", borderRadius: "8px", border: "1px solid var(--border-primary)" }}>
-                      <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600 }}>LIFETIME HOURS</div>
+                      <div style={{ color: "var(--text-tertiary)", fontSize: "0.7rem", fontWeight: 600 }}>THIS WEEK HOURS</div>
                       <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginTop: "2px" }}>
-                        {attendanceSummary ? `${Math.floor((attendanceSummary.totalLifetimeWorkedMinutes || attendanceSummary.totalWorkedMinutes || 0) / 60)}h ${((attendanceSummary.totalLifetimeWorkedMinutes || attendanceSummary.totalWorkedMinutes || 0) % 60)}m` : "0h 0m"}
+                        {attendanceSummary ? `${Math.floor((attendanceSummary.totalWeeklyWorkedMinutes || 0) / 60)}h ${(attendanceSummary.totalWeeklyWorkedMinutes || 0) % 60}m` : "0h 0m"}
                       </div>
                       <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
-                        Total Logged
+                        Mon – Today
                       </div>
                     </div>
 
@@ -176,7 +204,7 @@ export default function SettingsPage() {
                         {attendanceSummary?.totalDaysPresent || 0} Days
                       </div>
                       <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
-                        Attended Work
+                        {attendanceSummary?.thisMonthDaysPresent ?? attendanceSummary?.totalDaysPresent ?? 0} this month
                       </div>
                     </div>
 
@@ -186,11 +214,106 @@ export default function SettingsPage() {
                         {attendanceSummary?.totalDaysOnLeave || 0} Days
                       </div>
                       <div style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
-                        Past 30 Days
+                        This Month
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Holiday Calendar Modal */}
+        {showHolidayModal && (
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "1rem"
+          }}>
+            <div style={{
+              backgroundColor: "var(--bg-secondary)",
+              borderRadius: "12px",
+              border: "1px solid var(--border-primary)",
+              maxWidth: "480px",
+              width: "100%",
+              padding: "1.5rem",
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)",
+              maxHeight: "85vh",
+              overflowY: "auto"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Calendar size={18} style={{ color: "var(--primary-color)" }} />
+                  <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                    Official Holidays Calendar (2026)
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowHolidayModal(false)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)" }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>
+                Official company gazetted holidays are excluded from leave calculations and counted as non-working days.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {(officialHolidays.length > 0 ? officialHolidays : [
+                  { date: "2026-01-26", name: "Republic Day" },
+                  { date: "2026-03-04", name: "Holi" },
+                  { date: "2026-03-21", name: "Eid-ul-Fitr" },
+                  { date: "2026-04-14", name: "Dr. Ambedkar Jayanti" },
+                  { date: "2026-05-01", name: "May Day / Labour Day" },
+                  { date: "2026-08-15", name: "Independence Day" },
+                  { date: "2026-10-02", name: "Gandhi Jayanti" },
+                  { date: "2026-10-20", name: "Dussehra" },
+                  { date: "2026-11-08", name: "Diwali" },
+                  { date: "2026-12-25", name: "Christmas" }
+                ]).map((holiday, idx) => {
+                  const hDate = new Date(holiday.date);
+                  const isPast = hDate < new Date();
+                  return (
+                    <div 
+                      key={idx}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "0.75rem 1rem",
+                        backgroundColor: "var(--bg-primary)",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-primary)"
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--text-primary)" }}>{holiday.name}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                          {hDate.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
+                        </div>
+                      </div>
+                      <span className={`badge ${isPast ? "badge-default" : "badge-success"}`}>
+                        {isPast ? "Completed" : "Upcoming"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: "1.25rem", textAlign: "right" }}>
+                <button
+                  type="button"
+                  className="crm-btn crm-btn-secondary"
+                  onClick={() => setShowHolidayModal(false)}
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
