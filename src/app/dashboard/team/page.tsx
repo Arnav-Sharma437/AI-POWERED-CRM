@@ -43,7 +43,7 @@ export default function TeamPage() {
     setAttendanceUser(user);
     setAttendanceLoading(true);
     try {
-      const res = await fetch(`/api/auth/attendance?userId=${user.id}`);
+      const res = await fetch(`/api/auth/attendance?userId=${user.id}&_t=${Date.now()}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setAttendanceLogs(data.attendance || []);

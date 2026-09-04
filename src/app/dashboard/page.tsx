@@ -78,7 +78,7 @@ export default function DashboardPage() {
         const [statsRes, projRes, attRes] = await Promise.all([
           fetch(statsUrl),
           fetch("/api/projects"),
-          fetch("/api/auth/attendance")
+          fetch(`/api/auth/attendance?_t=${Date.now()}`, { cache: "no-store" })
         ]);
         if (statsRes.ok) {
           const statsData = await statsRes.json();

@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/auth";
 import { createActivity, listUsers, isDemoMode, checkDbConnection } from "@/lib/services";
 import { prisma } from "@/lib/db";
 import { mockDb } from "@/lib/mockData";
+import { chatEmitter } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const targetUserId = searchParams.get("userId") || (session.roleName !== "Super Admin" ? session.userId : undefined);
+    const targetUserId = searchParams.get("userId") || undefined;
     const dateStr = searchParams.get("date"); // YYYY-MM-DD or undefined
 
     await checkDbConnection();
@@ -23,7 +24,13 @@ export async function GET(request: Request) {
     let rawActivities: any[] = [];
     if (isDemoMode()) {
       rawActivities = mockDb.activities.filter(a => 
-        a.notes && (a.notes.includes("workday session") || a.notes.includes("clocked out") || a.notes.includes("finished workday"))
+        a.notes && (
+          a.notes.includes("workday session") || 
+          a.notes.includes("clocked out") || 
+          a.notes.includes("finished workday") ||
+          a.notes.includes("started workday") ||
+          a.notes.includes("logged in from")
+        )
       );
       if (targetUserId) {
         rawActivities = rawActivities.filter(a => a.userId === targetUserId);
@@ -33,7 +40,9 @@ export async function GET(request: Request) {
         OR: [
           { notes: { contains: "workday session" } },
           { notes: { contains: "clocked out" } },
-          { notes: { contains: "finished workday" } }
+          { notes: { contains: "finished workday" } },
+          { notes: { contains: "started workday" } },
+          { notes: { contains: "logged in from" } }
         ]
       };
       if (targetUserId) {
@@ -43,17 +52,17 @@ export async function GET(request: Request) {
         where: whereClause,
         include: { user: true },
         orderBy: { timestamp: "desc" },
-        take: 200
+        take: 500
       });
     }
 
     // Map logs into structured attendance records
     const attendanceLogs = rawActivities.map(act => {
-      const isStart = act.notes.includes("started workday session");
+      const isStart = act.notes.includes("started workday") || act.notes.includes("workday session") || act.notes.includes("logged in from");
       const isClockOut = act.notes.includes("clocked out") || act.notes.includes("finished workday");
       let location = "Office";
-      if (act.notes.includes("from Home")) location = "Home";
-      else if (act.notes.includes("from Office")) location = "Office";
+      if (act.notes.includes("from Home") || act.notes.includes("Home")) location = "Home";
+      else if (act.notes.includes("from Office") || act.notes.includes("Office")) location = "Office";
 
       return {
         id: act.id,
@@ -338,9 +347,25 @@ export async function POST(request: Request) {
         }
       }
 
+      // 3. Real-time broadcast to all connected CRM clients
+      try {
+        chatEmitter.emit("crm_update", {
+          entity: "attendance",
+          action: "start_work",
+          userId: session.userId,
+          userName: session.name,
+          roleName: userRole,
+          workLocation,
+          timestamp: actionTime.toISOString()
+        });
+      } catch (sseErr) {
+        console.error("Failed to emit attendance SSE event:", sseErr);
+      }
+
       return NextResponse.json({
         success: true,
         message: `Work session started from ${workLocation}!`,
+        isCurrentlyWorking: true,
         workLocation,
         workStartedAt: actionTime.toISOString()
       });
@@ -372,9 +397,25 @@ export async function POST(request: Request) {
         }
       }
 
+      // 3. Real-time broadcast to all connected CRM clients
+      try {
+        chatEmitter.emit("crm_update", {
+          entity: "attendance",
+          action: "clock_out",
+          userId: session.userId,
+          userName: session.name,
+          roleName: userRole,
+          workLocation,
+          timestamp: actionTime.toISOString()
+        });
+      } catch (sseErr) {
+        console.error("Failed to emit attendance SSE event:", sseErr);
+      }
+
       return NextResponse.json({
         success: true,
         message: `Clocked out successfully at ${actionTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}!`,
+        isCurrentlyWorking: false,
         workEndedAt: actionTime.toISOString()
       });
     } else if (action === "send_weekly_reports") {

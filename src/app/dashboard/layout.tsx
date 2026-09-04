@@ -323,7 +323,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           fetch("/api/users"),
           fetch("/api/clients"),
           fetch("/api/projects"),
-          fetch("/api/auth/attendance")
+          fetch(`/api/auth/attendance?_t=${Date.now()}`, { cache: "no-store" })
         ]);
 
         if (uRes.ok) {

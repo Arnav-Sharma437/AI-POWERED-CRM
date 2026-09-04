@@ -5,7 +5,7 @@ import { Shield, User, Info, CheckCircle2, Clock, MapPin, Building2, Home, Calen
 import { useDashboard } from "../layout";
 
 export default function SettingsPage() {
-  const { currentUser, setTriggerRefresh } = useDashboard();
+  const { currentUser, triggerRefresh, setTriggerRefresh } = useDashboard();
   const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -18,7 +18,7 @@ export default function SettingsPage() {
     async function loadAttendance() {
       if (!currentUser?.id) return;
       try {
-        const res = await fetch(`/api/auth/attendance?userId=${currentUser.id}`);
+        const res = await fetch(`/api/auth/attendance?userId=${currentUser.id}&_t=${Date.now()}`, { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           if (data.summary && data.summary[currentUser.id]) {
@@ -33,7 +33,7 @@ export default function SettingsPage() {
       }
     }
     loadAttendance();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, triggerRefresh]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
