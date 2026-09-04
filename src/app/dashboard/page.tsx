@@ -13,7 +13,7 @@ import AiLoader from "@/components/AiLoader";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { openQuickAdd, triggerRefresh, currentUser } = useDashboard();
+  const { openQuickAdd, triggerRefresh, currentUser, liveWorkedSeconds, formatSecondsToHms, isWorking, shiftLocation } = useDashboard();
   const isDeveloper = currentUser?.roleName === "Developer";
   const isSuperAdmin = currentUser?.roleName === "Super Admin";
   
@@ -143,7 +143,7 @@ export default function DashboardPage() {
     { name: "Assigned Projects", val: devProjects.length, icon: Briefcase, color: "var(--primary-color)", bg: "var(--primary-light)", link: "/dashboard/projects" },
     { name: "In Progress", val: devProjects.filter(p => p.status === "Work in Progress").length, icon: Clock, color: "var(--info-color)", bg: "var(--info-light)", link: "/dashboard/projects" },
     { name: "In Review / QA", val: devProjects.filter(p => p.status === "Review").length, icon: CheckCircle, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", link: "/dashboard/projects" },
-    { name: "Today's Work Time", val: formatMinutes(myAttendanceSummary?.totalWorkedMinutes || 0), icon: Clock, color: "#6366f1", bg: "rgba(99, 102, 241, 0.12)", link: "/dashboard" },
+    { name: "Today's Work Time", val: formatSecondsToHms(liveWorkedSeconds), icon: Clock, color: "#6366f1", bg: "rgba(99, 102, 241, 0.12)", link: "/dashboard" },
     { name: "Deadlines This Week", val: devProjects.filter(p => {
       const d = new Date(p.deadline).getTime();
       return d >= Date.now() && d <= Date.now() + 7 * 24 * 60 * 60 * 1000;
@@ -156,7 +156,7 @@ export default function DashboardPage() {
     { name: "Hot Leads", val: data.kpis.hotLeads, icon: Flame, color: "var(--danger-color)", bg: "var(--danger-light)", link: "/dashboard/leads?priority=Hot" },
     { name: "Meetings Today", val: data.kpis.meetingsToday, icon: Calendar, color: "var(--info-color)", bg: "var(--info-light)", link: "/dashboard/calendar" },
     { name: "Active Projects", val: data.kpis.activeProjects, icon: Briefcase, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", link: "/dashboard/projects" },
-    { name: "Today's Work Time", val: formatMinutes(myAttendanceSummary?.totalWorkedMinutes || 0), icon: Clock, color: "#6366f1", bg: "rgba(99, 102, 241, 0.12)", link: "/dashboard" },
+    { name: "Today's Work Time", val: formatSecondsToHms(liveWorkedSeconds), icon: Clock, color: "#6366f1", bg: "rgba(99, 102, 241, 0.12)", link: "/dashboard" },
     { name: "Deadlines (7d)", val: data.kpis.upcomingDeadlines, icon: AlertTriangle, color: "var(--danger-color)", bg: "var(--danger-light)", link: "/dashboard/projects" },
     { name: "Pending Bills", val: new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(data.kpis.pendingPaymentsSum), icon: DollarSign, color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", link: "/dashboard/payments" },
   ];
@@ -375,8 +375,8 @@ export default function DashboardPage() {
               <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600 }}>
                 Total Office / Work Time Today
               </div>
-              <div style={{ fontSize: "1.35rem", fontWeight: 400, color: "var(--primary-color)", marginTop: "2px" }}>
-                {formatMinutes(myAttendanceSummary?.totalWorkedMinutes || 0)}
+              <div style={{ fontSize: "1.35rem", fontWeight: 700, fontFamily: "monospace", color: "var(--primary-color)", marginTop: "2px" }}>
+                {formatSecondsToHms(liveWorkedSeconds)}
               </div>
             </div>
           </div>
@@ -506,8 +506,8 @@ export default function DashboardPage() {
                       <td style={{ padding: "0.75rem 0.6rem", color: "var(--text-secondary)", fontSize: "0.75rem" }}>
                         {u.isCurrentlyWorking ? <span style={{ color: "#10b981", fontWeight: 500 }}>Active Now</span> : u.lastClockOut ? new Date(u.lastClockOut).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}
                       </td>
-                      <td style={{ padding: "0.75rem 0.6rem", textAlign: "right", fontWeight: 600, color: "var(--text-primary)", fontSize: "0.8125rem" }}>
-                        {formatMinutes(u.totalWorkedMinutes)}
+                      <td style={{ padding: "0.75rem 0.6rem", textAlign: "right", fontWeight: 600, color: "var(--text-primary)", fontSize: "0.8125rem", fontFamily: u.userId === currentUser?.id ? "monospace" : "inherit" }}>
+                        {u.userId === currentUser?.id ? formatSecondsToHms(liveWorkedSeconds) : formatMinutes(u.totalWorkedMinutes)}
                       </td>
                     </tr>
                   ))}

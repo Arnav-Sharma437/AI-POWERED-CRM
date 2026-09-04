@@ -265,10 +265,17 @@ export async function GET(request: Request) {
 
       const uSummary = userSummaryMap[u.id];
       if (uSummary) {
+        const baseSeconds = (dayMap[todayKey]?.minutes || 0) * 60;
+        const currentLiveSeconds = isWorkingNow ? (liveTodayMinutes * 60) : 0;
+        const totalSeconds = baseSeconds + currentLiveSeconds;
+
         uSummary.isCurrentlyWorking = isWorkingNow;
         uSummary.currentLocation = isWorkingNow ? currentClockInLocation : (dayMap[todayKey]?.location || "Office");
         uSummary.firstClockIn = dayMap[todayKey]?.clockIn || null;
         uSummary.lastClockOut = dayMap[todayKey]?.clockOut || null;
+        uSummary.currentSessionStart = isWorkingNow && latestTodayLog ? latestTodayLog.timestamp : null;
+        uSummary.baseWorkedSecondsToday = baseSeconds;
+        uSummary.totalWorkedSeconds = totalSeconds;
         uSummary.totalWorkedMinutes = todayTotalMinutes;
         uSummary.totalWeeklyWorkedMinutes = weeklyTotalMinutes;
         uSummary.totalLifetimeWorkedMinutes = lifetimeTotalMinutes;

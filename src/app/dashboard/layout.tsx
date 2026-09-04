@@ -10,7 +10,15 @@ import {
   ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 
-// Context for global state sharing (Quick Add triggers, etc.)
+// Context for global state sharing (Quick Add triggers, attendance timer, etc.)
+export const formatSecondsToHms = (totalSec: number) => {
+  if (!totalSec || totalSec <= 0) return "00h 00m 00s";
+  const hrs = Math.floor(totalSec / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = Math.floor(totalSec % 60);
+  return `${String(hrs).padStart(2, "0")}h ${String(mins).padStart(2, "0")}m ${String(secs).padStart(2, "0")}s`;
+};
+
 interface DashboardContextType {
   currentUser: any;
   triggerRefresh: number;
@@ -20,6 +28,12 @@ interface DashboardContextType {
   devs: any[];
   clientsList: any[];
   projectsList: any[];
+  // Attendance and live stopwatch states
+  isWorking: boolean;
+  shiftLocation: "Office" | "Home";
+  liveWorkedSeconds: number;
+  formatSecondsToHms: (sec: number) => string;
+  setShowShiftModal: (modal: "start" | "end" | null) => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -87,14 +101,68 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [shiftLocation, setShiftLocation] = useState<"Office" | "Home">("Office");
   const [shiftNote, setShiftNote] = useState("");
   const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [baseWorkedSeconds, setBaseWorkedSeconds] = useState<number>(0);
+  const [currentSessionStart, setCurrentSessionStart] = useState<string | null>(null);
+  const [liveWorkedSeconds, setLiveWorkedSeconds] = useState<number>(0);
 
-  // Live topbar clock ticking every 1 second
+  // Live stopwatch and topbar clock ticking every 1 second
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentLiveTime(new Date());
+
+      if (isWorking && currentSessionStart) {
+        const sessionElapsedSec = Math.max(0, Math.floor((Date.now() - new Date(currentSessionStart).getTime()) / 1000));
+        setLiveWorkedSeconds(baseWorkedSeconds + sessionElapsedSec);
+      }
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isWorking, currentSessionStart, baseWorkedSeconds]);
+
+  // 30-second Heartbeat & System Shutdown / Tab Close detection
+  useEffect(() => {
+    if (!currentUser || !isWorking) return;
+
+    const pingHeartbeat = async () => {
+      try {
+        await fetch("/api/auth/attendance/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "heartbeat", location: shiftLocation })
+        });
+      } catch (err) {
+        // quiet catch
+      }
+    };
+
+    // Ping immediately then every 30s
+    pingHeartbeat();
+    const hbInterval = setInterval(pingHeartbeat, 30000);
+
+    const handleBeforeUnload = () => {
+      try {
+        const payload = JSON.stringify({ action: "tab_close", location: shiftLocation });
+        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+          navigator.sendBeacon("/api/auth/attendance/heartbeat", new Blob([payload], { type: "application/json" }));
+        } else {
+          fetch("/api/auth/attendance/heartbeat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            keepalive: true
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      clearInterval(hbInterval);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [currentUser, isWorking, shiftLocation]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("crm_theme") as "light" | "dark" | null;
@@ -354,6 +422,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             if (mySummary.currentLocation) {
               setShiftLocation(mySummary.currentLocation as "Office" | "Home");
             }
+            const baseSec = mySummary.baseWorkedSecondsToday || 0;
+            setBaseWorkedSeconds(baseSec);
+            setCurrentSessionStart(mySummary.currentSessionStart || null);
+
+            if (workingState && mySummary.currentSessionStart) {
+              const sessionElapsedSec = Math.max(0, Math.floor((Date.now() - new Date(mySummary.currentSessionStart).getTime()) / 1000));
+              setLiveWorkedSeconds(baseSec + sessionElapsedSec);
+            } else {
+              setLiveWorkedSeconds(mySummary.totalWorkedSeconds || (mySummary.totalWorkedMinutes || 0) * 60);
+            }
           }
         }
 
@@ -408,8 +486,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleStartWorkSession = async (e: React.FormEvent) => {
     e.preventDefault();
     setAttendanceLoading(true);
+    const nowIso = new Date().toISOString();
     // Immediate optimistic update
     setIsWorking(true);
+    setCurrentSessionStart(nowIso);
     if (typeof window !== "undefined") {
       localStorage.setItem("crm_is_working", "true");
     }
@@ -427,7 +507,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!res.ok) throw new Error(data.error || "Failed to start workday");
 
       setIsWorking(true);
-      setWorkStartedAt(new Date());
+      const startAt = data.workStartedAt || nowIso;
+      setCurrentSessionStart(startAt);
+      setWorkStartedAt(new Date(startAt));
       if (currentUser) {
         setCurrentUser((prev: any) => ({ ...prev, workLocation: shiftLocation }));
       }
@@ -437,6 +519,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setTriggerRefresh(prev => prev + 1);
     } catch (err: any) {
       setIsWorking(false);
+      setCurrentSessionStart(null);
       if (typeof window !== "undefined") {
         localStorage.setItem("crm_is_working", "false");
       }
@@ -451,6 +534,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setAttendanceLoading(true);
     // Immediate optimistic update
     setIsWorking(false);
+    setCurrentSessionStart(null);
     if (typeof window !== "undefined") {
       localStorage.setItem("crm_is_working", "false");
     }
@@ -468,6 +552,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!res.ok) throw new Error(data.error || "Failed to clock out");
 
       setIsWorking(false);
+      setCurrentSessionStart(null);
       showToast(data.message || "Clocked out successfully. Super Admin has been notified!");
       setShowShiftModal(null);
       setShiftNote("");
@@ -694,7 +779,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       bdas,
       devs,
       clientsList,
-      projectsList
+      projectsList,
+      isWorking,
+      shiftLocation,
+      liveWorkedSeconds,
+      formatSecondsToHms,
+      setShowShiftModal
     }}>
       <div className="crm-layout">
         {/* Mobile Backdrop Overlay */}
@@ -1012,7 +1102,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <>
                     <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#10b981", boxShadow: "0 0 10px #10b981" }} />
                     {currentUser?.workLocation === "Home" || shiftLocation === "Home" ? <Home size={14} style={{ color: "#10b981" }} /> : <Building2 size={14} style={{ color: "#10b981" }} />}
-                    <span style={{ color: "#10b981" }}>{currentUser?.workLocation || shiftLocation || "Office"} • Working</span>
+                    <span style={{ color: "#10b981", fontFamily: "monospace", letterSpacing: "0.03em" }}>{formatSecondsToHms(liveWorkedSeconds)}</span>
+                    <span style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>• {currentUser?.workLocation || shiftLocation || "Office"}</span>
                   </>
                 ) : (
                   <>
