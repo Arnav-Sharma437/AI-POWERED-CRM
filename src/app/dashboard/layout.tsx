@@ -118,7 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => clearInterval(timer);
   }, [isWorking, currentSessionStart, baseWorkedSeconds]);
 
-  // 30-second Heartbeat & System Shutdown / Tab Close detection
+  // 30-second Heartbeat for active session & system liveness
   useEffect(() => {
     if (!currentUser || !isWorking) return;
 
@@ -138,29 +138,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     pingHeartbeat();
     const hbInterval = setInterval(pingHeartbeat, 30000);
 
-    const handleBeforeUnload = () => {
-      try {
-        const payload = JSON.stringify({ action: "tab_close", location: shiftLocation });
-        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-          navigator.sendBeacon("/api/auth/attendance/heartbeat", new Blob([payload], { type: "application/json" }));
-        } else {
-          fetch("/api/auth/attendance/heartbeat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: payload,
-            keepalive: true
-          });
-        }
-      } catch (e) {
-        // ignore
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
     return () => {
       clearInterval(hbInterval);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [currentUser, isWorking, shiftLocation]);
 
@@ -377,13 +356,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       try {
         const meRes = await fetch("/api/auth/me");
         if (!meRes.ok) {
-          router.push("/login");
+          if (meRes.status === 401 && typeof window !== "undefined" && !localStorage.getItem("crm_user")) {
+            router.push("/login");
+          }
           return;
         }
         const meData = await meRes.json();
-        setCurrentUser(meData.user);
-        if (typeof window !== "undefined" && meData.user) {
-          localStorage.setItem("crm_user", JSON.stringify(meData.user));
+        if (meData?.user) {
+          setCurrentUser(meData.user);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("crm_user", JSON.stringify(meData.user));
+          }
         }
 
         // Parallelize all reference data calls for ultra-fast load

@@ -60,12 +60,12 @@ function ChatContent() {
         const res = await fetch("/api/auth/me");
         if (res.ok) {
           const data = await res.json();
-          setCurrentUser(data.user);
-        } else {
+          if (data?.user) setCurrentUser(data.user);
+        } else if (res.status === 401 && typeof window !== "undefined" && !localStorage.getItem("crm_user")) {
           router.push("/login");
         }
       } catch (err) {
-        console.error(err);
+        console.error("Chat fetchMe error:", err);
       }
     };
     fetchMe();
