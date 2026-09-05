@@ -2127,8 +2127,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Add Client Directly from Project Form Sub-Modal */}
         {showInnerClientForm && (
-          <div style={{ ...modalStyles.overlay, zIndex: 1100 }}>
-            <div style={modalStyles.container} className="animate-fade-in">
+          <div style={{ ...modalStyles.overlay, zIndex: 10050, backgroundColor: "rgba(0, 0, 0, 0.65)" }}>
+            <div style={{ ...modalStyles.container, maxWidth: "500px", zIndex: 10051 }} className="animate-fade-in">
               <div style={modalStyles.header}>
                 <h3 style={modalStyles.title}>Add New Client</h3>
                 <button type="button" onClick={() => setShowInnerClientForm(false)} style={modalStyles.closeBtn}>&times;</button>
@@ -2232,8 +2232,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Work Shift Attendance Modal (Clock-In / Start Work & Clock-Out) */}
         {showShiftModal && (
-          <div style={{ ...modalStyles.overlay, zIndex: 1200 }}>
-            <div style={{ ...modalStyles.container, maxWidth: "440px" }} className="animate-fade-in">
+          <div style={{ ...modalStyles.overlay, zIndex: 10050, backgroundColor: "rgba(0, 0, 0, 0.65)" }}>
+            <div style={{ ...modalStyles.container, maxWidth: "440px", zIndex: 10051 }} className="animate-fade-in">
               <div style={modalStyles.header}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <div style={{
