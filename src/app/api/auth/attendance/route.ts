@@ -5,8 +5,6 @@ import { prisma } from "@/lib/db";
 import { mockDb } from "@/lib/mockData";
 import { chatEmitter } from "@/lib/events";
 
-import { userHeartbeatMap } from "./heartbeat/route";
-
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
@@ -84,16 +82,13 @@ export async function GET(request: Request) {
       let action = "OTHER";
       const notes = (act.notes || "").toLowerCase();
       
-      // Determine CLOCK_OUT / LOGOUT / DISCONNECT
+      // Determine CLOCK_OUT / LOGOUT (Only on explicit user clock out or logout action)
       if (
         notes.includes("clocked out") || 
         notes.includes("finished workday") || 
         notes.includes("clock out") || 
         notes.includes("ended workday") || 
-        notes.includes("logged out") || 
-        notes.includes("checkpoint") || 
-        notes.includes("disconnect") || 
-        notes.includes("paused")
+        notes.includes("logged out")
       ) {
         action = "CLOCK_OUT";
       } 
@@ -255,19 +250,10 @@ export async function GET(request: Request) {
         }
       });
 
-      // User is active/working if and only if their latest log today is CLOCK_IN
+      // User is active/working if and only if their latest log today is CLOCK_IN (Stays active until explicit Clock Out / Logout)
       const todayLogs = uLogs.filter(l => getLocalDateKey(new Date(l.timestamp)) === todayKey);
       const latestTodayLog = todayLogs.length > 0 ? todayLogs[todayLogs.length - 1] : null;
-      let isWorkingNow = latestTodayLog?.action === "CLOCK_IN";
-
-      // Heartbeat deadman verification: If user clocked in > 3 minutes ago and hasn't sent a heartbeat for > 3 minutes, they are offline/disconnected
-      if (isWorkingNow && latestTodayLog) {
-        const lastHb = userHeartbeatMap[u.id]?.timestamp;
-        const timeSinceClockIn = now - new Date(latestTodayLog.timestamp).getTime();
-        if (timeSinceClockIn > 180000 && lastHb && (now - lastHb > 180000)) {
-          isWorkingNow = false;
-        }
-      }
+      const isWorkingNow = latestTodayLog?.action === "CLOCK_IN";
 
       let liveTodayMinutes = 0;
       if (isWorkingNow && latestTodayLog) {
